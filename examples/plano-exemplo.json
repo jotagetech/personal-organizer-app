@@ -1,0 +1,33 @@
+{
+  "versao": 1,
+  "nome": "Meu plano",
+  "unidade_carga": "kg",
+  "treinos": [
+    {
+      "id": "treino-a",
+      "nome": "A - Peito e tríceps",
+      "dias_semana": ["segunda", "quinta"],
+      "exercicios": [
+        {
+          "id": "supino-reto",
+          "nome": "Supino reto",
+          "forma_carga": "total",
+          "series": [
+            { "repeticoes_min": 8, "repeticoes_max": 12, "carga_sugerida": 60 },
+            { "repeticoes_min": 8, "repeticoes_max": 12, "carga_sugerida": 60 },
+            { "repeticoes_min": 8, "repeticoes_max": 12 }
+          ]
+        },
+        {
+          "id": "supino-inclinado-halteres",
+          "nome": "Supino inclinado com halteres",
+          "forma_carga": "por_halter",
+          "series": [
+            { "repeticoes_min": 10, "repeticoes_max": 10 },
+            { "repeticoes_min": 10, "repeticoes_max": 10 }
+          ]
+        }
+      ]
+    }
+  ]
+}

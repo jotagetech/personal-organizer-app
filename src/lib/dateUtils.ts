@@ -1,0 +1,57 @@
+export const DEFAULT_TIMEZONE = 'America/Sao_Paulo'
+
+const WEEKDAY_BY_INDEX = [
+    'domingo',
+    'segunda',
+    'terca',
+    'quarta',
+    'quinta',
+    'sexta',
+    'sabado',
+] as const
+
+export type IsoDate = string
+
+export function todayInTimezone(timezone: string = DEFAULT_TIMEZONE): IsoDate {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    })
+    const isoDate = formatter.format(new Date())
+
+    return isoDate
+}
+
+export function weekdayOfIsoDate(isoDate: IsoDate): (typeof WEEKDAY_BY_INDEX)[number] {
+    const [year, month, day] = isoDate.split('-').map(Number)
+    const dateAtNoonUtc = new Date(Date.UTC(year, month - 1, day, 12))
+    const weekday = WEEKDAY_BY_INDEX[dateAtNoonUtc.getUTCDay()]
+
+    return weekday
+}
+
+export function shiftIsoDate(isoDate: IsoDate, days: number): IsoDate {
+    const [year, month, day] = isoDate.split('-').map(Number)
+    const shiftedDate = new Date(Date.UTC(year, month - 1, day + days, 12))
+    const shiftedIsoDate = shiftedDate.toISOString().slice(0, 10)
+
+    return shiftedIsoDate
+}
+
+export function isValidIsoDate(candidate: string): candidate is IsoDate {
+    const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/
+    if (!isoDatePattern.test(candidate)) {
+        return false
+    }
+
+    const [year, month, day] = candidate.split('-').map(Number)
+    const parsedDate = new Date(Date.UTC(year, month - 1, day))
+    const roundTripsCleanly =
+        parsedDate.getUTCFullYear() === year &&
+        parsedDate.getUTCMonth() === month - 1 &&
+        parsedDate.getUTCDate() === day
+
+    return roundTripsCleanly
+}

@@ -1,0 +1,127 @@
+{
+  "$ref": "#/definitions/WorkoutPlan",
+  "definitions": {
+    "WorkoutPlan": {
+      "type": "object",
+      "properties": {
+        "versao": {
+          "type": "number",
+          "const": 1
+        },
+        "nome": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unidade_carga": {
+          "type": "string",
+          "const": "kg"
+        },
+        "treinos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "nome": {
+                "type": "string",
+                "minLength": 1
+              },
+              "dias_semana": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "segunda",
+                    "terca",
+                    "quarta",
+                    "quinta",
+                    "sexta",
+                    "sabado",
+                    "domingo"
+                  ]
+                }
+              },
+              "exercicios": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "nome": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "forma_carga": {
+                      "type": "string",
+                      "enum": [
+                        "total",
+                        "por_lado",
+                        "por_halter",
+                        "peso_corporal"
+                      ]
+                    },
+                    "series": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "repeticoes_min": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "repeticoes_max": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "carga_sugerida": {
+                            "type": "number",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "repeticoes_min",
+                          "repeticoes_max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "nome",
+                    "forma_carga",
+                    "series"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "id",
+              "nome",
+              "exercicios"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "versao",
+        "nome",
+        "unidade_carga",
+        "treinos"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
