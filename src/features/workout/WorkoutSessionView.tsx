@@ -2,12 +2,21 @@ import { useEffect, useState } from 'react'
 
 import {
     createSession,
+    finishSession,
     getSessionForDate,
     replaceSessionWorkout,
+    upsertSet,
 } from '@/features/workout/api'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
-import { setKey, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
+import {
+    setKey,
+    type WorkoutSessionRow,
+    type WorkoutSetRow,
+    type WorkoutSnapshot,
+    type WorkoutSnapshotExercise,
+} from '@/features/workout/types'
+import { WorkoutFinishPanel } from '@/features/workout/WorkoutFinishPanel'
 import { suggestWorkoutForWeekday } from '@/features/workout/workoutSelection'
 import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
 import type { Workout, WorkoutPlan } from '@/lib/workoutPlanSchema'
@@ -20,10 +29,11 @@ type WorkoutSessionViewProps = {
 
 export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSessionViewProps) {
     const [isLoading, setIsLoading] = useState(true)
-    const [sessionId, setSessionId] = useState<string | null>(null)
+    const [session, setSession] = useState<WorkoutSessionRow | null>(null)
     const [snapshot, setSnapshot] = useState<WorkoutSnapshot | null>(null)
     const [setsByKey, setSetsByKey] = useState<Map<string, WorkoutSetRow>>(new Map())
     const [workoutChoices, setWorkoutChoices] = useState<Workout[] | null>(null)
+    const [isFinishing, setIsFinishing] = useState(false)
 
     useEffect(() => {
         let isCancelled = false
@@ -36,7 +46,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             }
 
             if (existing) {
-                applyExistingSession(existing.session.id, existing.session.workout_snapshot, existing.sets)
+                applyExistingSession(existing.session, existing.sets)
                 setIsLoading(false)
                 return
             }
@@ -49,12 +59,12 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             } else if (suggestion.kind === 'choose_one') {
                 setWorkoutChoices(suggestion.workouts)
                 setSnapshot(null)
-                setSessionId(null)
+                setSession(null)
                 setSetsByKey(new Map())
             } else {
                 setWorkoutChoices(suggestion.availableWorkouts)
                 setSnapshot(null)
-                setSessionId(null)
+                setSession(null)
                 setSetsByKey(new Map())
             }
             setIsLoading(false)
@@ -67,32 +77,27 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionDate, plan])
 
-    function applyExistingSession(
-        newSessionId: string,
-        newSnapshot: WorkoutSnapshot,
-        sets: WorkoutSetRow[],
-    ) {
+    function applyExistingSession(existingSession: WorkoutSessionRow, sets: WorkoutSetRow[]) {
         const nextSetsByKey = new Map<string, WorkoutSetRow>()
         for (const set of sets) {
             nextSetsByKey.set(setKey(set.exercise_key, set.set_index), set)
         }
 
-        setSessionId(newSessionId)
-        setSnapshot(newSnapshot)
+        setSession(existingSession)
+        setSnapshot(existingSession.workout_snapshot)
         setSetsByKey(nextSetsByKey)
         setWorkoutChoices(null)
     }
 
     function startUnsavedWorkout(workout: Workout) {
         setSnapshot(buildWorkoutSnapshot(workout))
-        setSessionId(null)
+        setSession(null)
         setSetsByKey(new Map())
         setWorkoutChoices(null)
     }
 
     async function handleChooseWorkout(workout: Workout) {
-        const hasExistingSession = sessionId !== null
-        if (hasExistingSession) {
+        if (session) {
             const confirmedDiscard = window.confirm(
                 'Trocar o treino descarta os registros já feitos nesta data. Continuar?',
             )
@@ -101,8 +106,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             }
 
             const nextSnapshot = buildWorkoutSnapshot(workout)
-            await replaceSessionWorkout({ sessionId: sessionId as string, planId, snapshot: nextSnapshot })
+            await replaceSessionWorkout({ sessionId: session.id, planId, snapshot: nextSnapshot })
             setSnapshot(nextSnapshot)
+            setSession({ ...session, workout_snapshot: nextSnapshot, finished_at: null })
             setSetsByKey(new Map())
             setWorkoutChoices(null)
             return
@@ -116,15 +122,15 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     }
 
     async function ensureSession(): Promise<string> {
-        if (sessionId) {
-            return sessionId
+        if (session) {
+            return session.id
         }
         if (!snapshot) {
             throw new Error('Nenhum treino selecionado')
         }
 
         const createdSession = await createSession({ sessionDate, planId, snapshot })
-        setSessionId(createdSession.id)
+        setSession(createdSession)
         return createdSession.id
     }
 
@@ -134,6 +140,42 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             next.set(setKey(savedSet.exercise_key, savedSet.set_index), savedSet)
             return next
         })
+    }
+
+    async function handleCompleteExercise(exercicio: WorkoutSnapshotExercise, isLastExercise: boolean) {
+        if (!session) {
+            return
+        }
+
+        setIsFinishing(isLastExercise)
+        try {
+            const completions = exercicio.series.map(async (set) => {
+                const currentSet = setsByKey.get(setKey(exercicio.exercise_key, set.set_index))
+                const isReadyToComplete =
+                    currentSet && currentSet.load_kg !== null && currentSet.reps !== null && !currentSet.completed_at
+                if (!isReadyToComplete) {
+                    return
+                }
+
+                const savedSet = await upsertSet({
+                    sessionId: session.id,
+                    exerciseKey: exercicio.exercise_key,
+                    setIndex: set.set_index,
+                    loadKg: currentSet.load_kg,
+                    reps: currentSet.reps,
+                    completedAt: new Date().toISOString(),
+                })
+                handleSetSaved(savedSet)
+            })
+            await Promise.all(completions)
+
+            if (isLastExercise) {
+                const finishedSession = await finishSession(session.id)
+                setSession(finishedSession)
+            }
+        } finally {
+            setIsFinishing(false)
+        }
     }
 
     if (isLoading) {
@@ -171,25 +213,45 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                     Trocar treino
                 </button>
             </div>
-            {snapshot.exercicios.map((exercicio) => (
-                <div key={exercicio.exercise_key} style={{ marginBottom: 16 }}>
-                    <h3 style={{ fontSize: 14, marginBottom: 6 }}>{exercicio.nome}</h3>
-                    {exercicio.series.map((set) => (
-                        <ExerciseSetRow
-                            key={set.set_index}
-                            sessionId={sessionId}
-                            exerciseKey={exercicio.exercise_key}
-                            setIndex={set.set_index}
-                            repeticoesMin={set.repeticoes_min}
-                            repeticoesMax={set.repeticoes_max}
-                            cargaSugerida={set.carga_sugerida}
-                            existingSet={setsByKey.get(setKey(exercicio.exercise_key, set.set_index))}
-                            onSessionNeeded={ensureSession}
-                            onSaved={handleSetSaved}
-                        />
-                    ))}
-                </div>
-            ))}
+            {snapshot.exercicios.map((exercicio, exercicioIndex) => {
+                const isLastExercise = exercicioIndex === snapshot.exercicios.length - 1
+
+                return (
+                    <div key={exercicio.exercise_key} style={{ marginBottom: 16 }}>
+                        <h3 style={{ fontSize: 14, marginBottom: 6 }}>{exercicio.nome}</h3>
+                        {exercicio.series.map((set) => (
+                            <ExerciseSetRow
+                                key={set.set_index}
+                                sessionId={session?.id ?? null}
+                                exerciseKey={exercicio.exercise_key}
+                                setIndex={set.set_index}
+                                repeticoesMin={set.repeticoes_min}
+                                repeticoesMax={set.repeticoes_max}
+                                cargaSugerida={set.carga_sugerida}
+                                existingSet={setsByKey.get(setKey(exercicio.exercise_key, set.set_index))}
+                                onSessionNeeded={ensureSession}
+                                onSaved={handleSetSaved}
+                            />
+                        ))}
+                        <button
+                            type="button"
+                            className={isLastExercise ? 'primary-button' : 'secondary-button'}
+                            style={{ width: '100%' }}
+                            disabled={isFinishing}
+                            onClick={() => handleCompleteExercise(exercicio, isLastExercise)}
+                        >
+                            {isLastExercise ? 'Finalizar treino do dia' : 'Concluir exercício'}
+                        </button>
+                    </div>
+                )
+            })}
+            {session?.finished_at && (
+                <WorkoutFinishPanel
+                    session={session}
+                    sessionDate={sessionDate}
+                    onSessionUpdated={setSession}
+                />
+            )}
         </div>
     )
 }

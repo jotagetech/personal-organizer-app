@@ -43,6 +43,9 @@ type WorkoutSessionRow = {
     plan_id: string
     workout_key: string
     workout_snapshot: WorkoutSnapshot
+    finished_at: string | null
+    feeling_scale: number | null
+    feeling_note: string | null
     created_at: string
     updated_at: string
 }
@@ -70,6 +73,27 @@ type FoodEntryRow = {
     updated_at: string
 }
 
+type CardioActivityTypeRow = {
+    id: string
+    user_id: string
+    name: string
+    created_at: string
+}
+
+type CardioEntryRow = {
+    id: string
+    user_id: string
+    entry_date: string
+    activity_type_id: string
+    duration_minutes: number
+    distance_km: number | null
+    feeling_scale: number
+    feeling_note: string | null
+    note: string | null
+    created_at: string
+    updated_at: string
+}
+
 type TableDefinition<Row, InsertOverrides extends object, UpdateOverrides extends object> = {
     Row: Row
     Insert: Omit<Row, keyof InsertOverrides> & InsertOverrides
@@ -92,7 +116,14 @@ export type Database = {
             >
             workout_sessions: TableDefinition<
                 WorkoutSessionRow,
-                { id?: string; created_at?: string; updated_at?: string },
+                {
+                    id?: string
+                    created_at?: string
+                    updated_at?: string
+                    finished_at?: string | null
+                    feeling_scale?: number | null
+                    feeling_note?: string | null
+                },
                 Record<never, never>
             >
             workout_sets: TableDefinition<
@@ -102,6 +133,16 @@ export type Database = {
             >
             food_entries: TableDefinition<
                 FoodEntryRow,
+                { id?: string; created_at?: string; updated_at?: string },
+                Record<never, never>
+            >
+            cardio_activity_types: TableDefinition<
+                CardioActivityTypeRow,
+                { id?: string; created_at?: string },
+                Record<never, never>
+            >
+            cardio_entries: TableDefinition<
+                CardioEntryRow,
                 { id?: string; created_at?: string; updated_at?: string },
                 Record<never, never>
             >

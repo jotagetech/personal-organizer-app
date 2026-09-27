@@ -174,3 +174,37 @@ export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
 
     return data
 }
+
+export async function finishSession(sessionId: string): Promise<WorkoutSessionRow> {
+    const { data, error } = await supabase
+        .from('workout_sessions')
+        .update({ finished_at: new Date().toISOString() })
+        .eq('id', sessionId)
+        .select('*')
+        .single()
+
+    if (error || !data) {
+        throw new Error(error?.message ?? 'Falha ao finalizar treino')
+    }
+
+    return data
+}
+
+export async function updateSessionFeeling(
+    sessionId: string,
+    feelingScale: number,
+    feelingNote: string | null,
+): Promise<WorkoutSessionRow> {
+    const { data, error } = await supabase
+        .from('workout_sessions')
+        .update({ feeling_scale: feelingScale, feeling_note: feelingNote })
+        .eq('id', sessionId)
+        .select('*')
+        .single()
+
+    if (error || !data) {
+        throw new Error(error?.message ?? 'Falha ao salvar sentimento do treino')
+    }
+
+    return data
+}
