@@ -40,6 +40,17 @@ export function shiftIsoDate(isoDate: IsoDate, days: number): IsoDate {
     return shiftedIsoDate
 }
 
+export function diffInDays(fromIsoDate: IsoDate, toIsoDate: IsoDate): number {
+    const MILLISECONDS_PER_DAY = 86_400_000
+    const [fromYear, fromMonth, fromDay] = fromIsoDate.split('-').map(Number)
+    const [toYear, toMonth, toDay] = toIsoDate.split('-').map(Number)
+    const fromDateUtc = Date.UTC(fromYear, fromMonth - 1, fromDay)
+    const toDateUtc = Date.UTC(toYear, toMonth - 1, toDay)
+    const dayDifference = Math.round((toDateUtc - fromDateUtc) / MILLISECONDS_PER_DAY)
+
+    return dayDifference
+}
+
 export function isValidIsoDate(candidate: string): candidate is IsoDate {
     const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/
     if (!isoDatePattern.test(candidate)) {

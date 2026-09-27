@@ -6,6 +6,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { BottomNav, type AppTab } from '@/features/shared/BottomNav'
 import { DateHeader } from '@/features/shared/DateHeader'
 import { FoodTab } from '@/features/food/FoodTab'
+import { ResultsTab } from '@/features/results/ResultsTab'
 import { WorkoutTab } from '@/features/workout/WorkoutTab'
 
 export function App() {
@@ -41,7 +42,9 @@ function AuthenticatedShell() {
         <div className="app-shell">
             <DateHeader />
             <main className="app-content">
-                {activeTab === 'treino' ? <WorkoutTab /> : <FoodTab />}
+                {activeTab === 'treino' && <WorkoutTab />}
+                {activeTab === 'alimentacao' && <FoodTab />}
+                {activeTab === 'resultados' && <ResultsTab />}
             </main>
             <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
         </div>

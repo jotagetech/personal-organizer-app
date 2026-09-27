@@ -46,6 +46,20 @@ export function retreatPosition(snapshot: WorkoutSnapshot, position: StepPositio
     return { exerciseIndex: previousExerciseIndex, setIndexInExercise: previousExercicio.series.length - 1 }
 }
 
+export function totalSetCount(snapshot: WorkoutSnapshot): number {
+    const total = snapshot.exercicios.reduce((sum, exercicio) => sum + exercicio.series.length, 0)
+
+    return total
+}
+
+export function positionToGlobalIndex(snapshot: WorkoutSnapshot, position: StepPosition): number {
+    const setsInPreviousExercises = snapshot.exercicios
+        .slice(0, position.exerciseIndex)
+        .reduce((sum, exercicio) => sum + exercicio.series.length, 0)
+
+    return setsInPreviousExercises + position.setIndexInExercise
+}
+
 export function isLastPosition(snapshot: WorkoutSnapshot, position: StepPosition): boolean {
     const isLastExercise = position.exerciseIndex === snapshot.exercicios.length - 1
     const currentExercicio = snapshot.exercicios[position.exerciseIndex]

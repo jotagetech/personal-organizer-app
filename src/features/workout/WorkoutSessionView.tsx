@@ -18,7 +18,9 @@ import {
     advancePosition,
     findFirstIncompletePosition,
     isLastPosition,
+    positionToGlobalIndex,
     retreatPosition,
+    totalSetCount,
     type StepPosition,
 } from '@/features/workout/sessionProgress'
 import { WorkoutFinishPanel } from '@/features/workout/WorkoutFinishPanel'
@@ -211,12 +213,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     if (session?.finished_at || !position) {
         return (
             <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <h2 style={{ fontSize: 16, margin: 0 }}>{snapshot.nome}</h2>
-                    <button type="button" className="secondary-button" onClick={handleRequestSwitchWorkout}>
-                        Trocar treino
-                    </button>
-                </div>
+                <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
                 {session && (
                     <WorkoutFinishPanel session={session} sessionDate={sessionDate} onSessionUpdated={setSession} />
                 )}
@@ -228,14 +225,23 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     const currentSet = currentExercicio.series[position.setIndexInExercise]
     const isVeryLastSet = isLastPosition(snapshot, position)
     const isVeryFirstSet = position.exerciseIndex === 0 && position.setIndexInExercise === 0
+    const completedSetCount = positionToGlobalIndex(snapshot, position)
+    const totalSets = totalSetCount(snapshot)
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <h2 style={{ fontSize: 16, margin: 0 }}>{snapshot.nome}</h2>
-                <button type="button" className="secondary-button" onClick={handleRequestSwitchWorkout}>
-                    Trocar treino
-                </button>
+            <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
+            <div className="progress-track">
+                {Array.from({ length: totalSets }, (_, segmentIndex) => (
+                    <span
+                        key={segmentIndex}
+                        className={
+                            segmentIndex < completedSetCount
+                                ? 'progress-track__segment progress-track__segment--done'
+                                : 'progress-track__segment'
+                        }
+                    />
+                ))}
             </div>
             <p style={{ fontSize: 13, color: '#52525b', marginBottom: 4 }}>
                 Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length} · Série{' '}
@@ -261,6 +267,23 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                     ◀ Voltar
                 </button>
             )}
+        </div>
+    )
+}
+
+function WorkoutSnapshotHeader({
+    nome,
+    onRequestSwitchWorkout,
+}: {
+    nome: string
+    onRequestSwitchWorkout: () => void
+}) {
+    return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h2 style={{ fontSize: 16, margin: 0 }}>{nome}</h2>
+            <button type="button" className="secondary-button" onClick={onRequestSwitchWorkout}>
+                Trocar treino
+            </button>
         </div>
     )
 }

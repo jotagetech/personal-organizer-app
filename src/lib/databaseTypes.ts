@@ -73,6 +73,13 @@ type FoodEntryRow = {
     updated_at: string
 }
 
+type WorkoutCycleRow = {
+    id: string
+    user_id: string
+    start_date: string
+    created_at: string
+}
+
 type CardioActivityTypeRow = {
     id: string
     user_id: string
@@ -144,6 +151,11 @@ export type Database = {
             cardio_entries: TableDefinition<
                 CardioEntryRow,
                 { id?: string; created_at?: string; updated_at?: string },
+                Record<never, never>
+            >
+            workout_cycles: TableDefinition<
+                WorkoutCycleRow,
+                { id?: string; created_at?: string },
                 Record<never, never>
             >
         }

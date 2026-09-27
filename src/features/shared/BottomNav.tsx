@@ -1,4 +1,10 @@
-export type AppTab = 'treino' | 'alimentacao'
+export type AppTab = 'treino' | 'alimentacao' | 'resultados'
+
+const TABS: { key: AppTab; label: string }[] = [
+    { key: 'treino', label: 'Treino' },
+    { key: 'alimentacao', label: 'Alimentação' },
+    { key: 'resultados', label: 'Resultados' },
+]
 
 type BottomNavProps = {
     activeTab: AppTab
@@ -8,20 +14,16 @@ type BottomNavProps = {
 export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
     return (
         <nav className="bottom-nav">
-            <button
-                type="button"
-                className={tabClassName(activeTab === 'treino')}
-                onClick={() => onSelectTab('treino')}
-            >
-                Treino
-            </button>
-            <button
-                type="button"
-                className={tabClassName(activeTab === 'alimentacao')}
-                onClick={() => onSelectTab('alimentacao')}
-            >
-                Alimentação
-            </button>
+            {TABS.map((tab) => (
+                <button
+                    key={tab.key}
+                    type="button"
+                    className={tabClassName(activeTab === tab.key)}
+                    onClick={() => onSelectTab(tab.key)}
+                >
+                    {tab.label}
+                </button>
+            ))}
         </nav>
     )
 }

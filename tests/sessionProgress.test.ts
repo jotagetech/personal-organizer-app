@@ -4,7 +4,9 @@ import {
     advancePosition,
     findFirstIncompletePosition,
     isLastPosition,
+    positionToGlobalIndex,
     retreatPosition,
+    totalSetCount,
 } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
 
@@ -109,6 +111,22 @@ describe('retreatPosition', () => {
             setIndexInExercise: 0,
         })
         expect(previousPosition).toEqual({ exerciseIndex: 0, setIndexInExercise: 1 })
+    })
+})
+
+describe('totalSetCount', () => {
+    it('soma as séries de todos os exercícios do treino', () => {
+        expect(totalSetCount(snapshotWithTwoExercises())).toBe(3)
+    })
+})
+
+describe('positionToGlobalIndex', () => {
+    it('conta zero na primeira série do treino', () => {
+        expect(positionToGlobalIndex(snapshotWithTwoExercises(), { exerciseIndex: 0, setIndexInExercise: 0 })).toBe(0)
+    })
+
+    it('soma as séries dos exercícios anteriores', () => {
+        expect(positionToGlobalIndex(snapshotWithTwoExercises(), { exerciseIndex: 1, setIndexInExercise: 0 })).toBe(2)
     })
 })
 

@@ -1,12 +1,16 @@
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
-import { shiftIsoDate, todayInTimezone } from '@/lib/dateUtils'
+import { shiftIsoDate, todayInTimezone, weekdayOfIsoDate } from '@/lib/dateUtils'
+import type { Weekday } from '@/lib/workoutPlanSchema'
 
-const DAY_LABEL_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    timeZone: 'UTC',
-})
+const WEEKDAY_ABBREVIATION: Record<Weekday, string> = {
+    segunda: 'seg',
+    terca: 'ter',
+    quarta: 'qua',
+    quinta: 'qui',
+    sexta: 'sex',
+    sabado: 'sáb',
+    domingo: 'dom',
+}
 
 export function DateHeader() {
     const { selectedDate, setSelectedDate } = useSelectedDate()
@@ -54,9 +58,9 @@ export function DateHeader() {
 }
 
 function formatDateLabel(isoDate: string): string {
-    const [year, month, day] = isoDate.split('-').map(Number)
-    const dateAtNoonUtc = new Date(Date.UTC(year, month - 1, day, 12))
-    const formattedLabel = DAY_LABEL_FORMATTER.format(dateAtNoonUtc)
+    const [, month, day] = isoDate.split('-')
+    const weekday = weekdayOfIsoDate(isoDate)
+    const formattedLabel = `${WEEKDAY_ABBREVIATION[weekday]} ${day}/${month}`
 
     return formattedLabel
 }
