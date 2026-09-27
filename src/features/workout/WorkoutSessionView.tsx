@@ -5,7 +5,6 @@ import {
     finishSession,
     getSessionForDate,
     replaceSessionWorkout,
-    upsertSet,
 } from '@/features/workout/api'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
@@ -14,8 +13,14 @@ import {
     type WorkoutSessionRow,
     type WorkoutSetRow,
     type WorkoutSnapshot,
-    type WorkoutSnapshotExercise,
 } from '@/features/workout/types'
+import {
+    advancePosition,
+    findFirstIncompletePosition,
+    isLastPosition,
+    retreatPosition,
+    type StepPosition,
+} from '@/features/workout/sessionProgress'
 import { WorkoutFinishPanel } from '@/features/workout/WorkoutFinishPanel'
 import { suggestWorkoutForWeekday } from '@/features/workout/workoutSelection'
 import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
@@ -33,7 +38,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     const [snapshot, setSnapshot] = useState<WorkoutSnapshot | null>(null)
     const [setsByKey, setSetsByKey] = useState<Map<string, WorkoutSetRow>>(new Map())
     const [workoutChoices, setWorkoutChoices] = useState<Workout[] | null>(null)
-    const [isFinishing, setIsFinishing] = useState(false)
+    const [position, setPosition] = useState<StepPosition | null>(null)
 
     useEffect(() => {
         let isCancelled = false
@@ -46,7 +51,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             }
 
             if (existing) {
-                applyExistingSession(existing.session, existing.sets)
+                await applyExistingSession(existing.session, existing.sets)
                 setIsLoading(false)
                 return
             }
@@ -77,7 +82,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionDate, plan])
 
-    function applyExistingSession(existingSession: WorkoutSessionRow, sets: WorkoutSetRow[]) {
+    async function applyExistingSession(existingSession: WorkoutSessionRow, sets: WorkoutSetRow[]) {
         const nextSetsByKey = new Map<string, WorkoutSetRow>()
         for (const set of sets) {
             nextSetsByKey.set(setKey(set.exercise_key, set.set_index), set)
@@ -87,13 +92,24 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         setSnapshot(existingSession.workout_snapshot)
         setSetsByKey(nextSetsByKey)
         setWorkoutChoices(null)
+
+        const resumePosition = findFirstIncompletePosition(existingSession.workout_snapshot, nextSetsByKey)
+        setPosition(resumePosition)
+
+        const allSetsAlreadyCompleted = resumePosition === null
+        if (allSetsAlreadyCompleted && !existingSession.finished_at) {
+            const finishedSession = await finishSession(existingSession.id)
+            setSession(finishedSession)
+        }
     }
 
     function startUnsavedWorkout(workout: Workout) {
-        setSnapshot(buildWorkoutSnapshot(workout))
+        const nextSnapshot = buildWorkoutSnapshot(workout)
+        setSnapshot(nextSnapshot)
         setSession(null)
         setSetsByKey(new Map())
         setWorkoutChoices(null)
+        setPosition({ exerciseIndex: 0, setIndexInExercise: 0 })
     }
 
     async function handleChooseWorkout(workout: Workout) {
@@ -111,6 +127,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             setSession({ ...session, workout_snapshot: nextSnapshot, finished_at: null })
             setSetsByKey(new Map())
             setWorkoutChoices(null)
+            setPosition({ exerciseIndex: 0, setIndexInExercise: 0 })
             return
         }
 
@@ -142,40 +159,26 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         })
     }
 
-    async function handleCompleteExercise(exercicio: WorkoutSnapshotExercise, isLastExercise: boolean) {
-        if (!session) {
+    async function handleConfirmed() {
+        if (!snapshot || !position) {
             return
         }
 
-        setIsFinishing(isLastExercise)
-        try {
-            const completions = exercicio.series.map(async (set) => {
-                const currentSet = setsByKey.get(setKey(exercicio.exercise_key, set.set_index))
-                const isReadyToComplete =
-                    currentSet && currentSet.load_kg !== null && currentSet.reps !== null && !currentSet.completed_at
-                if (!isReadyToComplete) {
-                    return
-                }
+        const nextPosition = advancePosition(snapshot, position)
+        setPosition(nextPosition)
 
-                const savedSet = await upsertSet({
-                    sessionId: session.id,
-                    exerciseKey: exercicio.exercise_key,
-                    setIndex: set.set_index,
-                    loadKg: currentSet.load_kg,
-                    reps: currentSet.reps,
-                    completedAt: new Date().toISOString(),
-                })
-                handleSetSaved(savedSet)
-            })
-            await Promise.all(completions)
-
-            if (isLastExercise) {
-                const finishedSession = await finishSession(session.id)
-                setSession(finishedSession)
-            }
-        } finally {
-            setIsFinishing(false)
+        if (nextPosition === null) {
+            const activeSessionId = session?.id ?? (await ensureSession())
+            const finishedSession = await finishSession(activeSessionId)
+            setSession(finishedSession)
         }
+    }
+
+    function handleGoBack() {
+        if (!snapshot || !position) {
+            return
+        }
+        setPosition(retreatPosition(snapshot, position))
     }
 
     if (isLoading) {
@@ -205,6 +208,27 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         return <p>Nenhum treino disponível no plano ativo.</p>
     }
 
+    if (session?.finished_at || !position) {
+        return (
+            <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <h2 style={{ fontSize: 16, margin: 0 }}>{snapshot.nome}</h2>
+                    <button type="button" className="secondary-button" onClick={handleRequestSwitchWorkout}>
+                        Trocar treino
+                    </button>
+                </div>
+                {session && (
+                    <WorkoutFinishPanel session={session} sessionDate={sessionDate} onSessionUpdated={setSession} />
+                )}
+            </div>
+        )
+    }
+
+    const currentExercicio = snapshot.exercicios[position.exerciseIndex]
+    const currentSet = currentExercicio.series[position.setIndexInExercise]
+    const isVeryLastSet = isLastPosition(snapshot, position)
+    const isVeryFirstSet = position.exerciseIndex === 0 && position.setIndexInExercise === 0
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -213,44 +237,29 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                     Trocar treino
                 </button>
             </div>
-            {snapshot.exercicios.map((exercicio, exercicioIndex) => {
-                const isLastExercise = exercicioIndex === snapshot.exercicios.length - 1
-
-                return (
-                    <div key={exercicio.exercise_key} style={{ marginBottom: 16 }}>
-                        <h3 style={{ fontSize: 14, marginBottom: 6 }}>{exercicio.nome}</h3>
-                        {exercicio.series.map((set) => (
-                            <ExerciseSetRow
-                                key={set.set_index}
-                                sessionId={session?.id ?? null}
-                                exerciseKey={exercicio.exercise_key}
-                                setIndex={set.set_index}
-                                repeticoesMin={set.repeticoes_min}
-                                repeticoesMax={set.repeticoes_max}
-                                cargaSugerida={set.carga_sugerida}
-                                existingSet={setsByKey.get(setKey(exercicio.exercise_key, set.set_index))}
-                                onSessionNeeded={ensureSession}
-                                onSaved={handleSetSaved}
-                            />
-                        ))}
-                        <button
-                            type="button"
-                            className={isLastExercise ? 'primary-button' : 'secondary-button'}
-                            style={{ width: '100%' }}
-                            disabled={isFinishing}
-                            onClick={() => handleCompleteExercise(exercicio, isLastExercise)}
-                        >
-                            {isLastExercise ? 'Finalizar treino do dia' : 'Concluir exercício'}
-                        </button>
-                    </div>
-                )
-            })}
-            {session?.finished_at && (
-                <WorkoutFinishPanel
-                    session={session}
-                    sessionDate={sessionDate}
-                    onSessionUpdated={setSession}
-                />
+            <p style={{ fontSize: 13, color: '#52525b', marginBottom: 4 }}>
+                Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length} · Série{' '}
+                {position.setIndexInExercise + 1} de {currentExercicio.series.length}
+            </p>
+            <h3 style={{ fontSize: 16, marginTop: 0, marginBottom: 8 }}>{currentExercicio.nome}</h3>
+            <ExerciseSetRow
+                key={setKey(currentExercicio.exercise_key, currentSet.set_index)}
+                sessionId={session?.id ?? null}
+                exerciseKey={currentExercicio.exercise_key}
+                setIndex={currentSet.set_index}
+                repeticoesMin={currentSet.repeticoes_min}
+                repeticoesMax={currentSet.repeticoes_max}
+                cargaSugerida={currentSet.carga_sugerida}
+                existingSet={setsByKey.get(setKey(currentExercicio.exercise_key, currentSet.set_index))}
+                confirmLabel={isVeryLastSet ? 'Confirmar e finalizar treino' : 'Confirmar'}
+                onSessionNeeded={ensureSession}
+                onSaved={handleSetSaved}
+                onConfirmed={handleConfirmed}
+            />
+            {!isVeryFirstSet && (
+                <button type="button" className="secondary-button" style={{ marginTop: 8 }} onClick={handleGoBack}>
+                    ◀ Voltar
+                </button>
             )}
         </div>
     )

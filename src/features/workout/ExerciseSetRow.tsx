@@ -21,8 +21,10 @@ type ExerciseSetRowProps = {
     repeticoesMax: number
     cargaSugerida: number | null
     existingSet: WorkoutSetRow | undefined
+    confirmLabel: string
     onSessionNeeded: () => Promise<string>
     onSaved: (set: WorkoutSetRow) => void
+    onConfirmed: () => void
 }
 
 export function ExerciseSetRow({
@@ -33,8 +35,10 @@ export function ExerciseSetRow({
     repeticoesMax,
     cargaSugerida,
     existingSet,
+    confirmLabel,
     onSessionNeeded,
     onSaved,
+    onConfirmed,
 }: ExerciseSetRowProps) {
     const [fields, setFields] = useState<SetFieldState>(() => toFieldState(existingSet))
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
@@ -53,7 +57,14 @@ export function ExerciseSetRow({
         }
     }, [])
 
-    async function persist(nextFields: SetFieldState) {
+    function clearPendingAutosave() {
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
+            debounceTimerRef.current = null
+        }
+    }
+
+    async function autosave(nextFields: SetFieldState) {
         const requestId = ++latestRequestIdRef.current
         setSaveStatus('saving')
 
@@ -82,58 +93,75 @@ export function ExerciseSetRow({
         }
     }
 
-    function scheduleSave(nextFields: SetFieldState) {
-        if (debounceTimerRef.current) {
-            clearTimeout(debounceTimerRef.current)
-        }
+    function scheduleAutosave(nextFields: SetFieldState) {
+        clearPendingAutosave()
         debounceTimerRef.current = setTimeout(() => {
-            void persist(nextFields)
+            void autosave(nextFields)
         }, SAVE_DEBOUNCE_MS)
-    }
-
-    function saveNow(nextFields: SetFieldState) {
-        if (debounceTimerRef.current) {
-            clearTimeout(debounceTimerRef.current)
-        }
-        void persist(nextFields)
     }
 
     function handleLoadChange(rawValue: string) {
         const nextFields = { ...fields, loadKgText: rawValue }
         setFields(nextFields)
-        scheduleSave(nextFields)
+        scheduleAutosave(nextFields)
     }
 
     function handleRepsChange(rawValue: string) {
         const nextFields = { ...fields, repsText: rawValue }
         setFields(nextFields)
-        scheduleSave(nextFields)
+        scheduleAutosave(nextFields)
     }
 
     function handleFieldBlur() {
-        saveNow(fields)
+        clearPendingAutosave()
+        void autosave(fields)
     }
 
-    function handleToggleCompleted() {
-        const canComplete = isValidNonNegativeNumber(fields.loadKgText) && isValidNonNegativeInteger(fields.repsText)
-        const isCurrentlyCompleted = fields.completedAt !== null
+    const canConfirm = isValidNonNegativeNumber(fields.loadKgText) && isValidNonNegativeInteger(fields.repsText)
 
-        if (!isCurrentlyCompleted && !canComplete) {
+    async function handleConfirmClick() {
+        if (!canConfirm) {
             return
         }
 
-        const nextFields: SetFieldState = {
+        clearPendingAutosave()
+        const requestId = ++latestRequestIdRef.current
+        setSaveStatus('saving')
+
+        const confirmedFields: SetFieldState = {
             ...fields,
-            completedAt: isCurrentlyCompleted ? null : new Date().toISOString(),
+            completedAt: fields.completedAt ?? new Date().toISOString(),
         }
-        setFields(nextFields)
-        saveNow(nextFields)
+
+        try {
+            const activeSessionId = sessionId ?? (await onSessionNeeded())
+            const parsedValues = parseFieldsForSave(confirmedFields)
+            const savedSet = await upsertSet({
+                sessionId: activeSessionId,
+                exerciseKey,
+                setIndex,
+                loadKg: parsedValues.loadKg,
+                reps: parsedValues.reps,
+                completedAt: confirmedFields.completedAt,
+            })
+
+            if (requestId !== latestRequestIdRef.current) {
+                return
+            }
+            setFields(confirmedFields)
+            setSaveStatus('saved')
+            onSaved(savedSet)
+            onConfirmed()
+        } catch {
+            if (requestId !== latestRequestIdRef.current) {
+                return
+            }
+            setSaveStatus('error')
+        }
     }
 
-    const isCompleted = fields.completedAt !== null
-
     return (
-        <div className="card" style={{ marginBottom: 8 }}>
+        <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#52525b' }}>
                 <span>Série {setIndex}</span>
                 <span>
@@ -141,7 +169,7 @@ export function ExerciseSetRow({
                     {cargaSugerida !== null ? ` · Sugestão: ${cargaSugerida} kg` : ''}
                 </span>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                 <div className="field" style={{ flex: 1, marginBottom: 0 }}>
                     <label>Carga (kg)</label>
                     <input
@@ -164,16 +192,16 @@ export function ExerciseSetRow({
                         placeholder="ex: 10"
                     />
                 </div>
-                <button
-                    type="button"
-                    className={isCompleted ? 'primary-button' : 'secondary-button'}
-                    onClick={handleToggleCompleted}
-                    style={{ minWidth: 44 }}
-                    aria-label="Marcar série como concluída"
-                >
-                    {isCompleted ? '✓' : '○'}
-                </button>
             </div>
+            <button
+                type="button"
+                className="primary-button"
+                style={{ width: '100%', marginTop: 10 }}
+                disabled={!canConfirm}
+                onClick={handleConfirmClick}
+            >
+                {confirmLabel}
+            </button>
             <SaveStatusLabel status={saveStatus} />
         </div>
     )
@@ -189,7 +217,7 @@ function SaveStatusLabel({ status }: { status: SaveStatus }) {
     }
 
     if (status === 'error') {
-        return <p className="save-status save-status--error">Falha ao salvar. Tentando novamente ao editar.</p>
+        return <p className="save-status save-status--error">Falha ao salvar. Toque em confirmar para tentar de novo.</p>
     }
 
     return <p className="save-status">Salvo</p>
