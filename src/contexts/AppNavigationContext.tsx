@@ -10,7 +10,7 @@ type AppNavigationContextValue = {
 const AppNavigationContext = createContext<AppNavigationContextValue | null>(null)
 
 export function AppNavigationProvider({ children }: { children: ReactNode }) {
-    const [activeTab, setActiveTab] = useState<AppTab>('treino')
+    const [activeTab, setActiveTab] = useState<AppTab>('rotina')
 
     const contextValue: AppNavigationContextValue = { activeTab, goToTab: setActiveTab }
 

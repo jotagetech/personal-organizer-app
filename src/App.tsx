@@ -10,6 +10,7 @@ import { DateHeader } from '@/features/shared/DateHeader'
 import { UndoBar } from '@/features/shared/UndoBar'
 import { FoodTab } from '@/features/food/FoodTab'
 import { ResultsTab } from '@/features/results/ResultsTab'
+import { RoutineTab } from '@/features/routine/RoutineTab'
 import { WorkoutTab } from '@/features/workout/WorkoutTab'
 
 export function App() {
@@ -53,6 +54,7 @@ function AuthenticatedShell() {
         <div className="app-shell">
             <DateHeader />
             <main className="app-content">
+                {activeTab === 'rotina' && <RoutineTab />}
                 {activeTab === 'treino' && <WorkoutTab />}
                 {activeTab === 'alimentacao' && <FoodTab />}
                 {activeTab === 'resultados' && <ResultsTab />}

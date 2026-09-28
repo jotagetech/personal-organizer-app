@@ -1,9 +1,10 @@
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import type { TabIndicatorKind } from '@/features/shared/tabIndicators'
 
-export type AppTab = 'treino' | 'alimentacao' | 'resultados'
+export type AppTab = 'rotina' | 'treino' | 'alimentacao' | 'resultados'
 
 const TABS: { key: AppTab; label: string }[] = [
+    { key: 'rotina', label: 'Rotina' },
     { key: 'treino', label: 'Treino' },
     { key: 'alimentacao', label: 'Alimentação' },
     { key: 'resultados', label: 'Resultados' },

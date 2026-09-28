@@ -71,6 +71,28 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   banco, sem esperar a próxima troca de data. Uma falha nessa leitura não
   trava a tela nem aparece como erro, só deixa o indicador desatualizado até
   a próxima tentativa.
+- Nova aba Rotina: checklist diário de hábitos recorrentes (ex: academia
+  seg-sex, refeições, suplemento diário), virou a primeira aba do menu e a
+  tela de abertura padrão do app. Um item pode ter um vínculo opcional com
+  outra aba (treino finalizado, uma categoria de refeição, peso corporal ou
+  sono) e é marcado automaticamente quando esse sinal já existe pro dia
+  selecionado, sem gravar nada de novo pra isso. Tocar num item vinculado
+  ainda pendente leva direto pra aba correspondente ("Registrar agora"); uma
+  ação secundária "Marcar feito sem registrar" grava uma marcação manual
+  mesmo assim, com visual diferente (âmbar) da marcação automática, pra não
+  esconder que o registro de verdade ainda falta. Itens sem vínculo são
+  marcados manualmente, e a lista aceita tarefas avulsas de um único dia. O
+  menu "⋮" abre o gerenciamento dos itens recorrentes: criar, editar título/
+  dias da semana/vínculo, e arquivar (sem excluir, pra manter o histórico).
+  Tela vazia (nenhum item criado ainda) oferece um botão "Criar rotina
+  sugerida" com um conjunto de exemplo pronto. Templates recorrentes só
+  materializam um registro por dia quando algo é de fato marcado ou uma
+  tarefa avulsa é criada, sem job de background populando datas futuras.
+- Menu inferior ganhou um indicador de estado também pra Rotina, calculado à
+  parte dos outros três (depende dos próprios itens/registros de rotina, não
+  só de DaySignals): concluído quando todo item aplicável ao dia está feito,
+  pendente quando falta algo, e sem indicador num dia sem nenhum item
+  aplicável.
 
 ### Alterado
 
@@ -89,6 +111,8 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 - `activeTab` (Treino/Alimentação/Resultados) saiu de um estado local do
   app pra um contexto de navegação compartilhado, usado pelo novo detalhe do
   dia pra abrir a aba certa a partir de um atalho.
+- Aba padrão de abertura do app trocou de Treino pra Rotina, agora a
+  primeira do menu inferior.
 
 ### Corrigido
 

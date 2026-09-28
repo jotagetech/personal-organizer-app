@@ -139,6 +139,31 @@ type SleepEntryRow = {
     created_at: string
 }
 
+type RoutineItemRow = {
+    id: string
+    user_id: string
+    title: string
+    weekdays: string[]
+    link_kind: string | null
+    sort_order: number
+    active_from: string
+    archived_on: string | null
+    created_at: string
+    updated_at: string
+}
+
+type RoutineDayEntryRow = {
+    id: string
+    user_id: string
+    entry_date: string
+    routine_item_id: string | null
+    title: string | null
+    completed_at: string | null
+    sort_order: number
+    created_at: string
+    updated_at: string
+}
+
 type TableDefinition<Row, InsertOverrides extends object, UpdateOverrides extends object> = {
     Row: Row
     Insert: Omit<Row, keyof InsertOverrides> & InsertOverrides
@@ -229,6 +254,32 @@ export type Database = {
             sleep_entries: TableDefinition<
                 SleepEntryRow,
                 { id?: string; created_at?: string },
+                Record<never, never>
+            >
+            routine_items: TableDefinition<
+                RoutineItemRow,
+                {
+                    id?: string
+                    created_at?: string
+                    updated_at?: string
+                    link_kind?: string | null
+                    sort_order?: number
+                    active_from?: string
+                    archived_on?: string | null
+                },
+                Record<never, never>
+            >
+            routine_day_entries: TableDefinition<
+                RoutineDayEntryRow,
+                {
+                    id?: string
+                    created_at?: string
+                    updated_at?: string
+                    routine_item_id?: string | null
+                    title?: string | null
+                    completed_at?: string | null
+                    sort_order?: number
+                },
                 Record<never, never>
             >
         }

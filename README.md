@@ -45,6 +45,8 @@ npm run dev
    6. `20260928010000_workout_sets_delete_and_replace_workout.sql` (policy de
       exclusão em `workout_sets` e função `replace_session_workout`, ver
       `CHANGELOG.md`)
+   7. `20260928020000_daily_routine.sql` (checklist diário de hábitos:
+      templates recorrentes e registros por dia, ver `CHANGELOG.md`)
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
@@ -58,6 +60,18 @@ npm run dev
 
 ## Funcionalidades
 
+- **Rotina**: checklist diário de hábitos recorrentes (ex: academia seg-sex,
+  refeições, suplemento), primeira aba do menu e tela de abertura do app. Um
+  item pode ter um vínculo opcional com outra aba (treino finalizado, uma
+  categoria de refeição, peso corporal, sono) e é marcado automaticamente
+  quando esse sinal já existe pro dia; tocar num item vinculado ainda
+  pendente leva pra aba correspondente ("Registrar agora"), com uma ação
+  secundária "Marcar feito sem registrar" pra quem quer só riscar o item sem
+  abrir o registro de verdade (visual diferente da marcação automática, pra
+  não esconder que faltou o registro). Itens sem vínculo são marcados
+  manualmente, e a tela aceita tarefas avulsas de um dia só. O menu "⋮" abre
+  o gerenciamento dos itens recorrentes (criar, editar dias da semana e
+  vínculo, arquivar).
 - **Treino**: importa plano de treino via JSON, sugere o treino do dia,
   registra um exercício/uma série por vez (carga, repetições, RIR opcional,
   comentário livre por série), com barra de progresso e opção de voltar.
@@ -88,6 +102,7 @@ src/
   features/
     auth/           tela de login
     shared/         navegação inferior, cabeçalho de data
+    routine/        checklist diário de hábitos (templates recorrentes, itens avulsos)
     workout/        importação de plano, sessão/séries, ciclo de progresso, finalização
     cycle/          ciclo de treino (data de início, "Dia N do ciclo")
     cardio/         catálogo de atividades e registro de cardio

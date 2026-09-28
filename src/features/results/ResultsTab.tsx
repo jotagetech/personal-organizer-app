@@ -18,20 +18,11 @@ import { listFinishedSessionDates } from '@/features/results/api'
 import { buildWeeklyCompletionGrid } from '@/features/results/resultsGrid'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { shiftIsoDate, todayInTimezone, type IsoDate } from '@/lib/dateUtils'
+import { WEEKDAY_LABELS } from '@/lib/weekdayLabels'
 import type { Weekday } from '@/lib/workoutPlanSchema'
 
 const DEFAULT_LOOKBACK_DAYS = 27
 const SLEEP_MAX_HOURS = 24
-
-const WEEKDAY_LABELS: Record<Weekday, string> = {
-    segunda: 'Seg',
-    terca: 'Ter',
-    quarta: 'Qua',
-    quinta: 'Qui',
-    sexta: 'Sex',
-    sabado: 'Sáb',
-    domingo: 'Dom',
-}
 
 type GridInputs = {
     rangeStart: IsoDate

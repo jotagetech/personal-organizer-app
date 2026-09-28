@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
+import { fetchRoutineIndicatorForDate } from '@/features/routine/routineIndicator'
 import { fetchDaySignals } from '@/features/shared/daySignals'
 import { deriveTabIndicators, EMPTY_TAB_INDICATORS, type TabIndicators } from '@/features/shared/tabIndicators'
 
@@ -28,7 +29,8 @@ export function DayStatusProvider({ children }: { children: ReactNode }) {
     const loadIndicators = useCallback(async (date: string) => {
         try {
             const signals = await fetchDaySignals(date)
-            setIndicators(deriveTabIndicators(signals, PLANNED_WORKOUT_TODAY))
+            const routineIndicator = await fetchRoutineIndicatorForDate(date, signals)
+            setIndicators({ ...deriveTabIndicators(signals, PLANNED_WORKOUT_TODAY), rotina: routineIndicator })
         } catch {
             // sem tratamento: ver comentário acima
         }
