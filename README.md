@@ -105,3 +105,10 @@ Em uso real pelo autor, testado no celular. Ver `CHANGELOG.md` para o
 histórico de features e correções. Pendência conhecida: integração com
 Google Fit (sono/passos do Amazfit/Zepp), adiada por ser um projeto à parte
 (exige OAuth e uma Edge Function), ainda não implementada.
+
+Sem service worker: a aba precisa estar aberta antes de o sinal cair. Uma
+série de treino confirmada com a aba já aberta entra na fila de envio e
+sincroniza sozinha assim que a rede volta, mas recarregar a página (ou abrir
+o app do zero) sem conexão não funciona, porque o próprio HTML/JS ainda
+precisa ser baixado. O uso pensado é academia com sinal ruim mas
+intermitente, não modo avião do início ao fim.

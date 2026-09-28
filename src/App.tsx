@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { OutboxProvider } from '@/contexts/OutboxContext'
 import { SelectedDateProvider } from '@/contexts/SelectedDateContext'
 import { UndoableActionProvider } from '@/contexts/UndoableActionContext'
 import { LoginPage } from '@/features/auth/LoginPage'
@@ -33,7 +34,9 @@ function AuthGate() {
     return (
         <SelectedDateProvider>
             <UndoableActionProvider>
-                <AuthenticatedShell />
+                <OutboxProvider>
+                    <AuthenticatedShell />
+                </OutboxProvider>
             </UndoableActionProvider>
         </SelectedDateProvider>
     )

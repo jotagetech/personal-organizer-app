@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
+import { SyncStatusBadge } from '@/features/shared/SyncStatusBadge'
 import { shiftIsoDate, todayInTimezone, weekdayOfIsoDate } from '@/lib/dateUtils'
 import type { Weekday } from '@/lib/workoutPlanSchema'
 
@@ -17,6 +18,7 @@ const WEEKDAY_ABBREVIATION: Record<Weekday, string> = {
 export function DateHeader() {
     const { selectedDate, setSelectedDate } = useSelectedDate()
     const datePickerInputRef = useRef<HTMLInputElement>(null)
+    const isViewingToday = selectedDate === todayInTimezone()
 
     function goToPreviousDay() {
         setSelectedDate(shiftIsoDate(selectedDate, -1))
@@ -46,7 +48,15 @@ export function DateHeader() {
             <button type="button" className="icon-button" onClick={goToPreviousDay} aria-label="Dia anterior">
                 ‹
             </button>
-            <span className="date-header__label">{formatDateLabel(selectedDate)}</span>
+            <span
+                className={
+                    isViewingToday
+                        ? 'date-header__label'
+                        : 'date-header__label date-header__label--not-today'
+                }
+            >
+                {formatDateLabel(selectedDate)}
+            </span>
             <button type="button" className="icon-button" onClick={goToNextDay} aria-label="Próximo dia">
                 ›
             </button>
@@ -67,6 +77,7 @@ export function DateHeader() {
                 tabIndex={-1}
                 aria-hidden="true"
             />
+            <SyncStatusBadge />
             <button type="button" className="secondary-button" onClick={goToToday}>
                 Hoje
             </button>

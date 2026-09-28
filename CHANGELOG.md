@@ -25,12 +25,37 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 - Se o app for pra segundo plano (minimizado ou trocado de app no celular)
   com alguma exclusão pendente, ela é confirmada na hora, pra não depender de
   o app continuar rodando até o fim da janela de espera.
+- Fila de escrita otimista para o treino, pensada pro sinal ruim de academia:
+  confirmar uma série aplica o valor na tela e avança pro próximo passo na
+  hora, sem esperar resposta de rede. A escrita fica guardada em
+  `localStorage` e é reenviada sozinha quando a rede volta (evento `online`,
+  aba voltando a ficar visível, ou tentativas com espera crescente até um
+  teto de 60s). Duas escritas seguidas da mesma série viram uma só (a última
+  vence), e a fila garante a sessão do dia antes de enviar as séries, e as
+  séries antes de finalizar o treino. Um erro de rede ou de servidor tenta de
+  novo sozinho; uma violação de dado marca a escrita como falha definitiva,
+  com opção de descartar, em vez de tentar pra sempre. Reabrir uma data com
+  escritas pendentes mostra o treino já com esses valores, sem "voltar" pra
+  uma série que já foi confirmada localmente. Cobre só o treino (a parte que
+  mais dói perder no meio de uma série); cardio, alimentação, peso, sono,
+  sentimento pós-treino e "Trocar treino" continuam com gravação direta e
+  mensagem de erro visível.
+- Selo de sincronização no cabeçalho de data, mostrando quantas séries ainda
+  aguardam envio (ou que já está tudo salvo), com atalho pra descartar uma
+  escrita marcada como falha definitiva.
+- Cabeçalho de data destaca visualmente quando a data selecionada não é hoje,
+  pra ficar claro que um registro feito ali vai entrar num dia diferente do
+  atual.
 
 ### Corrigido
 
 - Falha ao excluir um registro (ex: sem conexão) agora restaura o item na
   lista com uma mensagem de erro, em vez de deixar a tela inconsistente com o
   banco.
+- Carregar o plano ativo ou a sessão do dia sem resposta do servidor (sinal
+  caindo no meio da consulta) ficava pendurado em "Carregando..." pra
+  sempre; agora essas leituras têm um prazo de 10s e caem no estado de erro
+  com opção de tentar de novo.
 
 ## 2026-09-27
 

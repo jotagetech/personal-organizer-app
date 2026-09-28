@@ -39,6 +39,11 @@ export async function importWorkoutPlanFromText(rawText: string): Promise<Import
 
 export type ActivePlan = { planId: string; plan: WorkoutPlan }
 
+// Leitura crítica pro fluxo de treino: sem prazo, uma rede instável deixa
+// "Carregando..." pendurado pra sempre em vez de cair no estado de erro com
+// opção de tentar de novo.
+const CRITICAL_READ_TIMEOUT_MS = 10_000
+
 export async function getActivePlan(): Promise<ActivePlan | null> {
     const { data: authData } = await supabase.auth.getUser()
     const currentUserId = authData.user?.id
@@ -50,6 +55,7 @@ export async function getActivePlan(): Promise<ActivePlan | null> {
         .from('user_settings')
         .select('active_plan_id')
         .eq('user_id', currentUserId)
+        .abortSignal(AbortSignal.timeout(CRITICAL_READ_TIMEOUT_MS))
         .maybeSingle()
 
     if (settingsError) {
@@ -63,6 +69,7 @@ export async function getActivePlan(): Promise<ActivePlan | null> {
         .from('workout_plans')
         .select('id, payload')
         .eq('id', settingsRow.active_plan_id)
+        .abortSignal(AbortSignal.timeout(CRITICAL_READ_TIMEOUT_MS))
         .single()
 
     if (planError || !planRow) {
@@ -79,6 +86,7 @@ export async function getSessionForDate(
         .from('workout_sessions')
         .select('*')
         .eq('session_date', sessionDate)
+        .abortSignal(AbortSignal.timeout(CRITICAL_READ_TIMEOUT_MS))
         .maybeSingle()
 
     if (sessionError) {
@@ -92,6 +100,7 @@ export async function getSessionForDate(
         .from('workout_sets')
         .select('*')
         .eq('session_id', session.id)
+        .abortSignal(AbortSignal.timeout(CRITICAL_READ_TIMEOUT_MS))
 
     if (setsError) {
         throw new Error(setsError.message)

@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import {
-    createSession,
-    finishSession,
-    getSessionForDate,
-    replaceSessionWorkout,
-} from '@/features/workout/api'
+import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/features/workout/api'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
 import {
@@ -25,6 +20,8 @@ import {
 } from '@/features/workout/sessionProgress'
 import { WorkoutFinishPanel } from '@/features/workout/WorkoutFinishPanel'
 import { suggestWorkoutForWeekday } from '@/features/workout/workoutSelection'
+import { useOutbox } from '@/contexts/OutboxContext'
+import { overlayPendingSets, type OutboxOperation, type UpsertSetOperation } from '@/lib/outbox/outboxQueue'
 import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
 import type { Workout, WorkoutPlan } from '@/lib/workoutPlanSchema'
 
@@ -35,6 +32,7 @@ type WorkoutSessionViewProps = {
 }
 
 export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSessionViewProps) {
+    const outbox = useOutbox()
     const [isLoading, setIsLoading] = useState(true)
     const [session, setSession] = useState<WorkoutSessionRow | null>(null)
     const [snapshot, setSnapshot] = useState<WorkoutSnapshot | null>(null)
@@ -60,6 +58,13 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
 
                 if (existing) {
                     await applyExistingSession(existing.session, existing.sets)
+                    return
+                }
+
+                const pendingOperationsForDate = outbox.getOperationsForDate(sessionDate)
+                const pendingSnapshot = findSnapshotInPendingOperations(pendingOperationsForDate)
+                if (pendingSnapshot) {
+                    resumeFromPendingOperations(pendingSnapshot, pendingOperationsForDate)
                     return
                 }
 
@@ -99,18 +104,45 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionDate, plan, reloadToken])
 
+    // Uma sessão nunca sincronizada ainda no servidor (o dia inteiro foi
+    // registrado sem sinal) não aparece em getSessionForDate; o treino em
+    // andamento continua vindo da própria fila de envio.
+    function findSnapshotInPendingOperations(operations: OutboxOperation[]): WorkoutSnapshot | null {
+        const upsertOperation = operations.find(
+            (operation): operation is UpsertSetOperation => operation.kind === 'upsert_set',
+        )
+        return upsertOperation?.snapshot ?? null
+    }
+
+    function resumeFromPendingOperations(pendingSnapshot: WorkoutSnapshot, operations: OutboxOperation[]) {
+        const overlaidSetsByKey = overlayPendingSets(new Map(), operations, sessionDate)
+        const isFinishPending = operations.some((operation) => operation.kind === 'finish_session')
+
+        setSnapshot(pendingSnapshot)
+        setSession(null)
+        setSetsByKey(overlaidSetsByKey)
+        setWorkoutChoices(null)
+        setPosition(isFinishPending ? null : findFirstIncompletePosition(pendingSnapshot, overlaidSetsByKey))
+    }
+
     async function applyExistingSession(existingSession: WorkoutSessionRow, sets: WorkoutSetRow[]) {
         const nextSetsByKey = new Map<string, WorkoutSetRow>()
         for (const set of sets) {
             nextSetsByKey.set(setKey(set.exercise_key, set.set_index), set)
         }
 
+        const overlaidSetsByKey = overlayPendingSets(
+            nextSetsByKey,
+            outbox.getOperationsForDate(sessionDate),
+            sessionDate,
+        )
+
         setSession(existingSession)
         setSnapshot(existingSession.workout_snapshot)
-        setSetsByKey(nextSetsByKey)
+        setSetsByKey(overlaidSetsByKey)
         setWorkoutChoices(null)
 
-        const resumePosition = findFirstIncompletePosition(existingSession.workout_snapshot, nextSetsByKey)
+        const resumePosition = findFirstIncompletePosition(existingSession.workout_snapshot, overlaidSetsByKey)
         setPosition(resumePosition)
 
         const allSetsAlreadyCompleted = resumePosition === null
@@ -170,28 +202,15 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         setWorkoutChoices(plan.treinos)
     }
 
-    async function ensureSession(): Promise<string> {
-        if (session) {
-            return session.id
-        }
-        if (!snapshot) {
-            throw new Error('Nenhum treino selecionado')
-        }
-
-        const createdSession = await createSession({ sessionDate, planId, snapshot })
-        setSession(createdSession)
-        return createdSession.id
-    }
-
-    function handleSetSaved(savedSet: WorkoutSetRow) {
+    function handleLocalSetSaved(row: WorkoutSetRow) {
         setSetsByKey((previous) => {
             const next = new Map(previous)
-            next.set(setKey(savedSet.exercise_key, savedSet.set_index), savedSet)
+            next.set(setKey(row.exercise_key, row.set_index), row)
             return next
         })
     }
 
-    async function handleConfirmed() {
+    function handleConfirmed() {
         if (!snapshot || !position) {
             return
         }
@@ -200,9 +219,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         setPosition(nextPosition)
 
         if (nextPosition === null) {
-            const activeSessionId = session?.id ?? (await ensureSession())
-            const finishedSession = await finishSession(activeSessionId)
-            setSession(finishedSession)
+            outbox.enqueueFinishSession(sessionDate)
         }
     }
 
@@ -212,6 +229,34 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         }
         setPosition(retreatPosition(snapshot, position))
     }
+
+    // Treino terminado antes de a sessão ter sido criada no servidor (o dia
+    // inteiro foi feito sem sinal): o painel de finalização depende do id real
+    // da sessão, então observa a fila até o envio confirmar e revelar esse id.
+    useEffect(() => {
+        if (!snapshot || position || session) {
+            return
+        }
+
+        let isCancelled = false
+
+        async function refreshSessionAfterSync() {
+            try {
+                const existing = await getSessionForDate(sessionDate)
+                if (!isCancelled && existing) {
+                    setSession(existing.session)
+                }
+            } catch {
+                // mantém o estado otimista de treino concluído; a próxima
+                // mudança na fila de envio tenta buscar de novo
+            }
+        }
+
+        void refreshSessionAfterSync()
+        return () => {
+            isCancelled = true
+        }
+    }, [snapshot, position, session, sessionDate, outbox.pendingCount])
 
     if (isLoading) {
         return <p>Carregando treino...</p>
@@ -262,12 +307,16 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         return <p>Nenhum treino disponível no plano ativo.</p>
     }
 
+    const effectiveSetsByKey = overlayPendingSets(setsByKey, outbox.getOperationsForDate(sessionDate), sessionDate)
+
     if (session?.finished_at || !position) {
         return (
             <div>
                 <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
-                {session && (
+                {session ? (
                     <WorkoutFinishPanel session={session} sessionDate={sessionDate} onSessionUpdated={setSession} />
+                ) : (
+                    <p className="save-status">Treino concluído no aparelho, sincronizando com o servidor...</p>
                 )}
             </div>
         )
@@ -302,17 +351,18 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             <h3 style={{ fontSize: 16, marginTop: 0, marginBottom: 8 }}>{currentExercicio.nome}</h3>
             <ExerciseSetRow
                 key={setKey(currentExercicio.exercise_key, currentSet.set_index)}
-                sessionId={session?.id ?? null}
+                sessionDate={sessionDate}
+                planId={planId}
+                snapshot={snapshot}
                 exerciseKey={currentExercicio.exercise_key}
                 setIndex={currentSet.set_index}
                 repeticoesMin={currentSet.repeticoes_min}
                 repeticoesMax={currentSet.repeticoes_max}
                 cargaSugerida={currentSet.carga_sugerida}
-                existingSet={setsByKey.get(setKey(currentExercicio.exercise_key, currentSet.set_index))}
+                existingSet={effectiveSetsByKey.get(setKey(currentExercicio.exercise_key, currentSet.set_index))}
                 confirmLabel={isVeryLastSet ? 'Confirmar e finalizar treino' : 'Confirmar'}
-                onSessionNeeded={ensureSession}
-                onSaved={handleSetSaved}
                 onConfirmed={handleConfirmed}
+                onLocalSave={handleLocalSetSaved}
             />
             {!isVeryFirstSet && (
                 <button type="button" className="secondary-button" style={{ marginTop: 8 }} onClick={handleGoBack}>
