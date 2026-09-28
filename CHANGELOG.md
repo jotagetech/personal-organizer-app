@@ -74,6 +74,18 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- Peso corporal e sono subiram pro topo da aba Resultados, num agrupamento
+  "Dia selecionado" acima da grade, e passam a gravar na data selecionada em
+  vez de sempre em "hoje". Abrir um dia que já tem registro mostra o valor
+  já preenchido no campo, em vez de sempre abrir em branco, e falta o
+  registro do dia dá destaque visual ao card (mesma ideia binária do
+  indicador da aba). A lista de registros recentes encolheu de uma lista
+  vertical pra uma linha compacta ("últimos: 78.4 · 78.9 · 79.1"), tocando
+  num valor pra excluir (a exclusão com desfazer continua igual). Validação
+  do valor digitado (vírgula ou ponto decimal, rejeição de valor zero ou
+  negativo, teto de 24h só pro registro de sono) saiu do formulário e virou
+  função pura própria, testada isoladamente.
+
 - `activeTab` (Treino/Alimentação/Resultados) saiu de um estado local do
   app pra um contexto de navegação compartilhado, usado pelo novo detalhe do
   dia pra abrir a aba certa a partir de um atalho.

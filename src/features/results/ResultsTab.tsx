@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import {
     deleteBodyWeightEntry,
     deleteSleepEntry,
+    getBodyWeightForDate,
+    getSleepForDate,
     listRecentBodyWeightEntries,
     listRecentSleepEntries,
     upsertBodyWeightEntry,
@@ -19,6 +21,7 @@ import { shiftIsoDate, todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 import type { Weekday } from '@/lib/workoutPlanSchema'
 
 const DEFAULT_LOOKBACK_DAYS = 27
+const SLEEP_MAX_HOURS = 24
 
 const WEEKDAY_LABELS: Record<Weekday, string> = {
     segunda: 'Seg',
@@ -103,7 +106,59 @@ export function ResultsTab() {
 
     return (
         <div>
-            <h2 style={{ fontSize: 16, marginTop: 0 }}>{gridTitle(cycle)}</h2>
+            <h2 style={{ fontSize: 16, marginTop: 0 }}>Dia selecionado</h2>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                    <QuickMetricLog
+                        title="Peso corporal"
+                        unitLabel="kg"
+                        placeholder="ex: 78.5"
+                        entryDate={selectedDate}
+                        listRecent={async () =>
+                            (await listRecentBodyWeightEntries()).map((entry) => ({
+                                id: entry.id,
+                                entryDate: entry.entry_date,
+                                value: entry.weight_kg,
+                            }))
+                        }
+                        getEntryForDate={async (entryDate) => {
+                            const entry = await getBodyWeightForDate(entryDate)
+                            return entry ? { id: entry.id, entryDate: entry.entry_date, value: entry.weight_kg } : null
+                        }}
+                        save={async (entryDate, value) => {
+                            const saved = await upsertBodyWeightEntry(entryDate, value)
+                            return { id: saved.id, entryDate: saved.entry_date, value: saved.weight_kg }
+                        }}
+                        deleteEntry={deleteBodyWeightEntry}
+                    />
+                </div>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                    <QuickMetricLog
+                        title="Sono (horas)"
+                        unitLabel="horas"
+                        placeholder="ex: 7.5"
+                        entryDate={selectedDate}
+                        maxValue={SLEEP_MAX_HOURS}
+                        listRecent={async () =>
+                            (await listRecentSleepEntries()).map((entry) => ({
+                                id: entry.id,
+                                entryDate: entry.entry_date,
+                                value: entry.hours,
+                            }))
+                        }
+                        getEntryForDate={async (entryDate) => {
+                            const entry = await getSleepForDate(entryDate)
+                            return entry ? { id: entry.id, entryDate: entry.entry_date, value: entry.hours } : null
+                        }}
+                        save={async (entryDate, value) => {
+                            const saved = await upsertSleepEntry(entryDate, value)
+                            return { id: saved.id, entryDate: saved.entry_date, value: saved.hours }
+                        }}
+                        deleteEntry={deleteSleepEntry}
+                    />
+                </div>
+            </div>
+            <h2 style={{ fontSize: 16 }}>{gridTitle(cycle)}</h2>
             <div className="results-grid">
                 <div className="results-grid__row results-grid__row--header">
                     {(Object.keys(WEEKDAY_LABELS) as Weekday[]).map((weekday) => (
@@ -129,46 +184,6 @@ export function ResultsTab() {
                         ))}
                     </div>
                 ))}
-            </div>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
-                <div style={{ flex: 1, minWidth: 160 }}>
-                    <QuickMetricLog
-                        title="Peso corporal"
-                        unitLabel="kg"
-                        placeholder="ex: 78.5"
-                        listRecent={async () =>
-                            (await listRecentBodyWeightEntries()).map((entry) => ({
-                                id: entry.id,
-                                entryDate: entry.entry_date,
-                                value: entry.weight_kg,
-                            }))
-                        }
-                        save={async (entryDate, value) => {
-                            const saved = await upsertBodyWeightEntry(entryDate, value)
-                            return { id: saved.id, entryDate: saved.entry_date, value: saved.weight_kg }
-                        }}
-                        deleteEntry={deleteBodyWeightEntry}
-                    />
-                </div>
-                <div style={{ flex: 1, minWidth: 160 }}>
-                    <QuickMetricLog
-                        title="Sono (horas)"
-                        unitLabel="horas"
-                        placeholder="ex: 7.5"
-                        listRecent={async () =>
-                            (await listRecentSleepEntries()).map((entry) => ({
-                                id: entry.id,
-                                entryDate: entry.entry_date,
-                                value: entry.hours,
-                            }))
-                        }
-                        save={async (entryDate, value) => {
-                            const saved = await upsertSleepEntry(entryDate, value)
-                            return { id: saved.id, entryDate: saved.entry_date, value: saved.hours }
-                        }}
-                        deleteEntry={deleteSleepEntry}
-                    />
-                </div>
             </div>
             <DayDetail selectedDate={selectedDate} />
         </div>

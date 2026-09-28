@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { useUndoableActions } from '@/contexts/UndoableActionContext'
-import { todayInTimezone } from '@/lib/dateUtils'
+import { parseMetricValue } from '@/features/bodyMetrics/parseMetric'
 
 type MetricPoint = { id: string; entryDate: string; value: number }
 
@@ -9,7 +9,10 @@ type QuickMetricLogProps = {
     title: string
     unitLabel: string
     placeholder: string
+    entryDate: string
+    maxValue?: number
     listRecent: () => Promise<MetricPoint[]>
+    getEntryForDate: (entryDate: string) => Promise<MetricPoint | null>
     save: (entryDate: string, value: number) => Promise<MetricPoint>
     deleteEntry: (id: string) => Promise<void>
 }
@@ -18,12 +21,17 @@ export function QuickMetricLog({
     title,
     unitLabel,
     placeholder,
+    entryDate,
+    maxValue,
     listRecent,
+    getEntryForDate,
     save,
     deleteEntry,
 }: QuickMetricLogProps) {
     const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [recentPoints, setRecentPoints] = useState<MetricPoint[]>([])
+    const [existingEntry, setExistingEntry] = useState<MetricPoint | null>(null)
+    const [hasLoadedEntry, setHasLoadedEntry] = useState(false)
     const [valueText, setValueText] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -33,25 +41,59 @@ export function QuickMetricLog({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
+    // Refaz a busca do registro do dia selecionado sempre que a data muda, pra
+    // abrir o formulário já preenchido em vez de sempre em branco.
+    useEffect(() => {
+        let isCancelled = false
+
+        async function loadEntryForDate() {
+            try {
+                const entry = await getEntryForDate(entryDate)
+                if (isCancelled) {
+                    return
+                }
+                setExistingEntry(entry)
+                setValueText(entry ? String(entry.value) : '')
+            } catch (loadError) {
+                if (isCancelled) {
+                    return
+                }
+                const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar registro do dia'
+                setErrorMessage(message)
+            } finally {
+                if (!isCancelled) {
+                    setHasLoadedEntry(true)
+                }
+            }
+        }
+
+        setHasLoadedEntry(false)
+        void loadEntryForDate()
+        return () => {
+            isCancelled = true
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [entryDate])
+
     async function handleSubmit(event: React.FormEvent) {
         event.preventDefault()
 
-        const normalizedText = valueText.trim().replace(',', '.')
-        const value = Number(normalizedText)
-        if (!Number.isFinite(value) || value <= 0) {
-            setErrorMessage('Informe um número válido.')
+        const parsedValue = parseMetricValue(valueText, maxValue)
+        if (!parsedValue.valid) {
+            setErrorMessage(parsedValue.errorMessage)
             return
         }
 
         setErrorMessage(null)
         setIsSubmitting(true)
         try {
-            const savedPoint = await save(todayInTimezone(), value)
+            const savedPoint = await save(entryDate, parsedValue.value)
+            setExistingEntry(savedPoint)
+            setValueText(String(savedPoint.value))
             setRecentPoints((previous) => {
-                const withoutToday = previous.filter((point) => point.entryDate !== savedPoint.entryDate)
-                return [savedPoint, ...withoutToday].sort((a, b) => (a.entryDate < b.entryDate ? 1 : -1))
+                const withoutSameDate = previous.filter((point) => point.entryDate !== savedPoint.entryDate)
+                return [savedPoint, ...withoutSameDate].sort((a, b) => (a.entryDate < b.entryDate ? 1 : -1))
             })
-            setValueText('')
         } catch (submitError) {
             const message = submitError instanceof Error ? submitError.message : 'Falha ao salvar'
             setErrorMessage(message)
@@ -68,15 +110,22 @@ export function QuickMetricLog({
             commit: () => deleteEntry(point.id),
             onCommitted: () => {
                 setRecentPoints((previous) => previous.filter((existingPoint) => existingPoint.id !== point.id))
+                if (point.entryDate === entryDate) {
+                    setExistingEntry(null)
+                    setValueText('')
+                }
             },
             onRestored: () => setErrorMessage('Não foi possível excluir esse registro.'),
         })
     }
 
     const visiblePoints = recentPoints.filter((point) => !isPendingDeletion(point.id))
+    const isEntryPendingDeletion = existingEntry !== null && isPendingDeletion(existingEntry.id)
+    const isMissingEntry = hasLoadedEntry && (existingEntry === null || isEntryPendingDeletion)
+    const cardClassName = isMissingEntry ? 'card card--pending' : 'card'
 
     return (
-        <div className="card">
+        <div className={cardClassName}>
             <h3 style={{ fontSize: 14, marginTop: 0 }}>{title}</h3>
             {errorMessage && <div className="error-list">{errorMessage}</div>}
             <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
@@ -95,43 +144,23 @@ export function QuickMetricLog({
                 </button>
             </form>
             {visiblePoints.length > 0 && (
-                <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
-                    {visiblePoints.map((point) => (
-                        <li
-                            key={point.id}
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                gap: 8,
-                                fontSize: 13,
-                                color: '#52525b',
-                                padding: '6px 0',
-                                borderTop: '1px solid #e4e4e7',
-                            }}
-                        >
-                            <span
-                                style={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            >
-                                {point.entryDate.slice(5)}: {point.value}
-                            </span>
+                <p className="quick-metric-log__recent">
+                    últimos:{' '}
+                    {visiblePoints.map((point, index) => (
+                        <span key={point.id}>
+                            {index > 0 && ' · '}
                             <button
                                 type="button"
-                                className="secondary-button"
-                                style={{ flexShrink: 0, minHeight: 32, padding: '0 10px', fontSize: 12 }}
+                                className="quick-metric-log__recent-value"
+                                title="Toque para excluir"
+                                aria-label={`Excluir registro de ${point.entryDate.slice(5)}: ${point.value}`}
                                 onClick={() => handleDeleteClick(point)}
                             >
-                                Excluir
+                                {point.value}
                             </button>
-                        </li>
+                        </span>
                     ))}
-                </ul>
+                </p>
             )}
         </div>
     )
