@@ -46,7 +46,12 @@ export function ResultsTab() {
                     return
                 }
 
-                const grid = buildWeeklyCompletionGrid(effectiveRangeStart, today, new Set(finishedDates))
+                const latestFinishedDate = finishedDates.reduce(
+                    (latest, date) => (date > latest ? date : latest),
+                    today,
+                )
+
+                const grid = buildWeeklyCompletionGrid(effectiveRangeStart, latestFinishedDate, new Set(finishedDates))
                 setWeeks(grid)
             } catch (loadError) {
                 if (isCancelled) {

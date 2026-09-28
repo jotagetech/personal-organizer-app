@@ -286,8 +286,8 @@ button, input, select {
 }
 
 .results-grid__cell--completed {
-    background: #18181b;
-    border-color: #18181b;
+    background: #16a34a;
+    border-color: #16a34a;
     color: #ffffff;
 }
 
