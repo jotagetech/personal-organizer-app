@@ -16,17 +16,25 @@ export function WorkoutTab() {
     const [activePlan, setActivePlan] = useState<ActivePlan | null>(null)
     const [cycle, setCycle] = useState<WorkoutCycleRow | null>(null)
     const [isLoadingPlan, setIsLoadingPlan] = useState(true)
+    const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [activePanel, setActivePanel] = useState<ActivePanel>(null)
     const menuRef = useRef<HTMLDivElement>(null)
 
     async function reloadActivePlan() {
         setIsLoadingPlan(true)
-        const [nextActivePlan, nextCycle] = await Promise.all([getActivePlan(), getCurrentCycle()])
-        setActivePlan(nextActivePlan)
-        setCycle(nextCycle)
-        setIsLoadingPlan(false)
-        setActivePanel(null)
+        setLoadErrorMessage(null)
+        try {
+            const [nextActivePlan, nextCycle] = await Promise.all([getActivePlan(), getCurrentCycle()])
+            setActivePlan(nextActivePlan)
+            setCycle(nextCycle)
+            setActivePanel(null)
+        } catch (loadError) {
+            const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar o plano'
+            setLoadErrorMessage(message)
+        } finally {
+            setIsLoadingPlan(false)
+        }
     }
 
     useEffect(() => {
@@ -45,6 +53,22 @@ export function WorkoutTab() {
 
     if (isLoadingPlan) {
         return <p>Carregando plano...</p>
+    }
+
+    if (loadErrorMessage) {
+        return (
+            <div className="error-list">
+                Falha ao carregar: {loadErrorMessage}
+                <button
+                    type="button"
+                    className="secondary-button"
+                    style={{ display: 'block', marginTop: 8 }}
+                    onClick={reloadActivePlan}
+                >
+                    Tentar de novo
+                </button>
+            </div>
+        )
     }
 
     if (!activePlan) {

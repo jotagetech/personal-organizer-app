@@ -15,12 +15,20 @@ export function FoodTab() {
     const { selectedDate } = useSelectedDate()
     const [entries, setEntries] = useState<FoodEntryRow[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
     async function reloadEntries() {
         setIsLoading(true)
-        const nextEntries = await listFoodEntriesForDate(selectedDate)
-        setEntries(nextEntries)
-        setIsLoading(false)
+        setErrorMessage(null)
+        try {
+            const nextEntries = await listFoodEntriesForDate(selectedDate)
+            setEntries(nextEntries)
+        } catch (loadError) {
+            const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar refeições'
+            setErrorMessage(message)
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     useEffect(() => {
@@ -40,9 +48,9 @@ export function FoodTab() {
                     }}
                 />
             </div>
-            {isLoading ? (
-                <p>Carregando...</p>
-            ) : (
+            {isLoading && <p>Carregando...</p>}
+            {errorMessage && <div className="error-list">{errorMessage}</div>}
+            {!isLoading && !errorMessage && (
                 <FoodEntryList
                     entries={entries}
                     onUpdate={async (entryId, values) => {

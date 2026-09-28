@@ -41,40 +41,52 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     const [setsByKey, setSetsByKey] = useState<Map<string, WorkoutSetRow>>(new Map())
     const [workoutChoices, setWorkoutChoices] = useState<Workout[] | null>(null)
     const [position, setPosition] = useState<StepPosition | null>(null)
+    const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
 
     useEffect(() => {
         let isCancelled = false
 
         async function load() {
             setIsLoading(true)
-            const existing = await getSessionForDate(sessionDate)
-            if (isCancelled) {
-                return
-            }
+            setLoadErrorMessage(null)
+            try {
+                const existing = await getSessionForDate(sessionDate)
+                if (isCancelled) {
+                    return
+                }
 
-            if (existing) {
-                await applyExistingSession(existing.session, existing.sets)
-                setIsLoading(false)
-                return
-            }
+                if (existing) {
+                    await applyExistingSession(existing.session, existing.sets)
+                    return
+                }
 
-            const weekday = weekdayOfIsoDate(sessionDate)
-            const suggestion = suggestWorkoutForWeekday(plan, weekday)
+                const weekday = weekdayOfIsoDate(sessionDate)
+                const suggestion = suggestWorkoutForWeekday(plan, weekday)
 
-            if (suggestion.kind === 'single') {
-                startUnsavedWorkout(suggestion.workout)
-            } else if (suggestion.kind === 'choose_one') {
-                setWorkoutChoices(suggestion.workouts)
-                setSnapshot(null)
-                setSession(null)
-                setSetsByKey(new Map())
-            } else {
-                setWorkoutChoices(suggestion.availableWorkouts)
-                setSnapshot(null)
-                setSession(null)
-                setSetsByKey(new Map())
+                if (suggestion.kind === 'single') {
+                    startUnsavedWorkout(suggestion.workout)
+                } else if (suggestion.kind === 'choose_one') {
+                    setWorkoutChoices(suggestion.workouts)
+                    setSnapshot(null)
+                    setSession(null)
+                    setSetsByKey(new Map())
+                } else {
+                    setWorkoutChoices(suggestion.availableWorkouts)
+                    setSnapshot(null)
+                    setSession(null)
+                    setSetsByKey(new Map())
+                }
+            } catch (loadError) {
+                if (isCancelled) {
+                    return
+                }
+                const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar treino'
+                setLoadErrorMessage(message)
+            } finally {
+                if (!isCancelled) {
+                    setIsLoading(false)
+                }
             }
-            setIsLoading(false)
         }
 
         void load()
@@ -185,6 +197,10 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
 
     if (isLoading) {
         return <p>Carregando treino...</p>
+    }
+
+    if (loadErrorMessage) {
+        return <div className="error-list">Falha ao carregar treino: {loadErrorMessage}</div>
     }
 
     if (workoutChoices) {

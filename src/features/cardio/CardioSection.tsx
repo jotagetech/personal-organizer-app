@@ -19,6 +19,7 @@ export function CardioSection({ sessionDate }: CardioSectionProps) {
     const [activityTypes, setActivityTypes] = useState<CardioActivityTypeRow[]>([])
     const [entries, setEntries] = useState<CardioEntryRow[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [isAdding, setIsAdding] = useState(false)
     const [hasDismissedPrompt, setHasDismissedPrompt] = useState(false)
 
@@ -27,18 +28,30 @@ export function CardioSection({ sessionDate }: CardioSectionProps) {
 
         async function load() {
             setIsLoading(true)
-            const [nextActivityTypes, nextEntries] = await Promise.all([
-                listActivityTypes(),
-                listCardioEntriesForDate(sessionDate),
-            ])
-            if (isCancelled) {
-                return
+            setErrorMessage(null)
+            try {
+                const [nextActivityTypes, nextEntries] = await Promise.all([
+                    listActivityTypes(),
+                    listCardioEntriesForDate(sessionDate),
+                ])
+                if (isCancelled) {
+                    return
+                }
+                setActivityTypes(nextActivityTypes)
+                setEntries(nextEntries)
+                setIsAdding(false)
+                setHasDismissedPrompt(false)
+            } catch (loadError) {
+                if (isCancelled) {
+                    return
+                }
+                const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar cardio'
+                setErrorMessage(message)
+            } finally {
+                if (!isCancelled) {
+                    setIsLoading(false)
+                }
             }
-            setActivityTypes(nextActivityTypes)
-            setEntries(nextEntries)
-            setIsLoading(false)
-            setIsAdding(false)
-            setHasDismissedPrompt(false)
         }
 
         void load()
@@ -49,6 +62,10 @@ export function CardioSection({ sessionDate }: CardioSectionProps) {
 
     if (isLoading) {
         return <p>Carregando cardio...</p>
+    }
+
+    if (errorMessage) {
+        return <div className="error-list">Falha ao carregar cardio: {errorMessage}</div>
     }
 
     const showPrompt = entries.length === 0 && !isAdding && !hasDismissedPrompt
