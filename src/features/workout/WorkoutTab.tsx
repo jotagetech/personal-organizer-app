@@ -129,7 +129,12 @@ export function WorkoutTab() {
                     )}
                 </div>
             </div>
-            <WorkoutSessionView plan={activePlan.plan} planId={activePlan.planId} sessionDate={selectedDate} />
+            <WorkoutSessionView
+                key={selectedDate}
+                plan={activePlan.plan}
+                planId={activePlan.planId}
+                sessionDate={selectedDate}
+            />
         </div>
     )
 }

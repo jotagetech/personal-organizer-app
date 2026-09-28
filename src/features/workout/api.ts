@@ -43,27 +43,30 @@ export async function getActivePlan(): Promise<ActivePlan | null> {
     const { data: authData } = await supabase.auth.getUser()
     const currentUserId = authData.user?.id
     if (!currentUserId) {
-        return null
+        throw new Error('Usuário não autenticado')
     }
 
-    const { data: settingsRow } = await supabase
+    const { data: settingsRow, error: settingsError } = await supabase
         .from('user_settings')
         .select('active_plan_id')
         .eq('user_id', currentUserId)
         .maybeSingle()
 
+    if (settingsError) {
+        throw new Error(settingsError.message)
+    }
     if (!settingsRow?.active_plan_id) {
         return null
     }
 
-    const { data: planRow, error } = await supabase
+    const { data: planRow, error: planError } = await supabase
         .from('workout_plans')
         .select('id, payload')
         .eq('id', settingsRow.active_plan_id)
         .single()
 
-    if (error || !planRow) {
-        return null
+    if (planError || !planRow) {
+        throw new Error(planError?.message ?? 'Plano ativo não encontrado')
     }
 
     return { planId: planRow.id, plan: planRow.payload as WorkoutPlan }
@@ -72,20 +75,27 @@ export async function getActivePlan(): Promise<ActivePlan | null> {
 export async function getSessionForDate(
     sessionDate: string,
 ): Promise<{ session: WorkoutSessionRow; sets: WorkoutSetRow[] } | null> {
-    const { data: session } = await supabase
+    const { data: session, error: sessionError } = await supabase
         .from('workout_sessions')
         .select('*')
         .eq('session_date', sessionDate)
         .maybeSingle()
 
+    if (sessionError) {
+        throw new Error(sessionError.message)
+    }
     if (!session) {
         return null
     }
 
-    const { data: sets } = await supabase
+    const { data: sets, error: setsError } = await supabase
         .from('workout_sets')
         .select('*')
         .eq('session_id', session.id)
+
+    if (setsError) {
+        throw new Error(setsError.message)
+    }
 
     return { session, sets: sets ?? [] }
 }
@@ -129,17 +139,19 @@ export async function replaceSessionWorkout(params: {
     sessionId: string
     planId: string
     snapshot: WorkoutSnapshot
-}): Promise<void> {
-    await supabase
-        .from('workout_sessions')
-        .update({
-            plan_id: params.planId,
-            workout_key: params.snapshot.workout_key,
-            workout_snapshot: params.snapshot,
-        })
-        .eq('id', params.sessionId)
+}): Promise<WorkoutSessionRow> {
+    const { data, error } = await supabase.rpc('replace_session_workout', {
+        p_session_id: params.sessionId,
+        p_plan_id: params.planId,
+        p_snapshot: params.snapshot,
+    })
 
-    await supabase.from('workout_sets').delete().eq('session_id', params.sessionId)
+    if (error || !data || data.length === 0) {
+        throw new Error(error?.message ?? 'Falha ao trocar o treino da sessão')
+    }
+
+    const [updatedSession] = data
+    return updatedSession
 }
 
 export type SetInput = {

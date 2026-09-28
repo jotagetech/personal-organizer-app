@@ -42,6 +42,9 @@ npm run dev
    4. `20260927030000_rir_bodyweight_sleep.sql`
    5. `20260928000000_food_items_catalog.sql` (popula o catálogo com os 597
       alimentos da Tabela TACO 4ª edição, ver `CHANGELOG.md`)
+   6. `20260928010000_workout_sets_delete_and_replace_workout.sql` (policy de
+      exclusão em `workout_sets` e função `replace_session_workout`, ver
+      `CHANGELOG.md`)
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie

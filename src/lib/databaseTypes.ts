@@ -243,6 +243,14 @@ export type Database = {
                 }
                 Returns: { plan_id: string; already_imported: boolean }[]
             }
+            replace_session_workout: {
+                Args: {
+                    p_session_id: string
+                    p_plan_id: string
+                    p_snapshot: unknown
+                }
+                Returns: WorkoutSessionRow[]
+            }
         }
     }
 }

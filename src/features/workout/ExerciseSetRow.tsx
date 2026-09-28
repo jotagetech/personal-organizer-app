@@ -45,20 +45,31 @@ export function ExerciseSetRow({
     const [fields, setFields] = useState<SetFieldState>(() => toFieldState(existingSet))
     const [isNoteOpen, setIsNoteOpen] = useState(() => Boolean(existingSet?.note))
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+    const fieldsRef = useRef(fields)
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const latestRequestIdRef = useRef(0)
 
+    function updateFields(nextFields: SetFieldState) {
+        fieldsRef.current = nextFields
+        setFields(nextFields)
+    }
+
     useEffect(() => {
-        setFields(toFieldState(existingSet))
+        updateFields(toFieldState(existingSet))
         setIsNoteOpen(Boolean(existingSet?.note))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [existingSet])
 
     useEffect(() => {
         return () => {
-            if (debounceTimerRef.current) {
-                clearTimeout(debounceTimerRef.current)
+            if (!debounceTimerRef.current) {
+                return
             }
+            clearTimeout(debounceTimerRef.current)
+            debounceTimerRef.current = null
+            void autosave(fieldsRef.current)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     function clearPendingAutosave() {
@@ -108,25 +119,25 @@ export function ExerciseSetRow({
 
     function handleLoadChange(rawValue: string) {
         const nextFields = { ...fields, loadKgText: rawValue }
-        setFields(nextFields)
+        updateFields(nextFields)
         scheduleAutosave(nextFields)
     }
 
     function handleRepsChange(rawValue: string) {
         const nextFields = { ...fields, repsText: rawValue }
-        setFields(nextFields)
+        updateFields(nextFields)
         scheduleAutosave(nextFields)
     }
 
     function handleRirChange(rawValue: string) {
         const nextFields = { ...fields, rirText: rawValue }
-        setFields(nextFields)
+        updateFields(nextFields)
         scheduleAutosave(nextFields)
     }
 
     function handleNoteChange(rawValue: string) {
         const nextFields = { ...fields, noteText: rawValue }
-        setFields(nextFields)
+        updateFields(nextFields)
         scheduleAutosave(nextFields)
     }
 
@@ -168,7 +179,7 @@ export function ExerciseSetRow({
             if (requestId !== latestRequestIdRef.current) {
                 return
             }
-            setFields(confirmedFields)
+            updateFields(confirmedFields)
             setSaveStatus('saved')
             onSaved(savedSet)
             onConfirmed()

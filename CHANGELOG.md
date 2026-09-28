@@ -48,3 +48,19 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   pra sempre cobrir o dia concluído mais recente.
 - Cor de dia concluído na grade de resultados trocada de preto pra verde.
 - Peso corporal e sono não tinham como ser excluídos depois de registrados.
+- "Trocar treino" atualizava o snapshot da sessão mas não apagava as séries
+  antigas no banco (faltava permissão de exclusão em `workout_sets`); elas
+  ficavam escondidas na tela e reapareciam ao recarregar o dia. Corrigido com
+  uma função no banco que atualiza o snapshot e apaga as séries antigas numa
+  única transação.
+- Trocar de data durante uma sessão de treino em andamento reaproveitava o
+  mesmo componente entre datas diferentes, com risco de misturar séries
+  digitadas num dia com a sessão de outro. Cada data agora tem sua própria
+  instância.
+- Falha de rede ao carregar o plano ativo ou a sessão do dia aparecia como
+  "nenhum plano" ou "treino novo" em vez de erro, arriscando refazer registros
+  já existentes. Agora o erro aparece explicitamente, com opção de tentar de
+  novo.
+- Sair de uma série sem tirar o foco do campo (trocando de série ou de data)
+  podia perder até 600ms de digitação por cancelar o autosave pendente; agora
+  esse autosave é enviado em vez de cancelado.

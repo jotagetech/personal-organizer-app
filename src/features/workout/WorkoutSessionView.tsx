@@ -42,6 +42,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     const [workoutChoices, setWorkoutChoices] = useState<Workout[] | null>(null)
     const [position, setPosition] = useState<StepPosition | null>(null)
     const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
+    const [reloadToken, setReloadToken] = useState(0)
+    const [isSwitchingWorkout, setIsSwitchingWorkout] = useState(false)
+    const [switchWorkoutErrorMessage, setSwitchWorkoutErrorMessage] = useState<string | null>(null)
 
     useEffect(() => {
         let isCancelled = false
@@ -94,7 +97,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             isCancelled = true
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sessionDate, plan])
+    }, [sessionDate, plan, reloadToken])
 
     async function applyExistingSession(existingSession: WorkoutSessionRow, sets: WorkoutSetRow[]) {
         const nextSetsByKey = new Map<string, WorkoutSetRow>()
@@ -127,25 +130,40 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     }
 
     async function handleChooseWorkout(workout: Workout) {
-        if (session) {
-            const confirmedDiscard = window.confirm(
-                'Trocar o treino descarta os registros já feitos nesta data. Continuar?',
-            )
-            if (!confirmedDiscard) {
-                return
-            }
-
-            const nextSnapshot = buildWorkoutSnapshot(workout)
-            await replaceSessionWorkout({ sessionId: session.id, planId, snapshot: nextSnapshot })
-            setSnapshot(nextSnapshot)
-            setSession({ ...session, workout_snapshot: nextSnapshot, finished_at: null })
-            setSetsByKey(new Map())
-            setWorkoutChoices(null)
-            setPosition({ exerciseIndex: 0, setIndexInExercise: 0 })
+        if (!session) {
+            startUnsavedWorkout(workout)
             return
         }
 
-        startUnsavedWorkout(workout)
+        const confirmedDiscard = window.confirm(
+            'Trocar o treino descarta os registros já feitos nesta data. Continuar?',
+        )
+        if (!confirmedDiscard) {
+            return
+        }
+
+        const nextSnapshot = buildWorkoutSnapshot(workout)
+        setIsSwitchingWorkout(true)
+        setSwitchWorkoutErrorMessage(null)
+
+        try {
+            const updatedSession = await replaceSessionWorkout({
+                sessionId: session.id,
+                planId,
+                snapshot: nextSnapshot,
+            })
+            setSnapshot(nextSnapshot)
+            setSession(updatedSession)
+            setSetsByKey(new Map())
+            setWorkoutChoices(null)
+            setPosition({ exerciseIndex: 0, setIndexInExercise: 0 })
+        } catch (switchError) {
+            const message =
+                switchError instanceof Error ? switchError.message : 'Falha ao trocar o treino'
+            setSwitchWorkoutErrorMessage(message)
+        } finally {
+            setIsSwitchingWorkout(false)
+        }
     }
 
     function handleRequestSwitchWorkout() {
@@ -200,19 +218,37 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     }
 
     if (loadErrorMessage) {
-        return <div className="error-list">Falha ao carregar treino: {loadErrorMessage}</div>
+        return (
+            <div className="error-list">
+                Falha ao carregar treino: {loadErrorMessage}
+                <button
+                    type="button"
+                    className="secondary-button"
+                    style={{ display: 'block', marginTop: 8 }}
+                    onClick={() => setReloadToken((token) => token + 1)}
+                >
+                    Tentar de novo
+                </button>
+            </div>
+        )
     }
 
     if (workoutChoices) {
         return (
             <div>
                 <p>Escolha o treino para este dia:</p>
+                {switchWorkoutErrorMessage && (
+                    <div className="error-list" style={{ marginBottom: 8 }}>
+                        {switchWorkoutErrorMessage}
+                    </div>
+                )}
                 {workoutChoices.map((workout) => (
                     <button
                         key={workout.id}
                         type="button"
                         className="secondary-button"
                         style={{ display: 'block', width: '100%', marginBottom: 8, textAlign: 'left' }}
+                        disabled={isSwitchingWorkout}
                         onClick={() => handleChooseWorkout(workout)}
                     >
                         {workout.nome}
