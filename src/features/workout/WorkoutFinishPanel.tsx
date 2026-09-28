@@ -6,6 +6,8 @@ import { updateSessionFeeling } from '@/features/workout/api'
 import type { WorkoutSessionRow } from '@/features/workout/types'
 import type { IsoDate } from '@/lib/dateUtils'
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
 type WorkoutFinishPanelProps = {
     session: WorkoutSessionRow
     sessionDate: IsoDate
@@ -14,22 +16,35 @@ type WorkoutFinishPanelProps = {
 
 export function WorkoutFinishPanel({ session, sessionDate, onSessionUpdated }: WorkoutFinishPanelProps) {
     const [feelingNote, setFeelingNote] = useState(session.feeling_note ?? '')
+    const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
 
     async function handleFeelingScaleChange(feelingScale: number) {
-        const updatedSession = await updateSessionFeeling(session.id, feelingScale, feelingNote || null)
-        onSessionUpdated(updatedSession)
+        setSaveStatus('saving')
+        try {
+            const updatedSession = await updateSessionFeeling(session.id, feelingScale, feelingNote || null)
+            onSessionUpdated(updatedSession)
+            setSaveStatus('saved')
+        } catch {
+            setSaveStatus('error')
+        }
     }
 
     async function handleFeelingNoteBlur() {
         if (session.feeling_scale === null) {
             return
         }
-        const updatedSession = await updateSessionFeeling(
-            session.id,
-            session.feeling_scale,
-            feelingNote.trim() === '' ? null : feelingNote.trim(),
-        )
-        onSessionUpdated(updatedSession)
+        setSaveStatus('saving')
+        try {
+            const updatedSession = await updateSessionFeeling(
+                session.id,
+                session.feeling_scale,
+                feelingNote.trim() === '' ? null : feelingNote.trim(),
+            )
+            onSessionUpdated(updatedSession)
+            setSaveStatus('saved')
+        } catch {
+            setSaveStatus('error')
+        }
     }
 
     return (
@@ -55,10 +70,27 @@ export function WorkoutFinishPanel({ session, sessionDate, onSessionUpdated }: W
                         onBlur={handleFeelingNoteBlur}
                     />
                 </div>
+                <SaveStatusLabel status={saveStatus} />
             </div>
             <CardioSection sessionDate={sessionDate} />
         </div>
     )
+}
+
+function SaveStatusLabel({ status }: { status: SaveStatus }) {
+    if (status === 'idle') {
+        return null
+    }
+
+    if (status === 'saving') {
+        return <p className="save-status">Salvando...</p>
+    }
+
+    if (status === 'error') {
+        return <p className="save-status save-status--error">Falha ao salvar. Toque no sentimento de novo.</p>
+    }
+
+    return <p className="save-status">Salvo</p>
 }
 
 function formatSessionDuration(startIso: string, endIso: string): string {

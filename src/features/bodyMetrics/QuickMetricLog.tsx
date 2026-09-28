@@ -95,19 +95,28 @@ export function QuickMetricLog({
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
+                                gap: 8,
                                 fontSize: 13,
                                 color: '#52525b',
                                 padding: '6px 0',
                                 borderTop: '1px solid #e4e4e7',
                             }}
                         >
-                            <span>
+                            <span
+                                style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
                                 {point.entryDate.slice(5)}: {point.value}
                             </span>
                             <button
                                 type="button"
                                 className="secondary-button"
-                                style={{ minHeight: 32, padding: '0 10px', fontSize: 12 }}
+                                style={{ flexShrink: 0, minHeight: 32, padding: '0 10px', fontSize: 12 }}
                                 onClick={() => handleDeleteClick(point.id)}
                             >
                                 Excluir

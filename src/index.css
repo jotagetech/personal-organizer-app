@@ -65,6 +65,17 @@ button, input, select {
     background: #e4e4e7;
 }
 
+.date-header__hidden-date-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
 .date-header .secondary-button {
     flex-shrink: 0;
     min-height: 40px;

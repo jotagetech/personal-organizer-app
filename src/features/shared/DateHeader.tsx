@@ -1,3 +1,5 @@
+import { useRef } from 'react'
+
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { shiftIsoDate, todayInTimezone, weekdayOfIsoDate } from '@/lib/dateUtils'
 import type { Weekday } from '@/lib/workoutPlanSchema'
@@ -14,6 +16,7 @@ const WEEKDAY_ABBREVIATION: Record<Weekday, string> = {
 
 export function DateHeader() {
     const { selectedDate, setSelectedDate } = useSelectedDate()
+    const datePickerInputRef = useRef<HTMLInputElement>(null)
 
     function goToPreviousDay() {
         setSelectedDate(shiftIsoDate(selectedDate, -1))
@@ -34,6 +37,10 @@ export function DateHeader() {
         }
     }
 
+    function openDatePicker() {
+        datePickerInputRef.current?.showPicker?.()
+    }
+
     return (
         <header className="date-header">
             <button type="button" className="icon-button" onClick={goToPreviousDay} aria-label="Dia anterior">
@@ -43,12 +50,22 @@ export function DateHeader() {
             <button type="button" className="icon-button" onClick={goToNextDay} aria-label="Próximo dia">
                 ›
             </button>
-            <input
-                type="date"
+            <button
+                type="button"
                 className="icon-button"
+                onClick={openDatePicker}
+                aria-label="Selecionar data no calendário"
+            >
+                📅
+            </button>
+            <input
+                ref={datePickerInputRef}
+                type="date"
+                className="date-header__hidden-date-input"
                 value={selectedDate}
                 onChange={handleDatePickerChange}
-                aria-label="Selecionar data no calendário"
+                tabIndex={-1}
+                aria-hidden="true"
             />
             <button type="button" className="secondary-button" onClick={goToToday}>
                 Hoje
