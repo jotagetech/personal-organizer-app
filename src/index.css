@@ -388,6 +388,38 @@ button, input, select {
     font-size: 13px;
 }
 
+.daily-totals-card__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.daily-totals-card__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.daily-totals-card__stat strong {
+    font-size: 20px;
+}
+
+.daily-totals-card__stat span {
+    font-size: 12px;
+    color: #71717a;
+}
+
+.daily-totals-card__empty {
+    margin: 0;
+    color: #71717a;
+}
+
+.daily-totals-card__hint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: #71717a;
+}
+
 .undo-bar__button:active {
     background: #e4e4e7;
 }

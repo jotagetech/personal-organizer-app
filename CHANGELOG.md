@@ -7,6 +7,13 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Aba Alimentação reorganizada: um card de total do dia (kcal, proteína,
+  carboidrato e gordura) agora fica sempre visível no topo, mesmo com o dia
+  vazio, no lugar do badge que só aparecia depois do primeiro registro. O
+  formulário de "Adicionar consumo" some atrás de um botão quando já há algo
+  registrado no dia (continua aberto por padrão no primeiro registro) e, uma
+  vez aberto, só fecha com um botão "Fechar" explícito, pra não atrapalhar
+  quem registra várias refeições em sequência.
 - Exclusão de peso corporal, sono, cardio e consumo de alimento agora abre uma
   barra "Desfazer" por alguns segundos em vez de excluir na hora com uma
   confirmação. O item some da tela assim que a exclusão é pedida, mas só é
