@@ -283,6 +283,8 @@ button, input, select {
     border: 1px solid #e4e4e7;
     border-radius: 8px;
     font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: #52525b;
 }
 
 .results-grid__cell--completed {

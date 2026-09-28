@@ -95,7 +95,7 @@ export function ResultsTab() {
                                 className={dayCellClassName(day.inRange, day.completed)}
                                 title={day.date}
                             >
-                                {day.inRange && day.completed ? '✓' : ''}
+                                {dayOfMonth(day.date)}
                             </span>
                         ))}
                     </div>
@@ -143,6 +143,13 @@ export function ResultsTab() {
             </div>
         </div>
     )
+}
+
+function dayOfMonth(isoDate: string): string {
+    const day = isoDate.slice(8, 10)
+    const dayWithoutLeadingZero = day.replace(/^0/, '')
+
+    return dayWithoutLeadingZero
 }
 
 function dayCellClassName(inRange: boolean, completed: boolean): string {
