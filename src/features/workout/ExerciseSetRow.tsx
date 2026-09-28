@@ -8,6 +8,8 @@ const SAVE_DEBOUNCE_MS = 600
 type SetFieldState = {
     loadKgText: string
     repsText: string
+    rirText: string
+    noteText: string
     completedAt: string | null
 }
 
@@ -41,12 +43,14 @@ export function ExerciseSetRow({
     onConfirmed,
 }: ExerciseSetRowProps) {
     const [fields, setFields] = useState<SetFieldState>(() => toFieldState(existingSet))
+    const [isNoteOpen, setIsNoteOpen] = useState(() => Boolean(existingSet?.note))
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const latestRequestIdRef = useRef(0)
 
     useEffect(() => {
         setFields(toFieldState(existingSet))
+        setIsNoteOpen(Boolean(existingSet?.note))
     }, [existingSet])
 
     useEffect(() => {
@@ -77,6 +81,8 @@ export function ExerciseSetRow({
                 setIndex,
                 loadKg: parsedValues.loadKg,
                 reps: parsedValues.reps,
+                rir: parsedValues.rir,
+                note: parsedValues.note,
                 completedAt: nextFields.completedAt,
             })
 
@@ -112,6 +118,18 @@ export function ExerciseSetRow({
         scheduleAutosave(nextFields)
     }
 
+    function handleRirChange(rawValue: string) {
+        const nextFields = { ...fields, rirText: rawValue }
+        setFields(nextFields)
+        scheduleAutosave(nextFields)
+    }
+
+    function handleNoteChange(rawValue: string) {
+        const nextFields = { ...fields, noteText: rawValue }
+        setFields(nextFields)
+        scheduleAutosave(nextFields)
+    }
+
     function handleFieldBlur() {
         clearPendingAutosave()
         void autosave(fields)
@@ -142,6 +160,8 @@ export function ExerciseSetRow({
                 setIndex,
                 loadKg: parsedValues.loadKg,
                 reps: parsedValues.reps,
+                rir: parsedValues.rir,
+                note: parsedValues.note,
                 completedAt: confirmedFields.completedAt,
             })
 
@@ -192,7 +212,39 @@ export function ExerciseSetRow({
                         placeholder="ex: 10"
                     />
                 </div>
+                <div className="field" style={{ width: 64, flexShrink: 0, marginBottom: 0 }}>
+                    <label>RIR</label>
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        value={fields.rirText}
+                        onChange={(event) => handleRirChange(event.target.value)}
+                        onBlur={handleFieldBlur}
+                        placeholder="0-10"
+                    />
+                </div>
             </div>
+            {isNoteOpen ? (
+                <div className="field" style={{ marginTop: 8, marginBottom: 0 }}>
+                    <label>Comentário (dor, desconforto, observação)</label>
+                    <textarea
+                        rows={2}
+                        value={fields.noteText}
+                        onChange={(event) => handleNoteChange(event.target.value)}
+                        onBlur={handleFieldBlur}
+                        placeholder="ex: senti o ombro puxar na última repetição"
+                    />
+                </div>
+            ) : (
+                <button
+                    type="button"
+                    className="secondary-button"
+                    style={{ marginTop: 8 }}
+                    onClick={() => setIsNoteOpen(true)}
+                >
+                    💬 Comentário
+                </button>
+            )}
             <button
                 type="button"
                 className="primary-button"
@@ -227,20 +279,31 @@ function toFieldState(existingSet: WorkoutSetRow | undefined): SetFieldState {
     const fieldState: SetFieldState = {
         loadKgText: existingSet?.load_kg != null ? String(existingSet.load_kg) : '',
         repsText: existingSet?.reps != null ? String(existingSet.reps) : '',
+        rirText: existingSet?.rir != null ? String(existingSet.rir) : '',
+        noteText: existingSet?.note ?? '',
         completedAt: existingSet?.completed_at ?? null,
     }
 
     return fieldState
 }
 
-function parseFieldsForSave(fields: SetFieldState): { loadKg: number | null; reps: number | null } {
+function parseFieldsForSave(fields: SetFieldState): {
+    loadKg: number | null
+    reps: number | null
+    rir: number | null
+    note: string | null
+} {
     const normalizedLoadText = fields.loadKgText.trim().replace(',', '.')
     const normalizedRepsText = fields.repsText.trim()
+    const normalizedRirText = fields.rirText.trim()
+    const normalizedNoteText = fields.noteText.trim()
 
     const loadKg = normalizedLoadText === '' ? null : Number(normalizedLoadText)
     const reps = normalizedRepsText === '' ? null : Number(normalizedRepsText)
+    const rir = normalizedRirText === '' ? null : Number(normalizedRirText)
+    const note = normalizedNoteText === '' ? null : normalizedNoteText
 
-    return { loadKg, reps }
+    return { loadKg, reps, rir, note }
 }
 
 function isValidNonNegativeNumber(text: string): boolean {

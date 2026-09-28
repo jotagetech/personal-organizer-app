@@ -148,6 +148,8 @@ export type SetInput = {
     setIndex: number
     loadKg: number | null
     reps: number | null
+    rir: number | null
+    note: string | null
     completedAt: string | null
 }
 
@@ -161,6 +163,8 @@ export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
                 set_index: input.setIndex,
                 load_kg: input.loadKg,
                 reps: input.reps,
+                rir: input.rir,
+                note: input.note,
                 completed_at: input.completedAt,
             },
             { onConflict: 'session_id,exercise_key,set_index' },

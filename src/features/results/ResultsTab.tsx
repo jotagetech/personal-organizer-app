@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
 
+import {
+    listRecentBodyWeightEntries,
+    listRecentSleepEntries,
+    upsertBodyWeightEntry,
+    upsertSleepEntry,
+} from '@/features/bodyMetrics/api'
+import { QuickMetricLog } from '@/features/bodyMetrics/QuickMetricLog'
 import { getCurrentCycle } from '@/features/cycle/api'
 import { listFinishedSessionDates } from '@/features/results/api'
 import { buildWeeklyCompletionGrid, type WeekRow } from '@/features/results/resultsGrid'
@@ -86,6 +93,42 @@ export function ResultsTab() {
                         ))}
                     </div>
                 ))}
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                    <QuickMetricLog
+                        title="Peso corporal"
+                        unitLabel="kg"
+                        placeholder="ex: 78.5"
+                        listRecent={async () =>
+                            (await listRecentBodyWeightEntries()).map((entry) => ({
+                                entryDate: entry.entry_date,
+                                value: entry.weight_kg,
+                            }))
+                        }
+                        save={async (entryDate, value) => {
+                            const saved = await upsertBodyWeightEntry(entryDate, value)
+                            return { entryDate: saved.entry_date, value: saved.weight_kg }
+                        }}
+                    />
+                </div>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                    <QuickMetricLog
+                        title="Sono (horas)"
+                        unitLabel="horas"
+                        placeholder="ex: 7.5"
+                        listRecent={async () =>
+                            (await listRecentSleepEntries()).map((entry) => ({
+                                entryDate: entry.entry_date,
+                                value: entry.hours,
+                            }))
+                        }
+                        save={async (entryDate, value) => {
+                            const saved = await upsertSleepEntry(entryDate, value)
+                            return { entryDate: saved.entry_date, value: saved.hours }
+                        }}
+                    />
+                </div>
             </div>
         </div>
     )

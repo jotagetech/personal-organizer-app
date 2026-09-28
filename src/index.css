@@ -119,11 +119,13 @@ button, input, select {
     color: #52525b;
 }
 
-.field input, .field select {
+.field input, .field select, .field textarea {
     min-height: 44px;
     padding: 8px 10px;
     border: 1px solid #d4d4d8;
     border-radius: 8px;
+    font-family: inherit;
+    resize: vertical;
 }
 
 .primary-button {

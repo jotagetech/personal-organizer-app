@@ -35,7 +35,12 @@ export function WorkoutFinishPanel({ session, sessionDate, onSessionUpdated }: W
     return (
         <div>
             <div className="card">
-                <p style={{ marginTop: 0, fontWeight: 600 }}>Treino concluído</p>
+                <p style={{ marginTop: 0, marginBottom: 4, fontWeight: 600 }}>Treino concluído</p>
+                {session.finished_at && (
+                    <p style={{ marginTop: 0, fontSize: 13, color: '#52525b' }}>
+                        Duração: {formatSessionDuration(session.created_at, session.finished_at)}
+                    </p>
+                )}
                 <div className="field">
                     <label>Como foi o treino?</label>
                     <FeelingScaleInput value={session.feeling_scale} onChange={handleFeelingScaleChange} />
@@ -54,4 +59,15 @@ export function WorkoutFinishPanel({ session, sessionDate, onSessionUpdated }: W
             <CardioSection sessionDate={sessionDate} />
         </div>
     )
+}
+
+function formatSessionDuration(startIso: string, endIso: string): string {
+    const totalMinutes = Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000))
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+
+    if (hours === 0) {
+        return `${minutes} min`
+    }
+    return `${hours}h ${minutes}min`
 }

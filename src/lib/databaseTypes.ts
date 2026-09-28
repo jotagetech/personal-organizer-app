@@ -57,6 +57,8 @@ type WorkoutSetRow = {
     set_index: number
     load_kg: number | null
     reps: number | null
+    rir: number | null
+    note: string | null
     completed_at: string | null
     updated_at: string
 }
@@ -101,6 +103,22 @@ type CardioEntryRow = {
     updated_at: string
 }
 
+type BodyWeightEntryRow = {
+    id: string
+    user_id: string
+    entry_date: string
+    weight_kg: number
+    created_at: string
+}
+
+type SleepEntryRow = {
+    id: string
+    user_id: string
+    entry_date: string
+    hours: number
+    created_at: string
+}
+
 type TableDefinition<Row, InsertOverrides extends object, UpdateOverrides extends object> = {
     Row: Row
     Insert: Omit<Row, keyof InsertOverrides> & InsertOverrides
@@ -135,7 +153,7 @@ export type Database = {
             >
             workout_sets: TableDefinition<
                 WorkoutSetRow,
-                { id?: string; updated_at?: string },
+                { id?: string; updated_at?: string; rir?: number | null; note?: string | null },
                 Record<never, never>
             >
             food_entries: TableDefinition<
@@ -155,6 +173,16 @@ export type Database = {
             >
             workout_cycles: TableDefinition<
                 WorkoutCycleRow,
+                { id?: string; created_at?: string },
+                Record<never, never>
+            >
+            body_weight_entries: TableDefinition<
+                BodyWeightEntryRow,
+                { id?: string; created_at?: string },
+                Record<never, never>
+            >
+            sleep_entries: TableDefinition<
+                SleepEntryRow,
                 { id?: string; created_at?: string },
                 Record<never, never>
             >

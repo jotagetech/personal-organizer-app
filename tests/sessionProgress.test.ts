@@ -42,6 +42,8 @@ function completedSet(exerciseKey: string, setIndex: number): WorkoutSetRow {
         set_index: setIndex,
         load_kg: 10,
         reps: 10,
+        rir: null,
+        note: null,
         completed_at: '2026-09-27T12:00:00.000Z',
         updated_at: '2026-09-27T12:00:00.000Z',
     }
