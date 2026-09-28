@@ -5,6 +5,16 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ## 2026-09-28
 
+### Corrigido
+
+- "Criar rotina sugerida" duplicava itens quando nenhum item se aplicava ao
+  dia selecionado (ex: um dia antes de `active_from`, ou fora dos dias da
+  semana configurados): o botão aparecia de novo mesmo já existindo itens
+  ativos, e cada clique inseria mais 5 itens. O critério agora é a
+  existência de item ATIVO (independente do dia), não de linha aplicável ao
+  dia selecionado; um dia sem nada aplicável mostra só "Nada de rotina pra
+  este dia.", sem o botão.
+
 ### Adicionado
 
 - Aba Alimentação reorganizada: um card de total do dia (kcal, proteína,
@@ -122,6 +132,12 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   dia pra abrir a aba certa a partir de um atalho.
 - Aba padrão de abertura do app trocou de Treino pra Rotina, agora a
   primeira do menu inferior.
+- Tarefa avulsa da aba Rotina deixa de ser sempre "só hoje": ganhou um campo
+  de data, com valor padrão a data selecionada mas editável, pra criar de uma
+  vez uma tarefa pra uma data futura (ou passada) específica sem precisar
+  navegar até lá primeiro. Criar pra uma data diferente da selecionada não
+  recarrega a lista visível (ela não mudou); mostra uma confirmação local em
+  vez disso.
 
 ### Corrigido
 

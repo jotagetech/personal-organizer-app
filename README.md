@@ -69,7 +69,8 @@ npm run dev
   secundária "Marcar feito sem registrar" pra quem quer só riscar o item sem
   abrir o registro de verdade (visual diferente da marcação automática, pra
   não esconder que faltou o registro). Itens sem vínculo são marcados
-  manualmente, e a tela aceita tarefas avulsas de um dia só. O menu "⋮" abre
+  manualmente, e a tela aceita tarefas avulsas para uma data escolhida (não
+  só o dia selecionado no momento). O menu "⋮" abre
   o gerenciamento dos itens recorrentes (criar, editar dias da semana e
   vínculo, arquivar).
 - **Treino**: importa plano de treino via JSON, sugere o treino do dia,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveRoutineForDate } from '@/features/routine/resolveRoutine'
+import { deriveRoutineEmptyState, resolveRoutineForDate } from '@/features/routine/resolveRoutine'
 import type { RoutineDayEntryRow, RoutineItemRow } from '@/features/routine/types'
 import type { DaySignals } from '@/features/shared/daySignals'
 
@@ -125,5 +125,45 @@ describe('resolveRoutineForDate', () => {
         )
 
         expect(rows.map((row) => row.title)).toEqual(['Academia', 'Café da manhã', 'Tarefa avulsa'])
+    })
+})
+
+describe('deriveRoutineEmptyState', () => {
+    it('oferece a rotina sugerida quando não há nenhum item', () => {
+        expect(deriveRoutineEmptyState([], [])).toBe('offer_suggested')
+    })
+
+    it('oferece a rotina sugerida quando todos os itens estão arquivados', () => {
+        const items = [buildItem({ archived_on: REFERENCE_DATE })]
+
+        expect(deriveRoutineEmptyState(items, [])).toBe('offer_suggested')
+    })
+
+    it('oferece a rotina sugerida mesmo com tarefa avulsa no dia, se não há item ativo', () => {
+        const items = [buildItem({ archived_on: REFERENCE_DATE })]
+        const adhocRow = { ...buildEntry({ id: 'adhoc-1' }) }
+        const rows = resolveRoutineForDate(REFERENCE_DATE, items, [adhocRow], buildSignals())
+
+        expect(deriveRoutineEmptyState(items, rows)).toBe('offer_suggested')
+        expect(rows).toHaveLength(1)
+    })
+
+    it('mostra "nada pra este dia" quando há item ativo mas nenhum se aplica hoje (o bug original)', () => {
+        const items = [buildItem({ active_from: '2026-10-01' })]
+
+        expect(deriveRoutineEmptyState(items, [])).toBe('nothing_for_day')
+    })
+
+    it('mostra "nada pra este dia" quando o item ativo não cai no dia da semana', () => {
+        const items = [buildItem({ weekdays: ['sabado', 'domingo'] })]
+
+        expect(deriveRoutineEmptyState(items, [])).toBe('nothing_for_day')
+    })
+
+    it('não mostra nenhum estado vazio quando há linhas pra este dia', () => {
+        const items = [buildItem()]
+        const rows = resolveRoutineForDate(REFERENCE_DATE, items, [], buildSignals())
+
+        expect(deriveRoutineEmptyState(items, rows)).toBe('none')
     })
 })

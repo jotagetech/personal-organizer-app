@@ -98,6 +98,23 @@ function resolveAdhocRow(entry: RoutineDayEntryRow): RoutineRow {
     }
 }
 
+export type RoutineEmptyState = 'offer_suggested' | 'nothing_for_day' | 'none'
+
+// Lógica pura: decide qual estado vazio mostrar (se algum). "offer_suggested"
+// olha só pra existência de item ATIVO, nunca pra aplicabilidade num dia
+// específico, pra não reoferecer "Criar rotina sugerida" (e duplicar itens)
+// só porque nenhum item se aplica à data selecionada.
+export function deriveRoutineEmptyState(items: RoutineItemRow[], rows: RoutineRow[]): RoutineEmptyState {
+    const hasActiveItem = items.some((item) => item.archived_on === null)
+    if (!hasActiveItem) {
+        return 'offer_suggested'
+    }
+    if (rows.length === 0) {
+        return 'nothing_for_day'
+    }
+    return 'none'
+}
+
 // Lógica pura (sem chamada de rede): decide o que a tela de rotina mostra
 // pra uma data, cruzando os templates recorrentes com os registros do dia e
 // com os sinais já calculados pelas outras abas, sem consultar nada de novo.

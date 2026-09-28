@@ -162,15 +162,23 @@ export async function deleteRoutineDayEntry(dayEntryId: string): Promise<void> {
     }
 }
 
-export async function createAdhocRoutineEntry(
-    entryDate: IsoDate,
-    title: string,
-    sortOrder: number,
-): Promise<RoutineDayEntryRow> {
+// sort_order é calculado a partir da contagem de registros já existentes na
+// data de destino (não na data selecionada na tela), já que uma tarefa avulsa
+// pode ser criada pra uma data diferente da que está aberta no momento.
+export async function createAdhocRoutineEntry(entryDate: IsoDate, title: string): Promise<RoutineDayEntryRow> {
     const { data: authData } = await supabase.auth.getUser()
     const currentUserId = authData.user?.id
     if (!currentUserId) {
         throw new Error('Usuário não autenticado')
+    }
+
+    const { count, error: countError } = await supabase
+        .from('routine_day_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('entry_date', entryDate)
+
+    if (countError) {
+        throw new Error(countError.message)
     }
 
     const { data, error } = await supabase
@@ -181,7 +189,7 @@ export async function createAdhocRoutineEntry(
             routine_item_id: null,
             title,
             completed_at: null,
-            sort_order: sortOrder,
+            sort_order: count ?? 0,
         })
         .select('*')
         .single()

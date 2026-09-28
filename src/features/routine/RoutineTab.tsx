@@ -14,11 +14,11 @@ import {
     unmarkAdhocRoutineEntryDone,
 } from '@/features/routine/api'
 import { RoutineItemsEditor } from '@/features/routine/RoutineItemsEditor'
-import { resolveRoutineForDate } from '@/features/routine/resolveRoutine'
+import { deriveRoutineEmptyState, resolveRoutineForDate } from '@/features/routine/resolveRoutine'
 import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
 import type { RoutineDayEntryRow, RoutineItemRow, RoutineRow, RoutineRowState } from '@/features/routine/types'
 import { fetchDaySignals, type DaySignals } from '@/features/shared/daySignals'
-import type { IsoDate } from '@/lib/dateUtils'
+import { isValidIsoDate, type IsoDate } from '@/lib/dateUtils'
 
 export function RoutineTab() {
     const { selectedDate } = useSelectedDate()
@@ -73,6 +73,7 @@ export function RoutineTab() {
         () => (signals ? resolveRoutineForDate(selectedDate, items, dayEntries, signals) : []),
         [selectedDate, items, dayEntries, signals],
     )
+    const emptyState = useMemo(() => deriveRoutineEmptyState(items, rows), [items, rows])
 
     async function handleMarkDone(routineItemId: string) {
         await markRoutineItemDone(routineItemId, selectedDate)
@@ -122,6 +123,7 @@ export function RoutineTab() {
         try {
             await seedSuggestedRoutineItems()
             await reloadRoutine()
+            refreshDayStatus()
         } catch (createError) {
             const message = createError instanceof Error ? createError.message : 'Falha ao criar rotina sugerida'
             setErrorMessage(message)
@@ -165,7 +167,7 @@ export function RoutineTab() {
             </div>
             {isLoading && <p>Carregando...</p>}
             {errorMessage && <div className="error-list">{errorMessage}</div>}
-            {!isLoading && !errorMessage && rows.length === 0 && (
+            {!isLoading && !errorMessage && emptyState === 'offer_suggested' && (
                 <div className="card">
                     <p style={{ marginTop: 0 }}>Nenhum item de rotina criado ainda.</p>
                     <button
@@ -176,6 +178,11 @@ export function RoutineTab() {
                     >
                         {isCreatingSuggested ? 'Criando...' : 'Criar rotina sugerida'}
                     </button>
+                </div>
+            )}
+            {!isLoading && !errorMessage && emptyState === 'nothing_for_day' && (
+                <div className="card">
+                    <p style={{ margin: 0 }}>Nada de rotina pra este dia.</p>
                 </div>
             )}
             {!isLoading && !errorMessage && rows.length > 0 && (
@@ -191,9 +198,7 @@ export function RoutineTab() {
                     ))}
                 </div>
             )}
-            {!isLoading && !errorMessage && (
-                <NewAdhocTaskField entryDate={selectedDate} rowCount={rows.length} onCreated={reloadRoutine} />
-            )}
+            {!isLoading && !errorMessage && <NewAdhocTaskField entryDate={selectedDate} onCreated={reloadRoutine} />}
         </div>
     )
 }
@@ -265,14 +270,15 @@ function routineCheckClassName(state: RoutineRowState): string {
 
 type NewAdhocTaskFieldProps = {
     entryDate: IsoDate
-    rowCount: number
     onCreated: () => Promise<void>
 }
 
-function NewAdhocTaskField({ entryDate, rowCount, onCreated }: NewAdhocTaskFieldProps) {
+function NewAdhocTaskField({ entryDate, onCreated }: NewAdhocTaskFieldProps) {
     const [title, setTitle] = useState('')
+    const [targetDate, setTargetDate] = useState<string>(entryDate)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
+    const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null)
 
     async function handleSubmit(event: React.FormEvent) {
         event.preventDefault()
@@ -281,13 +287,24 @@ function NewAdhocTaskField({ entryDate, rowCount, onCreated }: NewAdhocTaskField
             setErrorMessage('Informe a tarefa.')
             return
         }
+        if (!isValidIsoDate(targetDate)) {
+            setErrorMessage('Informe a data.')
+            return
+        }
 
         setErrorMessage(null)
+        setConfirmationMessage(null)
         setIsSubmitting(true)
         try {
-            await createAdhocRoutineEntry(entryDate, trimmedTitle, rowCount)
-            await onCreated()
+            await createAdhocRoutineEntry(targetDate, trimmedTitle)
             setTitle('')
+            if (targetDate === entryDate) {
+                await onCreated()
+            } else {
+                // Data diferente da selecionada na tela: a lista visível não
+                // muda, então uma confirmação local substitui o reload.
+                setConfirmationMessage(`Tarefa adicionada para ${formatDayMonthLabel(targetDate)}.`)
+            }
         } catch (submitError) {
             const message = submitError instanceof Error ? submitError.message : 'Falha ao criar tarefa'
             setErrorMessage(message)
@@ -299,14 +316,25 @@ function NewAdhocTaskField({ entryDate, rowCount, onCreated }: NewAdhocTaskField
     return (
         <form onSubmit={handleSubmit}>
             {errorMessage && <div className="error-list">{errorMessage}</div>}
-            <div style={{ display: 'flex', gap: 8 }}>
+            {confirmationMessage && (
+                <p style={{ fontSize: 13, color: '#52525b', margin: '0 0 8px' }}>{confirmationMessage}</p>
+            )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <input
                     type="text"
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
-                    placeholder="+ Tarefa só hoje"
-                    aria-label="Nova tarefa só de hoje"
+                    placeholder="+ Nova tarefa avulsa"
+                    aria-label="Nova tarefa avulsa"
                     className="routine-adhoc-input"
+                />
+                <input
+                    type="date"
+                    value={targetDate}
+                    onChange={(event) => setTargetDate(event.target.value)}
+                    aria-label="Data da tarefa"
+                    className="routine-adhoc-input"
+                    style={{ flex: '0 0 auto' }}
                 />
                 <button type="submit" className="secondary-button" disabled={isSubmitting}>
                     {isSubmitting ? 'Adicionando...' : 'Adicionar'}
@@ -314,4 +342,9 @@ function NewAdhocTaskField({ entryDate, rowCount, onCreated }: NewAdhocTaskField
             </div>
         </form>
     )
+}
+
+function formatDayMonthLabel(isoDate: IsoDate): string {
+    const [, month, day] = isoDate.split('-')
+    return `${day}/${month}`
 }
