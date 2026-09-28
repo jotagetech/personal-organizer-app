@@ -15,6 +15,7 @@ import {
 } from '@/features/routine/api'
 import { RoutineItemsEditor } from '@/features/routine/RoutineItemsEditor'
 import { deriveRoutineEmptyState, resolveRoutineForDate } from '@/features/routine/resolveRoutine'
+import { deriveRoutineRowActions, type RoutineRowActions, type RoutineRowRemoval } from '@/features/routine/routineRowActions'
 import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
 import type { RoutineDayEntryRow, RoutineItemRow, RoutineRow, RoutineRowState } from '@/features/routine/types'
 import { fetchDaySignals, type DaySignals } from '@/features/shared/daySignals'
@@ -30,8 +31,9 @@ export function RoutineTab() {
     const [isLoading, setIsLoading] = useState(true)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
-    const [isEditorOpen, setIsEditorOpen] = useState(false)
+    const [editorTarget, setEditorTarget] = useState<{ initialEditingItemId: string | null } | null>(null)
     const [isCreatingSuggested, setIsCreatingSuggested] = useState(false)
+    const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
 
     async function reloadRoutine() {
@@ -74,47 +76,47 @@ export function RoutineTab() {
         [selectedDate, items, dayEntries, signals],
     )
     const emptyState = useMemo(() => deriveRoutineEmptyState(items, rows), [items, rows])
+    const activeItemIds = useMemo(
+        () => new Set(items.filter((item) => item.archived_on === null).map((item) => item.id)),
+        [items],
+    )
+
+    async function runRoutineAction(action: () => Promise<unknown>) {
+        setActionErrorMessage(null)
+        try {
+            await action()
+            await reloadRoutine()
+            refreshDayStatus()
+        } catch (actionError) {
+            const message = actionError instanceof Error ? actionError.message : 'Falha ao atualizar a rotina'
+            setActionErrorMessage(message)
+            throw actionError
+        }
+    }
 
     async function handleMarkDone(routineItemId: string) {
-        await markRoutineItemDone(routineItemId, selectedDate)
-        await reloadRoutine()
-        refreshDayStatus()
+        await runRoutineAction(() => markRoutineItemDone(routineItemId, selectedDate))
     }
 
-    async function handleMarkAdhocDone(dayEntryId: string) {
-        await markAdhocRoutineEntryDone(dayEntryId)
-        await reloadRoutine()
-        refreshDayStatus()
+    async function handleConfirmDone(row: RoutineRow) {
+        if (row.source === 'adhoc' && row.dayEntryId) {
+            await runRoutineAction(() => markAdhocRoutineEntryDone(row.dayEntryId!))
+            return
+        }
+        if (row.routineItemId) {
+            await handleMarkDone(row.routineItemId)
+        }
     }
 
-    async function handleUnmark(row: RoutineRow) {
-        if (!row.dayEntryId) {
+    async function handleRemove(row: RoutineRow, removal: RoutineRowRemoval) {
+        if (!row.dayEntryId || !removal) {
             return
         }
-        if (row.source === 'adhoc') {
-            await unmarkAdhocRoutineEntryDone(row.dayEntryId)
-        } else {
-            await deleteRoutineDayEntry(row.dayEntryId)
-        }
-        await reloadRoutine()
-        refreshDayStatus()
-    }
-
-    function handleCheckboxTap(row: RoutineRow) {
-        if (row.state === 'pending' && row.source === 'manual' && row.routineItemId) {
-            void handleMarkDone(row.routineItemId)
-            return
-        }
-        if (row.state === 'pending' && row.source === 'adhoc' && row.dayEntryId) {
-            void handleMarkAdhocDone(row.dayEntryId)
-            return
-        }
-        // Concluído só pelo sinal, sem marcação manual pra remover: o
-        // checkbox nem chega a ficar tocável nesse caso (ver isTappable em
-        // RoutineRowView), então esse branch só roda com dayEntryId presente.
-        if (row.dayEntryId) {
-            void handleUnmark(row)
-        }
+        await runRoutineAction(() =>
+            removal === 'unmark_adhoc'
+                ? unmarkAdhocRoutineEntryDone(row.dayEntryId!)
+                : deleteRoutineDayEntry(row.dayEntryId!),
+        )
     }
 
     async function handleCreateSuggested() {
@@ -132,8 +134,15 @@ export function RoutineTab() {
         }
     }
 
-    if (isEditorOpen) {
-        return <RoutineItemsEditor items={items} onClose={() => setIsEditorOpen(false)} onChanged={reloadRoutine} />
+    if (editorTarget) {
+        return (
+            <RoutineItemsEditor
+                items={items}
+                initialEditingItemId={editorTarget.initialEditingItemId}
+                onClose={() => setEditorTarget(null)}
+                onChanged={reloadRoutine}
+            />
+        )
     }
 
     return (
@@ -155,7 +164,7 @@ export function RoutineTab() {
                                 type="button"
                                 className="overflow-menu__item"
                                 onClick={() => {
-                                    setIsEditorOpen(true)
+                                    setEditorTarget({ initialEditingItemId: null })
                                     setIsMenuOpen(false)
                                 }}
                             >
@@ -185,15 +194,19 @@ export function RoutineTab() {
                     <p style={{ margin: 0 }}>Nada de rotina pra este dia.</p>
                 </div>
             )}
+            {actionErrorMessage && <div className="error-list">{actionErrorMessage}</div>}
             {!isLoading && !errorMessage && rows.length > 0 && (
                 <div className="card">
                     {rows.map((row) => (
                         <RoutineRowView
-                            key={row.id}
+                            key={`${selectedDate}:${row.id}`}
                             row={row}
-                            onCheckboxTap={() => handleCheckboxTap(row)}
+                            actions={deriveRoutineRowActions(row, activeItemIds)}
                             onNavigate={() => row.linkKind && goToTab(ROUTINE_LINK_KIND_TARGET_TAB[row.linkKind])}
                             onMarkWithoutRegistering={() => row.routineItemId && void handleMarkDone(row.routineItemId)}
+                            onConfirmDone={() => handleConfirmDone(row)}
+                            onEdit={() => setEditorTarget({ initialEditingItemId: row.routineItemId })}
+                            onRemove={(removal) => handleRemove(row, removal)}
                         />
                     ))}
                 </div>
@@ -205,13 +218,27 @@ export function RoutineTab() {
 
 type RoutineRowViewProps = {
     row: RoutineRow
-    onCheckboxTap: () => void
+    actions: RoutineRowActions
     onNavigate: () => void
     onMarkWithoutRegistering: () => void
+    onConfirmDone: () => Promise<void>
+    onEdit: () => void
+    onRemove: (removal: RoutineRowRemoval) => Promise<void>
 }
 
-function RoutineRowView({ row, onCheckboxTap, onNavigate, onMarkWithoutRegistering }: RoutineRowViewProps) {
-    if (row.source === 'linked' && row.state === 'pending') {
+function RoutineRowView({
+    row,
+    actions,
+    onNavigate,
+    onMarkWithoutRegistering,
+    onConfirmDone,
+    onEdit,
+    onRemove,
+}: RoutineRowViewProps) {
+    const [isConfirming, setIsConfirming] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    if (actions.primary === 'linked_register') {
         return (
             <div className="routine-row">
                 <span className="routine-row__title">{row.title}</span>
@@ -231,15 +258,56 @@ function RoutineRowView({ row, onCheckboxTap, onNavigate, onMarkWithoutRegisteri
         )
     }
 
+    async function handleConfirm() {
+        setIsSubmitting(true)
+        try {
+            await onConfirmDone()
+        } finally {
+            setIsSubmitting(false)
+            setIsConfirming(false)
+        }
+    }
+
+    async function handleRemoveClick() {
+        setIsSubmitting(true)
+        try {
+            await onRemove(actions.removal)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    if (actions.primary === 'confirm_done' && isConfirming) {
+        return (
+            <div className="routine-row">
+                <span className="routine-row__title">Confirmar conclusão de {row.title}?</span>
+                <div className="routine-row__linked-actions">
+                    <button type="button" className="primary-button" disabled={isSubmitting} onClick={handleConfirm}>
+                        Confirmar
+                    </button>
+                    <button
+                        type="button"
+                        className="routine-row__secondary-action"
+                        disabled={isSubmitting}
+                        onClick={() => setIsConfirming(false)}
+                    >
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
     const isDone = row.state === 'done' || row.state === 'done_manual_override'
-    const isTappable = row.state === 'pending' || row.dayEntryId !== null
+    const isTappable = actions.primary === 'confirm_done'
+    const hasRowActions = actions.canEdit || actions.removal !== null
 
     return (
         <div className="routine-row">
             <button
                 type="button"
                 className="routine-row__toggle"
-                onClick={isTappable ? onCheckboxTap : undefined}
+                onClick={isTappable ? () => setIsConfirming(true) : undefined}
                 disabled={!isTappable}
                 aria-pressed={isDone}
             >
@@ -250,6 +318,26 @@ function RoutineRowView({ row, onCheckboxTap, onNavigate, onMarkWithoutRegisteri
                     {row.title}
                 </span>
             </button>
+            {hasRowActions && (
+                <div className="routine-row__linked-actions">
+                    {actions.canEdit && (
+                        <button type="button" className="routine-row__secondary-action" onClick={onEdit}>
+                            Editar
+                        </button>
+                    )}
+                    {actions.removal !== null && (
+                        <button
+                            type="button"
+                            className="routine-row__secondary-action"
+                            disabled={isSubmitting}
+                            aria-label={actions.removal === 'unmark_adhoc' ? 'Remover conclusão' : 'Remover'}
+                            onClick={handleRemoveClick}
+                        >
+                            Remover
+                        </button>
+                    )}
+                </div>
+            )}
             {row.state === 'done_manual_override' && (
                 <p className="routine-row__hint">Marcado sem registro na aba de origem.</p>
             )}

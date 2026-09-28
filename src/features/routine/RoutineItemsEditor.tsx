@@ -12,12 +12,13 @@ const NO_LINK_OPTION_VALUE = 'nenhum'
 
 type RoutineItemsEditorProps = {
     items: RoutineItemRow[]
+    initialEditingItemId?: string | null
     onClose: () => void
     onChanged: () => Promise<void>
 }
 
-export function RoutineItemsEditor({ items, onClose, onChanged }: RoutineItemsEditorProps) {
-    const [editingItemId, setEditingItemId] = useState<string | null>(null)
+export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onChanged }: RoutineItemsEditorProps) {
+    const [editingItemId, setEditingItemId] = useState<string | null>(initialEditingItemId ?? null)
     const [isCreating, setIsCreating] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
 

@@ -138,6 +138,16 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   navegar até lá primeiro. Criar pra uma data diferente da selecionada não
   recarrega a lista visível (ela não mudou); mostra uma confirmação local em
   vez disso.
+- Tocar num item de rotina manual ou avulso ainda pendente não grava mais na
+  hora: mostra uma confirmação inline ("Confirmar conclusão de X?") antes de
+  marcar concluído. Itens vinculados pendentes continuam com as mesmas duas
+  ações de sempre ("Registrar agora"/"Marcar feito sem registrar").
+- Desmarcar um item de rotina já concluído tocando de novo deixou de existir.
+  Um item concluído agora mostra "Editar" (atalho direto pra tela de
+  gerenciamento, já aberta editando aquele item específico, quando o
+  template por trás ainda está ativo) e/ou "Remover" (desfaz a marcação,
+  quando há uma marcação de fato por trás do estado concluído). Uma falha ao
+  confirmar, editar ou remover aparece acima da lista sem escondê-la.
 
 ### Corrigido
 
