@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { useUndoableActions } from '@/contexts/UndoableActionContext'
 import { FoodEntryForm } from '@/features/food/FoodEntryForm'
 import {
     MEAL_CATEGORIES,
@@ -26,16 +27,36 @@ type FoodEntryListProps = {
 }
 
 export function FoodEntryList({ entryDate, entries, onUpdate, onDelete }: FoodEntryListProps) {
+    const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
+    const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null)
 
-    if (entries.length === 0) {
-        return <p style={{ color: '#71717a' }}>Nenhum consumo registrado neste dia.</p>
+    const visibleEntries = entries.filter((entry) => !isPendingDeletion(entry.id))
+
+    function handleDeleteClick(entry: FoodEntryRow) {
+        setDeleteErrorMessage(null)
+        scheduleDeletion({
+            id: entry.id,
+            label: `Alimentação: ${entry.food_name}`,
+            commit: () => onDelete(entry.id),
+            onRestored: () => setDeleteErrorMessage('Não foi possível excluir esse consumo.'),
+        })
+    }
+
+    if (visibleEntries.length === 0) {
+        return (
+            <>
+                {deleteErrorMessage && <div className="error-list">{deleteErrorMessage}</div>}
+                <p style={{ color: '#71717a' }}>Nenhum consumo registrado neste dia.</p>
+            </>
+        )
     }
 
     return (
         <div>
+            {deleteErrorMessage && <div className="error-list">{deleteErrorMessage}</div>}
             {MEAL_CATEGORIES.map((mealCategory) => {
-                const entriesForMeal = entries.filter((entry) => entry.meal_category === mealCategory)
+                const entriesForMeal = visibleEntries.filter((entry) => entry.meal_category === mealCategory)
                 if (entriesForMeal.length === 0) {
                     return null
                 }
@@ -82,7 +103,7 @@ export function FoodEntryList({ entryDate, entries, onUpdate, onDelete }: FoodEn
                                             <button
                                                 type="button"
                                                 className="secondary-button"
-                                                onClick={() => handleDeleteClick(entry.id, onDelete)}
+                                                onClick={() => handleDeleteClick(entry)}
                                             >
                                                 Excluir
                                             </button>
@@ -96,12 +117,4 @@ export function FoodEntryList({ entryDate, entries, onUpdate, onDelete }: FoodEn
             })}
         </div>
     )
-}
-
-async function handleDeleteClick(entryId: string, onDelete: (entryId: string) => Promise<void>) {
-    const confirmedDeletion = window.confirm('Excluir este consumo?')
-    if (!confirmedDeletion) {
-        return
-    }
-    await onDelete(entryId)
 }

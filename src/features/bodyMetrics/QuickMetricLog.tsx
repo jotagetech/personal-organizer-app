@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+import { useUndoableActions } from '@/contexts/UndoableActionContext'
 import { todayInTimezone } from '@/lib/dateUtils'
 
 type MetricPoint = { id: string; entryDate: string; value: number }
@@ -21,6 +22,7 @@ export function QuickMetricLog({
     save,
     deleteEntry,
 }: QuickMetricLogProps) {
+    const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [recentPoints, setRecentPoints] = useState<MetricPoint[]>([])
     const [valueText, setValueText] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -58,14 +60,20 @@ export function QuickMetricLog({
         }
     }
 
-    async function handleDeleteClick(pointId: string) {
-        const confirmedDeletion = window.confirm('Excluir esse registro?')
-        if (!confirmedDeletion) {
-            return
-        }
-        await deleteEntry(pointId)
-        setRecentPoints((previous) => previous.filter((point) => point.id !== pointId))
+    function handleDeleteClick(point: MetricPoint) {
+        setErrorMessage(null)
+        scheduleDeletion({
+            id: point.id,
+            label: `${title} (${point.entryDate.slice(5)})`,
+            commit: () => deleteEntry(point.id),
+            onCommitted: () => {
+                setRecentPoints((previous) => previous.filter((existingPoint) => existingPoint.id !== point.id))
+            },
+            onRestored: () => setErrorMessage('Não foi possível excluir esse registro.'),
+        })
     }
+
+    const visiblePoints = recentPoints.filter((point) => !isPendingDeletion(point.id))
 
     return (
         <div className="card">
@@ -86,9 +94,9 @@ export function QuickMetricLog({
                     {isSubmitting ? 'Salvando...' : 'Salvar'}
                 </button>
             </form>
-            {recentPoints.length > 0 && (
+            {visiblePoints.length > 0 && (
                 <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
-                    {recentPoints.map((point) => (
+                    {visiblePoints.map((point) => (
                         <li
                             key={point.id}
                             style={{
@@ -117,7 +125,7 @@ export function QuickMetricLog({
                                 type="button"
                                 className="secondary-button"
                                 style={{ flexShrink: 0, minHeight: 32, padding: '0 10px', fontSize: 12 }}
-                                onClick={() => handleDeleteClick(point.id)}
+                                onClick={() => handleDeleteClick(point)}
                             >
                                 Excluir
                             </button>

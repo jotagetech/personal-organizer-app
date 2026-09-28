@@ -1,3 +1,6 @@
+import { useState } from 'react'
+
+import { useUndoableActions } from '@/contexts/UndoableActionContext'
 import { FEELING_SCALE_OPTIONS } from '@/features/cardio/types'
 import type { CardioActivityTypeRow, CardioEntryRow } from '@/features/cardio/types'
 
@@ -8,13 +11,28 @@ type CardioEntryListProps = {
 }
 
 export function CardioEntryList({ entries, activityTypes, onDelete }: CardioEntryListProps) {
-    if (entries.length === 0) {
+    const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
+    const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null)
+
+    const visibleEntries = entries.filter((entry) => !isPendingDeletion(entry.id))
+    if (visibleEntries.length === 0 && !deleteErrorMessage) {
         return null
+    }
+
+    function handleDeleteClick(entry: CardioEntryRow) {
+        setDeleteErrorMessage(null)
+        scheduleDeletion({
+            id: entry.id,
+            label: `Cardio: ${activityTypeName(activityTypes, entry.activity_type_id)}`,
+            commit: () => onDelete(entry.id),
+            onRestored: () => setDeleteErrorMessage('Não foi possível excluir esse registro de cardio.'),
+        })
     }
 
     return (
         <div>
-            {entries.map((entry) => (
+            {deleteErrorMessage && <div className="error-list">{deleteErrorMessage}</div>}
+            {visibleEntries.map((entry) => (
                 <div key={entry.id} className="card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
@@ -32,7 +50,7 @@ export function CardioEntryList({ entries, activityTypes, onDelete }: CardioEntr
                         <button
                             type="button"
                             className="secondary-button"
-                            onClick={() => handleDeleteClick(entry.id, onDelete)}
+                            onClick={() => handleDeleteClick(entry)}
                         >
                             Excluir
                         </button>
@@ -41,14 +59,6 @@ export function CardioEntryList({ entries, activityTypes, onDelete }: CardioEntr
             ))}
         </div>
     )
-}
-
-async function handleDeleteClick(entryId: string, onDelete: (entryId: string) => Promise<void>) {
-    const confirmedDeletion = window.confirm('Excluir este registro de cardio?')
-    if (!confirmedDeletion) {
-        return
-    }
-    await onDelete(entryId)
 }
 
 function activityTypeName(activityTypes: CardioActivityTypeRow[], activityTypeId: string): string {

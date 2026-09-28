@@ -3,6 +3,28 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
+## 2026-09-28
+
+### Adicionado
+
+- Exclusão de peso corporal, sono, cardio e consumo de alimento agora abre uma
+  barra "Desfazer" por alguns segundos em vez de excluir na hora com uma
+  confirmação. O item some da tela assim que a exclusão é pedida, mas só é
+  apagado do banco depois da janela de desfazer terminar; tocar em "Desfazer"
+  cancela a exclusão e o item volta a aparecer.
+- Trocar de aba enquanto a barra de desfazer está visível não cancela a
+  exclusão pendente, e reabrir a tela que mostrava o item continua escondendo
+  ele até a exclusão se resolver.
+- Se o app for pra segundo plano (minimizado ou trocado de app no celular)
+  com alguma exclusão pendente, ela é confirmada na hora, pra não depender de
+  o app continuar rodando até o fim da janela de espera.
+
+### Corrigido
+
+- Falha ao excluir um registro (ex: sem conexão) agora restaura o item na
+  lista com uma mensagem de erro, em vez de deixar a tela inconsistente com o
+  banco.
+
 ## 2026-09-27
 
 ### Adicionado

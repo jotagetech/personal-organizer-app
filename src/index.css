@@ -349,3 +349,45 @@ button, input, select {
 .food-suggestion-list__item:active {
     background: #f4f4f5;
 }
+
+.undo-bar {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(57px + env(safe-area-inset-bottom, 0px) + 10px);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #18181b;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.undo-bar__label {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.undo-bar__button {
+    flex-shrink: 0;
+    min-height: 36px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #18181b;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.undo-bar__button:active {
+    background: #e4e4e7;
+}

@@ -2,9 +2,11 @@ import { useState } from 'react'
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { SelectedDateProvider } from '@/contexts/SelectedDateContext'
+import { UndoableActionProvider } from '@/contexts/UndoableActionContext'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BottomNav, type AppTab } from '@/features/shared/BottomNav'
 import { DateHeader } from '@/features/shared/DateHeader'
+import { UndoBar } from '@/features/shared/UndoBar'
 import { FoodTab } from '@/features/food/FoodTab'
 import { ResultsTab } from '@/features/results/ResultsTab'
 import { WorkoutTab } from '@/features/workout/WorkoutTab'
@@ -30,7 +32,9 @@ function AuthGate() {
 
     return (
         <SelectedDateProvider>
-            <AuthenticatedShell />
+            <UndoableActionProvider>
+                <AuthenticatedShell />
+            </UndoableActionProvider>
         </SelectedDateProvider>
     )
 }
@@ -46,6 +50,7 @@ function AuthenticatedShell() {
                 {activeTab === 'alimentacao' && <FoodTab />}
                 {activeTab === 'resultados' && <ResultsTab />}
             </main>
+            <UndoBar />
             <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
         </div>
     )
