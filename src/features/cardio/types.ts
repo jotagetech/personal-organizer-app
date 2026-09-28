@@ -12,3 +12,17 @@ export const FEELING_SCALE_OPTIONS = [
 ] as const
 
 export type FeelingScale = (typeof FEELING_SCALE_OPTIONS)[number]['value']
+
+export function feelingEmoji(feelingScale: number): string {
+    const matchingOption = FEELING_SCALE_OPTIONS.find((option) => option.value === feelingScale)
+    const emoji = matchingOption?.emoji ?? ''
+
+    return emoji
+}
+
+export function activityTypeName(activityTypes: CardioActivityTypeRow[], activityTypeId: string): string {
+    const matchingType = activityTypes.find((activityType) => activityType.id === activityTypeId)
+    const name = matchingType?.name ?? 'Atividade'
+
+    return name
+}

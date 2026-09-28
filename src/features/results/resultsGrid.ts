@@ -8,11 +8,17 @@ export type DayCell = {
     weekday: Weekday
     completed: boolean
     inRange: boolean
+    selected: boolean
 }
 
 export type WeekRow = {
     weekStart: IsoDate
     days: DayCell[]
+}
+
+export type DateRange = {
+    rangeStart: IsoDate
+    rangeEnd: IsoDate
 }
 
 export function mondayOnOrBefore(date: IsoDate): IsoDate {
@@ -23,13 +29,33 @@ export function mondayOnOrBefore(date: IsoDate): IsoDate {
     return monday
 }
 
+// A grade sempre precisa mostrar a data selecionada, mesmo quando ela cai
+// fora da janela padrão (ciclo atual ou últimos N dias), pra tocar num dia
+// fora da tela ainda ser possível a partir de outro ponto do app.
+export function expandRangeToIncludeDate(range: DateRange, referenceDate: IsoDate): DateRange {
+    const expandedStart = referenceDate < range.rangeStart ? referenceDate : range.rangeStart
+    const expandedEnd = referenceDate > range.rangeEnd ? referenceDate : range.rangeEnd
+
+    return { rangeStart: expandedStart, rangeEnd: expandedEnd }
+}
+
+// rangeStart/rangeEnd definem "dentro do intervalo" (ciclo atual ou janela
+// padrão, critério que não muda aqui); a grade desenhada pode precisar ir
+// além disso só pra caber a data selecionada em algum lugar, sem que esses
+// dias extras passem a contar como dentro do intervalo.
 export function buildWeeklyCompletionGrid(
     rangeStart: IsoDate,
     rangeEnd: IsoDate,
     completedDates: ReadonlySet<IsoDate>,
+    selectedDate?: IsoDate,
 ): WeekRow[] {
-    const firstWeekStart = mondayOnOrBefore(rangeStart)
-    const totalDays = diffInDays(firstWeekStart, rangeEnd) + 1
+    const gridBounds =
+        selectedDate === undefined
+            ? { rangeStart, rangeEnd }
+            : expandRangeToIncludeDate({ rangeStart, rangeEnd }, selectedDate)
+
+    const firstWeekStart = mondayOnOrBefore(gridBounds.rangeStart)
+    const totalDays = diffInDays(firstWeekStart, gridBounds.rangeEnd) + 1
     const totalWeeks = Math.ceil(totalDays / 7)
 
     const weeks: WeekRow[] = []
@@ -39,8 +65,9 @@ export function buildWeeklyCompletionGrid(
             const date = shiftIsoDate(weekStart, dayIndex)
             const inRange = date >= rangeStart && date <= rangeEnd
             const completed = completedDates.has(date)
+            const selected = date === selectedDate
 
-            return { date, weekday, completed, inRange }
+            return { date, weekday, completed, inRange, selected }
         })
 
         weeks.push({ weekStart, days })

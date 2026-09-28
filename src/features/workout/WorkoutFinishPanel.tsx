@@ -93,7 +93,7 @@ function SaveStatusLabel({ status }: { status: SaveStatus }) {
     return <p className="save-status">Salvo</p>
 }
 
-function formatSessionDuration(startIso: string, endIso: string): string {
+export function formatSessionDuration(startIso: string, endIso: string): string {
     const totalMinutes = Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000))
     const hours = Math.floor(totalMinutes / 60)
     const minutes = totalMinutes % 60

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildWeeklyCompletionGrid, mondayOnOrBefore } from '@/features/results/resultsGrid'
+import {
+    buildWeeklyCompletionGrid,
+    expandRangeToIncludeDate,
+    mondayOnOrBefore,
+} from '@/features/results/resultsGrid'
 
 describe('mondayOnOrBefore', () => {
     it('retorna a mesma data quando já é segunda-feira', () => {
@@ -35,5 +39,59 @@ describe('buildWeeklyCompletionGrid', () => {
     it('cria semanas suficientes para cobrir todo o intervalo', () => {
         const weeks = buildWeeklyCompletionGrid('2026-09-21', '2026-10-04', new Set())
         expect(weeks).toHaveLength(2)
+    })
+
+    it('marca selected na célula que corresponde à data selecionada', () => {
+        const weeks = buildWeeklyCompletionGrid('2026-09-28', '2026-09-30', new Set(), '2026-09-29')
+
+        expect(weeks[0].days[0].selected).toBe(false)
+        expect(weeks[0].days[1].selected).toBe(true)
+        expect(weeks[0].days[2].selected).toBe(false)
+    })
+
+    it('nenhuma célula fica selected quando nenhuma data selecionada é passada', () => {
+        const weeks = buildWeeklyCompletionGrid('2026-09-28', '2026-09-30', new Set())
+
+        expect(weeks[0].days.some((day) => day.selected)).toBe(false)
+    })
+
+    it('expande a grade pra trás quando a data selecionada é anterior ao início calculado', () => {
+        const weeks = buildWeeklyCompletionGrid('2026-09-28', '2026-09-30', new Set(), '2026-09-20')
+        const allDays = weeks.flatMap((week) => week.days)
+        const selectedCell = allDays.find((day) => day.date === '2026-09-20')
+
+        expect(selectedCell).toBeDefined()
+        expect(selectedCell?.selected).toBe(true)
+        expect(selectedCell?.inRange).toBe(false)
+    })
+
+    it('expande a grade pra frente quando a data selecionada é posterior ao fim calculado', () => {
+        const weeks = buildWeeklyCompletionGrid('2026-09-28', '2026-09-30', new Set(), '2026-10-10')
+        const allDays = weeks.flatMap((week) => week.days)
+        const selectedCell = allDays.find((day) => day.date === '2026-10-10')
+
+        expect(selectedCell).toBeDefined()
+        expect(selectedCell?.selected).toBe(true)
+        expect(selectedCell?.inRange).toBe(false)
+    })
+})
+
+describe('expandRangeToIncludeDate', () => {
+    it('expande o início do intervalo quando a data selecionada é anterior a ele', () => {
+        const range = expandRangeToIncludeDate({ rangeStart: '2026-09-10', rangeEnd: '2026-09-28' }, '2026-09-01')
+
+        expect(range).toEqual({ rangeStart: '2026-09-01', rangeEnd: '2026-09-28' })
+    })
+
+    it('expande o fim do intervalo quando a data selecionada é posterior a ele', () => {
+        const range = expandRangeToIncludeDate({ rangeStart: '2026-09-10', rangeEnd: '2026-09-28' }, '2026-10-05')
+
+        expect(range).toEqual({ rangeStart: '2026-09-10', rangeEnd: '2026-10-05' })
+    })
+
+    it('mantém o intervalo original quando a data selecionada já está dentro dele', () => {
+        const range = expandRangeToIncludeDate({ rangeStart: '2026-09-10', rangeEnd: '2026-09-28' }, '2026-09-20')
+
+        expect(range).toEqual({ rangeStart: '2026-09-10', rangeEnd: '2026-09-28' })
     })
 })

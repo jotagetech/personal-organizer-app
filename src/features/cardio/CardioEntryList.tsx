@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { useUndoableActions } from '@/contexts/UndoableActionContext'
-import { FEELING_SCALE_OPTIONS } from '@/features/cardio/types'
+import { activityTypeName, feelingEmoji } from '@/features/cardio/types'
 import type { CardioActivityTypeRow, CardioEntryRow } from '@/features/cardio/types'
 
 type CardioEntryListProps = {
@@ -59,18 +59,4 @@ export function CardioEntryList({ entries, activityTypes, onDelete }: CardioEntr
             ))}
         </div>
     )
-}
-
-function activityTypeName(activityTypes: CardioActivityTypeRow[], activityTypeId: string): string {
-    const matchingType = activityTypes.find((activityType) => activityType.id === activityTypeId)
-    const name = matchingType?.name ?? 'Atividade'
-
-    return name
-}
-
-function feelingEmoji(feelingScale: number): string {
-    const matchingOption = FEELING_SCALE_OPTIONS.find((option) => option.value === feelingScale)
-    const emoji = matchingOption?.emoji ?? ''
-
-    return emoji
 }

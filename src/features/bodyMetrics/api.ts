@@ -40,6 +40,20 @@ export async function upsertBodyWeightEntry(entryDate: string, weightKg: number)
     return data
 }
 
+export async function getBodyWeightForDate(entryDate: string): Promise<BodyWeightEntryRow | null> {
+    const { data, error } = await supabase
+        .from('body_weight_entries')
+        .select('*')
+        .eq('entry_date', entryDate)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
 export async function deleteBodyWeightEntry(entryId: string): Promise<void> {
     const { error } = await supabase.from('body_weight_entries').delete().eq('id', entryId)
     if (error) {
@@ -76,6 +90,20 @@ export async function upsertSleepEntry(entryDate: string, hours: number): Promis
 
     if (error || !data) {
         throw new Error(error?.message ?? 'Falha ao salvar sono')
+    }
+
+    return data
+}
+
+export async function getSleepForDate(entryDate: string): Promise<SleepEntryRow | null> {
+    const { data, error } = await supabase
+        .from('sleep_entries')
+        .select('*')
+        .eq('entry_date', entryDate)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
     }
 
     return data

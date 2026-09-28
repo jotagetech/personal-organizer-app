@@ -1,11 +1,10 @@
-import { useState } from 'react'
-
+import { AppNavigationProvider, useAppNavigation } from '@/contexts/AppNavigationContext'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { OutboxProvider } from '@/contexts/OutboxContext'
 import { SelectedDateProvider } from '@/contexts/SelectedDateContext'
 import { UndoableActionProvider } from '@/contexts/UndoableActionContext'
 import { LoginPage } from '@/features/auth/LoginPage'
-import { BottomNav, type AppTab } from '@/features/shared/BottomNav'
+import { BottomNav } from '@/features/shared/BottomNav'
 import { DateHeader } from '@/features/shared/DateHeader'
 import { UndoBar } from '@/features/shared/UndoBar'
 import { FoodTab } from '@/features/food/FoodTab'
@@ -32,18 +31,20 @@ function AuthGate() {
     }
 
     return (
-        <SelectedDateProvider>
-            <UndoableActionProvider>
-                <OutboxProvider>
-                    <AuthenticatedShell />
-                </OutboxProvider>
-            </UndoableActionProvider>
-        </SelectedDateProvider>
+        <AppNavigationProvider>
+            <SelectedDateProvider>
+                <UndoableActionProvider>
+                    <OutboxProvider>
+                        <AuthenticatedShell />
+                    </OutboxProvider>
+                </UndoableActionProvider>
+            </SelectedDateProvider>
+        </AppNavigationProvider>
     )
 }
 
 function AuthenticatedShell() {
-    const [activeTab, setActiveTab] = useState<AppTab>('treino')
+    const { activeTab, goToTab } = useAppNavigation()
 
     return (
         <div className="app-shell">
@@ -54,7 +55,7 @@ function AuthenticatedShell() {
                 {activeTab === 'resultados' && <ResultsTab />}
             </main>
             <UndoBar />
-            <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
+            <BottomNav activeTab={activeTab} onSelectTab={goToTab} />
         </div>
     )
 }

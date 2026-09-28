@@ -74,7 +74,10 @@ npm run dev
 - **Peso corporal e sono**: registro rápido diário (um número, upsert por
   dia), na aba Resultados.
 - **Resultados**: grade semanal de dias de treino concluído (verde = treino
-  finalizado naquele dia), mais os registros de peso/sono.
+  finalizado naquele dia), mais os registros de peso/sono. Tocar num dia da
+  grade muda a data selecionada em todo o app e mostra, logo abaixo, o
+  detalhe somente leitura daquele dia (treino por exercício, cardio,
+  alimentação por refeição, peso e sono).
 
 ## Estrutura
 

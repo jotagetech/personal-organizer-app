@@ -10,9 +10,12 @@ import {
 } from '@/features/bodyMetrics/api'
 import { QuickMetricLog } from '@/features/bodyMetrics/QuickMetricLog'
 import { getCurrentCycle } from '@/features/cycle/api'
+import type { WorkoutCycleRow } from '@/features/cycle/types'
+import { DayDetail } from '@/features/results/DayDetail'
 import { listFinishedSessionDates } from '@/features/results/api'
-import { buildWeeklyCompletionGrid, type WeekRow } from '@/features/results/resultsGrid'
-import { shiftIsoDate, todayInTimezone } from '@/lib/dateUtils'
+import { buildWeeklyCompletionGrid } from '@/features/results/resultsGrid'
+import { useSelectedDate } from '@/contexts/SelectedDateContext'
+import { shiftIsoDate, todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 import type { Weekday } from '@/lib/workoutPlanSchema'
 
 const DEFAULT_LOOKBACK_DAYS = 27
@@ -27,8 +30,16 @@ const WEEKDAY_LABELS: Record<Weekday, string> = {
     domingo: 'Dom',
 }
 
+type GridInputs = {
+    rangeStart: IsoDate
+    rangeEnd: IsoDate
+    completedDates: Set<IsoDate>
+}
+
 export function ResultsTab() {
-    const [weeks, setWeeks] = useState<WeekRow[] | null>(null)
+    const { selectedDate, setSelectedDate } = useSelectedDate()
+    const [gridInputs, setGridInputs] = useState<GridInputs | null>(null)
+    const [cycle, setCycle] = useState<WorkoutCycleRow | null>(null)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
     useEffect(() => {
@@ -37,8 +48,8 @@ export function ResultsTab() {
         async function load() {
             try {
                 const today = todayInTimezone()
-                const cycle = await getCurrentCycle()
-                const rangeStart = cycle ? cycle.start_date : shiftIsoDate(today, -DEFAULT_LOOKBACK_DAYS)
+                const currentCycle = await getCurrentCycle()
+                const rangeStart = currentCycle ? currentCycle.start_date : shiftIsoDate(today, -DEFAULT_LOOKBACK_DAYS)
                 const effectiveRangeStart = rangeStart <= today ? rangeStart : today
 
                 const finishedDates = await listFinishedSessionDates(effectiveRangeStart)
@@ -51,8 +62,12 @@ export function ResultsTab() {
                     today,
                 )
 
-                const grid = buildWeeklyCompletionGrid(effectiveRangeStart, latestFinishedDate, new Set(finishedDates))
-                setWeeks(grid)
+                setCycle(currentCycle)
+                setGridInputs({
+                    rangeStart: effectiveRangeStart,
+                    rangeEnd: latestFinishedDate,
+                    completedDates: new Set(finishedDates),
+                })
             } catch (loadError) {
                 if (isCancelled) {
                     return
@@ -72,13 +87,23 @@ export function ResultsTab() {
         return <div className="error-list">{errorMessage}</div>
     }
 
-    if (!weeks) {
+    if (!gridInputs) {
         return <p>Carregando resultados...</p>
     }
 
+    // A grade continua limitada à janela do ciclo (ou aos últimos dias, sem
+    // ciclo ativo) para o cálculo de "dentro do intervalo"; só o desenho da
+    // grade se estende pra sempre incluir a data selecionada em algum lugar.
+    const weeks = buildWeeklyCompletionGrid(
+        gridInputs.rangeStart,
+        gridInputs.rangeEnd,
+        gridInputs.completedDates,
+        selectedDate,
+    )
+
     return (
         <div>
-            <h2 style={{ fontSize: 16, marginTop: 0 }}>Dias de treino concluídos</h2>
+            <h2 style={{ fontSize: 16, marginTop: 0 }}>{gridTitle(cycle)}</h2>
             <div className="results-grid">
                 <div className="results-grid__row results-grid__row--header">
                     {(Object.keys(WEEKDAY_LABELS) as Weekday[]).map((weekday) => (
@@ -90,13 +115,17 @@ export function ResultsTab() {
                 {weeks.map((week) => (
                     <div key={week.weekStart} className="results-grid__row">
                         {week.days.map((day) => (
-                            <span
+                            <button
                                 key={day.date}
-                                className={dayCellClassName(day.inRange, day.completed)}
+                                type="button"
+                                className={dayCellClassName(day.inRange, day.completed, day.selected)}
                                 title={day.date}
+                                aria-label={dayAriaLabel(day.date, day.completed)}
+                                aria-pressed={day.selected}
+                                onClick={() => setSelectedDate(day.date)}
                             >
                                 {dayOfMonth(day.date)}
-                            </span>
+                            </button>
                         ))}
                     </div>
                 ))}
@@ -141,8 +170,27 @@ export function ResultsTab() {
                     />
                 </div>
             </div>
+            <DayDetail selectedDate={selectedDate} />
         </div>
     )
+}
+
+function gridTitle(cycle: WorkoutCycleRow | null): string {
+    if (!cycle) {
+        return 'Dias de treino concluídos'
+    }
+
+    const cycleStartLabel = formatDayMonth(cycle.start_date)
+    const title = `Dias de treino concluídos · ciclo desde ${cycleStartLabel}`
+
+    return title
+}
+
+function formatDayMonth(isoDate: IsoDate): string {
+    const [, month, day] = isoDate.split('-')
+    const formattedLabel = `${day}/${month}`
+
+    return formattedLabel
 }
 
 function dayOfMonth(isoDate: string): string {
@@ -152,12 +200,26 @@ function dayOfMonth(isoDate: string): string {
     return dayWithoutLeadingZero
 }
 
-function dayCellClassName(inRange: boolean, completed: boolean): string {
+function dayCellClassName(inRange: boolean, completed: boolean, selected: boolean): string {
+    const classNames = ['results-grid__cell']
+
     if (!inRange) {
-        return 'results-grid__cell results-grid__cell--out-of-range'
+        classNames.push('results-grid__cell--out-of-range')
+    } else if (completed) {
+        classNames.push('results-grid__cell--completed')
     }
-    if (completed) {
-        return 'results-grid__cell results-grid__cell--completed'
+
+    if (selected) {
+        classNames.push('results-grid__cell--selected')
     }
-    return 'results-grid__cell'
+
+    const className = classNames.join(' ')
+    return className
+}
+
+function dayAriaLabel(isoDate: string, completed: boolean): string {
+    const completedSuffix = completed ? ' (treino concluído)' : ''
+    const label = `Ver detalhes do dia ${formatDayMonth(isoDate)}${completedSuffix}`
+
+    return label
 }

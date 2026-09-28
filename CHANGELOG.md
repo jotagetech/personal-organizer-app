@@ -46,6 +46,24 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 - Cabeçalho de data destaca visualmente quando a data selecionada não é hoje,
   pra ficar claro que um registro feito ali vai entrar num dia diferente do
   atual.
+- Grade de resultados agora é clicável: tocar num dia muda a data selecionada
+  em todo o app (mesma usada pelas outras abas), com destaque visual na
+  célula correspondente. A grade continua limitada à janela do ciclo atual
+  (ou aos últimos dias, sem ciclo ativo), mas sempre se estende pra mostrar a
+  data selecionada em algum lugar, mesmo quando ela cai fora dessa janela.
+  Título do card passa a citar a data de início do ciclo quando há um ciclo
+  ativo.
+- Aba Resultados ganhou um detalhe somente leitura do dia selecionado, logo
+  abaixo da grade: treino (nome, séries por exercício com carga, repetições,
+  RIR e comentário, duração e sentimento pós-treino), cardio, alimentação
+  agrupada por refeição com os totais do dia, e peso/sono. Botões abrem
+  diretamente a aba de Treino ou de Alimentação para registrar o que falta.
+
+### Alterado
+
+- `activeTab` (Treino/Alimentação/Resultados) saiu de um estado local do
+  app pra um contexto de navegação compartilhado, usado pelo novo detalhe do
+  dia pra abrir a aba certa a partir de um atalho.
 
 ### Corrigido
 
