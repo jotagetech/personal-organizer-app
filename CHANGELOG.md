@@ -93,6 +93,15 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   só de DaySignals): concluído quando todo item aplicável ao dia está feito,
   pendente quando falta algo, e sem indicador num dia sem nenhum item
   aplicável.
+- Relatório do dia no topo do detalhe da aba Resultados, no lugar do título
+  repetido "Dia selecionado": placar da rotina (quantos itens foram feitos,
+  o que ainda falta ou não foi feito) mais até 4 destaques do dia (séries de
+  treino concluídas e duração, kcal/proteína, minutos de cardio, peso/sono
+  registrados). A frase de abertura muda conforme a proporção de itens de
+  rotina concluídos no dia, com 2 ou 3 variações por faixa escolhidas de
+  forma determinística pela data (não muda a cada carregamento, mas também
+  não repete todo dia). Um dia sem nenhum item de rotina ativo não entra em
+  nenhuma faixa de conclusão, só informa que não há rotina configurada.
 
 ### Alterado
 

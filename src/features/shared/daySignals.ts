@@ -16,6 +16,32 @@ export type DaySignals = {
     cardioCount: number
 }
 
+type DaySignalSources = {
+    workoutResult: Awaited<ReturnType<typeof getSessionForDate>>
+    foodEntries: Awaited<ReturnType<typeof listFoodEntriesForDate>>
+    bodyWeightEntry: Awaited<ReturnType<typeof getBodyWeightForDate>>
+    sleepEntry: Awaited<ReturnType<typeof getSleepForDate>>
+    cardioEntries: Awaited<ReturnType<typeof listCardioEntriesForDate>>
+}
+
+// Lógica pura, sem chamada de rede: dado o resultado de cada consulta, deriva
+// os sinais. Extraída pra ser reaproveitada por quem já buscou esses mesmos
+// dados por outro motivo (ex: getDaySummary), sem duplicar a busca.
+export function deriveDaySignals(sources: DaySignalSources): DaySignals {
+    const mealsLogged = new Set<MealCategory>(
+        sources.foodEntries.map((entry) => entry.meal_category as MealCategory),
+    )
+
+    return {
+        workout: deriveWorkoutSignal(sources.workoutResult),
+        mealsLogged,
+        foodEntryCount: sources.foodEntries.length,
+        bodyWeightLogged: sources.bodyWeightEntry !== null,
+        sleepLogged: sources.sleepEntry !== null,
+        cardioCount: sources.cardioEntries.length,
+    }
+}
+
 // Sinais leves pro indicador das abas: só presença/ausência, nunca os dados
 // completos do dia (isso já existe em getDaySummary, pro detalhe do dia em
 // Resultados, e é caro demais pra rodar a cada troca de aba/data).
@@ -28,19 +54,7 @@ export async function fetchDaySignals(date: IsoDate): Promise<DaySignals> {
         listCardioEntriesForDate(date),
     ])
 
-    const mealsLogged = new Set<MealCategory>(
-        foodEntries.map((entry) => entry.meal_category as MealCategory),
-    )
-
-    const daySignals: DaySignals = {
-        workout: deriveWorkoutSignal(workoutResult),
-        mealsLogged,
-        foodEntryCount: foodEntries.length,
-        bodyWeightLogged: bodyWeightEntry !== null,
-        sleepLogged: sleepEntry !== null,
-        cardioCount: cardioEntries.length,
-    }
-    return daySignals
+    return deriveDaySignals({ workoutResult, foodEntries, bodyWeightEntry, sleepEntry, cardioEntries })
 }
 
 function deriveWorkoutSignal(workoutResult: Awaited<ReturnType<typeof getSessionForDate>>): WorkoutSignal {

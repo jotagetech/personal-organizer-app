@@ -8,10 +8,11 @@ import { computeDailyTotals } from '@/features/food/dailyTotals'
 import { FOOD_UNIT_LABELS, MEAL_CATEGORIES, MEAL_CATEGORY_LABELS } from '@/features/food/types'
 import type { FoodEntryRow, FoodUnit } from '@/features/food/types'
 import { getDaySummary, type DaySummary } from '@/features/results/api'
+import { buildDayReport, type DayReport } from '@/features/results/dayReport'
 import { summarizeWorkoutSets, type WorkoutExerciseSummary, type WorkoutSetSummary } from '@/features/results/daySummary'
 import { formatSessionDuration } from '@/features/workout/WorkoutFinishPanel'
 import type { WorkoutSessionRow, WorkoutSetRow } from '@/features/workout/types'
-import type { IsoDate } from '@/lib/dateUtils'
+import { todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 
 type DayDetailProps = {
     selectedDate: IsoDate
@@ -66,9 +67,12 @@ export function DayDetail({ selectedDate }: DayDetailProps) {
         return null
     }
 
+    const today = todayInTimezone()
+    const report = buildDayReport(summary, summary.routineRows, selectedDate, today)
+
     return (
         <div>
-            <h2 style={{ fontSize: 16 }}>Dia selecionado</h2>
+            <DayReportSection report={report} isToday={selectedDate === today} />
             <WorkoutDaySection
                 session={summary.workoutSession}
                 sets={summary.workoutSets}
@@ -77,6 +81,36 @@ export function DayDetail({ selectedDate }: DayDetailProps) {
             <CardioDaySection entries={summary.cardioEntries} activityTypes={summary.activityTypes} />
             <FoodDaySection entries={summary.foodEntries} onOpenFood={() => goToTab('alimentacao')} />
             <BodyMetricsDaySection bodyWeightEntry={summary.bodyWeightEntry} sleepEntry={summary.sleepEntry} />
+        </div>
+    )
+}
+
+type DayReportSectionProps = {
+    report: DayReport
+    isToday: boolean
+}
+
+function DayReportSection({ report, isToday }: DayReportSectionProps) {
+    return (
+        <div className="card">
+            <h2 style={{ fontSize: 16, margin: '0 0 4px' }}>{isToday ? 'Hoje' : 'Dia selecionado'}</h2>
+            <p style={{ margin: '0 0 8px', fontWeight: 600 }}>{report.headline}</p>
+            {report.routineTotalCount > 0 && (
+                <p style={{ fontSize: 13, color: '#52525b', margin: '0 0 4px' }}>
+                    Rotina: {report.routineDoneCount} de {report.routineTotalCount} feitos
+                </p>
+            )}
+            {report.pendingTitles.length > 0 && (
+                <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 8px' }}>
+                    {isToday ? 'Ainda falta: ' : 'Não foi feito: '}
+                    {report.pendingTitles.join(', ')}
+                </p>
+            )}
+            {report.highlights.map((highlight) => (
+                <p key={highlight} style={{ fontSize: 13, margin: '0 0 2px' }}>
+                    {highlight}
+                </p>
+            ))}
         </div>
     )
 }

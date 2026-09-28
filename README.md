@@ -91,7 +91,10 @@ npm run dev
   finalizado naquele dia), mais os registros de peso/sono. Tocar num dia da
   grade muda a data selecionada em todo o app e mostra, logo abaixo, o
   detalhe somente leitura daquele dia (treino por exercício, cardio,
-  alimentação por refeição, peso e sono).
+  alimentação por refeição, peso e sono), com um relatório do dia no topo:
+  placar da rotina (feito vs. pendente) e até 4 destaques do dia, com uma
+  frase de abertura que muda conforme a proporção de itens de rotina
+  concluídos.
 
 ## Estrutura
 
