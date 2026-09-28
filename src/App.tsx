@@ -1,5 +1,6 @@
 import { AppNavigationProvider, useAppNavigation } from '@/contexts/AppNavigationContext'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { DayStatusProvider } from '@/contexts/DayStatusContext'
 import { OutboxProvider } from '@/contexts/OutboxContext'
 import { SelectedDateProvider } from '@/contexts/SelectedDateContext'
 import { UndoableActionProvider } from '@/contexts/UndoableActionContext'
@@ -33,11 +34,13 @@ function AuthGate() {
     return (
         <AppNavigationProvider>
             <SelectedDateProvider>
-                <UndoableActionProvider>
-                    <OutboxProvider>
-                        <AuthenticatedShell />
-                    </OutboxProvider>
-                </UndoableActionProvider>
+                <DayStatusProvider>
+                    <UndoableActionProvider>
+                        <OutboxProvider>
+                            <AuthenticatedShell />
+                        </OutboxProvider>
+                    </UndoableActionProvider>
+                </DayStatusProvider>
             </SelectedDateProvider>
         </AppNavigationProvider>
     )

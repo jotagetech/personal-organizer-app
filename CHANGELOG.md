@@ -58,6 +58,19 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   RIR e comentário, duração e sentimento pós-treino), cardio, alimentação
   agrupada por refeição com os totais do dia, e peso/sono. Botões abrem
   diretamente a aba de Treino ou de Alimentação para registrar o que falta.
+- Menu inferior ganhou indicadores de estado por aba, refletindo a data
+  selecionada no momento (não necessariamente hoje): um check verde em
+  Treino quando o treino do dia está finalizado, um ponto âmbar quando está
+  em andamento, um check verde em Alimentação com pelo menos um registro no
+  dia, e um ponto âmbar em Resultados quando falta peso corporal ou sono
+  daquele dia. Cada aba com indicador leva um `aria-label` descrevendo o
+  estado. A leitura desses sinais é deliberadamente leve (só presença ou
+  ausência de registro, nunca os dados completos do dia) e roda de novo
+  sempre que a data selecionada muda ou que finalizar treino, adicionar/
+  editar/excluir consumo, ou adicionar/excluir cardio confirma de fato no
+  banco, sem esperar a próxima troca de data. Uma falha nessa leitura não
+  trava a tela nem aparece como erro, só deixa o indicador desatualizado até
+  a próxima tentativa.
 
 ### Alterado
 

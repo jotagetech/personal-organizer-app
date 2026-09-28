@@ -9,6 +9,7 @@ import {
 import { CardioEntryForm } from '@/features/cardio/CardioEntryForm'
 import { CardioEntryList } from '@/features/cardio/CardioEntryList'
 import type { CardioActivityTypeRow, CardioEntryRow } from '@/features/cardio/types'
+import { useDayStatus } from '@/contexts/DayStatusContext'
 import type { IsoDate } from '@/lib/dateUtils'
 
 type CardioSectionProps = {
@@ -16,6 +17,7 @@ type CardioSectionProps = {
 }
 
 export function CardioSection({ sessionDate }: CardioSectionProps) {
+    const { refreshDayStatus } = useDayStatus()
     const [activityTypes, setActivityTypes] = useState<CardioActivityTypeRow[]>([])
     const [entries, setEntries] = useState<CardioEntryRow[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -79,6 +81,7 @@ export function CardioSection({ sessionDate }: CardioSectionProps) {
                 onDelete={async (entryId) => {
                     await deleteCardioEntry(entryId)
                     setEntries((previous) => previous.filter((entry) => entry.id !== entryId))
+                    refreshDayStatus()
                 }}
             />
             {showPrompt && (
@@ -110,6 +113,7 @@ export function CardioSection({ sessionDate }: CardioSectionProps) {
                             const createdEntry = await createCardioEntry({ entryDate: sessionDate, ...values })
                             setEntries((previous) => [...previous, createdEntry])
                             setIsAdding(false)
+                            refreshDayStatus()
                         }}
                     />
                 </div>

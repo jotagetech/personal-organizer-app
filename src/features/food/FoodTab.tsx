@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import {
     createFoodEntry,
@@ -15,6 +16,7 @@ import type { FoodEntryRow } from '@/features/food/types'
 
 export function FoodTab() {
     const { selectedDate } = useSelectedDate()
+    const { refreshDayStatus } = useDayStatus()
     const [entries, setEntries] = useState<FoodEntryRow[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -107,6 +109,7 @@ export function FoodTab() {
                         onSubmit={async (values) => {
                             await createFoodEntry({ entryDate: selectedDate, ...values })
                             await reloadEntries()
+                            refreshDayStatus()
                         }}
                     />
                 </div>
@@ -124,10 +127,12 @@ export function FoodTab() {
                     onUpdate={async (entryId, values) => {
                         await updateFoodEntry(entryId, { entryDate: selectedDate, ...values })
                         await reloadEntries()
+                        refreshDayStatus()
                     }}
                     onDelete={async (entryId) => {
                         await deleteFoodEntry(entryId)
                         await reloadEntries()
+                        refreshDayStatus()
                     }}
                 />
             )}

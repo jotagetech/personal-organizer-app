@@ -20,6 +20,7 @@ import {
 } from '@/features/workout/sessionProgress'
 import { WorkoutFinishPanel } from '@/features/workout/WorkoutFinishPanel'
 import { suggestWorkoutForWeekday } from '@/features/workout/workoutSelection'
+import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useOutbox } from '@/contexts/OutboxContext'
 import { overlayPendingSets, type OutboxOperation, type UpsertSetOperation } from '@/lib/outbox/outboxQueue'
 import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
@@ -33,6 +34,7 @@ type WorkoutSessionViewProps = {
 
 export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSessionViewProps) {
     const outbox = useOutbox()
+    const { refreshDayStatus } = useDayStatus()
     const [isLoading, setIsLoading] = useState(true)
     const [session, setSession] = useState<WorkoutSessionRow | null>(null)
     const [snapshot, setSnapshot] = useState<WorkoutSnapshot | null>(null)
@@ -149,6 +151,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         if (allSetsAlreadyCompleted && !existingSession.finished_at) {
             const finishedSession = await finishSession(existingSession.id)
             setSession(finishedSession)
+            refreshDayStatus()
         }
     }
 
@@ -220,6 +223,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
 
         if (nextPosition === null) {
             outbox.enqueueFinishSession(sessionDate)
+            refreshDayStatus()
         }
     }
 

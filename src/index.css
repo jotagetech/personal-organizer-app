@@ -110,6 +110,22 @@ button, input, select {
     font-weight: 700;
 }
 
+.bottom-nav__indicator {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 11px;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.bottom-nav__indicator--done {
+    color: #16a34a;
+}
+
+.bottom-nav__indicator--pending {
+    color: #d97706;
+}
+
 .card {
     background: #ffffff;
     border: 1px solid #e4e4e7;
