@@ -1,13 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+import {
+    createFoodItem,
+    findFoodItemByExactName,
+    listFrequentFoodItems,
+    searchFoodItems,
+    type FrequentFoodItem,
+} from '@/features/food/api'
+import { suggestMealCategoryForHour } from '@/features/food/mealSuggestion'
 import {
     FOOD_UNITS,
     FOOD_UNIT_LABELS,
     MEAL_CATEGORIES,
     MEAL_CATEGORY_LABELS,
+    type FoodItemRow,
     type FoodUnit,
     type MealCategory,
 } from '@/features/food/types'
+import { todayInTimezone } from '@/lib/dateUtils'
+
+const SEARCH_DEBOUNCE_MS = 250
+const MIN_SEARCH_TEXT_LENGTH = 2
 
 export type FoodEntryFormValues = {
     foodName: string
@@ -16,9 +29,18 @@ export type FoodEntryFormValues = {
     mealCategory: MealCategory
 }
 
+type FoodEntryFormSubmitValues = {
+    foodName: string
+    quantity: number
+    unit: FoodUnit
+    mealCategory: MealCategory
+    foodItemId: string | null
+}
+
 type FoodEntryFormProps = {
+    entryDate: string
     initialValues?: FoodEntryFormValues
-    onSubmit: (values: { foodName: string; quantity: number; unit: FoodUnit; mealCategory: MealCategory }) => Promise<void>
+    onSubmit: (values: FoodEntryFormSubmitValues) => Promise<void>
     onCancel?: () => void
     submitLabel: string
 }
@@ -30,10 +52,71 @@ const EMPTY_FORM_VALUES: FoodEntryFormValues = {
     mealCategory: 'cafe_da_manha',
 }
 
-export function FoodEntryForm({ initialValues, onSubmit, onCancel, submitLabel }: FoodEntryFormProps) {
+export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, submitLabel }: FoodEntryFormProps) {
     const [values, setValues] = useState<FoodEntryFormValues>(initialValues ?? EMPTY_FORM_VALUES)
+    const [selectedFoodItemId, setSelectedFoodItemId] = useState<string | null>(null)
+    const [suggestions, setSuggestions] = useState<FoodItemRow[]>([])
+    const [frequentItems, setFrequentItems] = useState<FrequentFoodItem[]>([])
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+        void listFrequentFoodItems(entryDate).then(setFrequentItems)
+
+        if (!initialValues && entryDate === todayInTimezone()) {
+            const suggestedMealCategory = suggestMealCategoryForHour(new Date().getHours())
+            setValues((previous) => ({ ...previous, mealCategory: suggestedMealCategory }))
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    function handleFoodNameChange(rawValue: string) {
+        setValues({ ...values, foodName: rawValue })
+        setSelectedFoodItemId(null)
+
+        if (searchDebounceRef.current) {
+            clearTimeout(searchDebounceRef.current)
+        }
+        if (rawValue.trim().length < MIN_SEARCH_TEXT_LENGTH) {
+            setSuggestions([])
+            return
+        }
+        searchDebounceRef.current = setTimeout(() => {
+            void searchFoodItems(rawValue).then(setSuggestions)
+        }, SEARCH_DEBOUNCE_MS)
+    }
+
+    function handleSelectSuggestion(item: FoodItemRow) {
+        setValues({ ...values, foodName: item.name })
+        setSelectedFoodItemId(item.id)
+        setSuggestions([])
+    }
+
+    function handleSelectFrequentItem(frequentItem: FrequentFoodItem) {
+        setValues({
+            foodName: frequentItem.item.name,
+            quantityText: String(frequentItem.lastQuantity),
+            unit: frequentItem.lastUnit,
+            mealCategory: frequentItem.lastMealCategory,
+        })
+        setSelectedFoodItemId(frequentItem.item.id)
+        setSuggestions([])
+    }
+
+    async function resolveFoodItemId(foodName: string): Promise<string> {
+        if (selectedFoodItemId) {
+            return selectedFoodItemId
+        }
+
+        const existingItem = await findFoodItemByExactName(foodName)
+        if (existingItem) {
+            return existingItem.id
+        }
+
+        const createdItem = await createFoodItem(foodName)
+        return createdItem.id
+    }
 
     async function handleSubmit(event: React.FormEvent) {
         event.preventDefault()
@@ -54,8 +137,16 @@ export function FoodEntryForm({ initialValues, onSubmit, onCancel, submitLabel }
         setErrorMessage(null)
         setIsSubmitting(true)
         try {
-            await onSubmit({ foodName: trimmedFoodName, quantity, unit: values.unit, mealCategory: values.mealCategory })
+            const foodItemId = await resolveFoodItemId(trimmedFoodName)
+            await onSubmit({
+                foodName: trimmedFoodName,
+                quantity,
+                unit: values.unit,
+                mealCategory: values.mealCategory,
+                foodItemId,
+            })
             setValues(EMPTY_FORM_VALUES)
+            setSelectedFoodItemId(null)
         } catch (submitError) {
             const message = submitError instanceof Error ? submitError.message : 'Falha ao salvar'
             setErrorMessage(message)
@@ -67,15 +158,44 @@ export function FoodEntryForm({ initialValues, onSubmit, onCancel, submitLabel }
     return (
         <form onSubmit={handleSubmit}>
             {errorMessage && <div className="error-list">{errorMessage}</div>}
+            {frequentItems.length > 0 && (
+                <div className="food-chip-row">
+                    {frequentItems.map((frequentItem) => (
+                        <button
+                            key={frequentItem.item.id}
+                            type="button"
+                            className="food-chip"
+                            onClick={() => handleSelectFrequentItem(frequentItem)}
+                        >
+                            {frequentItem.item.name}
+                        </button>
+                    ))}
+                </div>
+            )}
             <div className="field">
                 <label htmlFor="food-name">Alimento</label>
                 <input
                     id="food-name"
                     type="text"
                     value={values.foodName}
-                    onChange={(event) => setValues({ ...values, foodName: event.target.value })}
+                    onChange={(event) => handleFoodNameChange(event.target.value)}
                     placeholder="ex: Filé de peito de frango"
+                    autoComplete="off"
                 />
+                {suggestions.length > 0 && (
+                    <div className="food-suggestion-list">
+                        {suggestions.map((suggestion) => (
+                            <button
+                                key={suggestion.id}
+                                type="button"
+                                className="food-suggestion-list__item"
+                                onClick={() => handleSelectSuggestion(suggestion)}
+                            >
+                                {suggestion.name}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
                 <div className="field" style={{ flex: 1 }}>

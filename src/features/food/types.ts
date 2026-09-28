@@ -1,6 +1,7 @@
 import type { Database } from '@/lib/databaseTypes'
 
 export type FoodEntryRow = Database['public']['Tables']['food_entries']['Row']
+export type FoodItemRow = Database['public']['Tables']['food_items']['Row']
 
 export const FOOD_UNITS = ['g', 'ml', 'unidade', 'porcao', 'colher'] as const
 export type FoodUnit = (typeof FOOD_UNITS)[number]

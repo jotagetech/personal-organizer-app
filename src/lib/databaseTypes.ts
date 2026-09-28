@@ -71,6 +71,26 @@ type FoodEntryRow = {
     quantity: number
     unit: string
     meal_category: string
+    food_item_id: string | null
+    kcal: number | null
+    protein_g: number | null
+    carbs_g: number | null
+    fat_g: number | null
+    created_at: string
+    updated_at: string
+}
+
+type FoodItemRow = {
+    id: string
+    user_id: string
+    name: string
+    reference_quantity: number | null
+    reference_unit: string | null
+    kcal: number | null
+    protein_g: number | null
+    carbs_g: number | null
+    fat_g: number | null
+    is_seed: boolean
     created_at: string
     updated_at: string
 }
@@ -158,7 +178,32 @@ export type Database = {
             >
             food_entries: TableDefinition<
                 FoodEntryRow,
-                { id?: string; created_at?: string; updated_at?: string },
+                {
+                    id?: string
+                    created_at?: string
+                    updated_at?: string
+                    food_item_id?: string | null
+                    kcal?: number | null
+                    protein_g?: number | null
+                    carbs_g?: number | null
+                    fat_g?: number | null
+                },
+                Record<never, never>
+            >
+            food_items: TableDefinition<
+                FoodItemRow,
+                {
+                    id?: string
+                    created_at?: string
+                    updated_at?: string
+                    reference_quantity?: number | null
+                    reference_unit?: string | null
+                    kcal?: number | null
+                    protein_g?: number | null
+                    carbs_g?: number | null
+                    fat_g?: number | null
+                    is_seed?: boolean
+                },
                 Record<never, never>
             >
             cardio_activity_types: TableDefinition<

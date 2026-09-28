@@ -1,8 +1,10 @@
-# Treino e Alimentação (v0)
+# Treino e Alimentação
 
-App pessoal para registrar treinos (a partir de um plano importado em JSON) e
-alimentação do dia a dia. Ver `instrucoes-app-treino-alimentacao-v0.md` (fora do
-controle de versão) para a especificação completa.
+App pessoal para registrar treino de força, cardio, alimentação, peso corporal
+e sono, com foco em uso rápido pelo celular. Ver
+`instrucoes-app-treino-alimentacao-v0.md` (fora do controle de versão) para a
+especificação original da v0; muita coisa evoluiu desde então (ver
+`CHANGELOG.md`).
 
 ## Stack
 
@@ -33,16 +35,43 @@ npm run dev
 ## Configuração do Supabase
 
 1. Crie um projeto no Supabase.
-2. Aplique a migração em `supabase/migrations/20260927000000_init.sql` (via
-   `supabase db push`, ou colando o conteúdo no SQL Editor do projeto).
+2. Aplique as migrações em `supabase/migrations/`, **nessa ordem exata**:
+   1. `20260927000000_init.sql`
+   2. `20260927010000_cardio_and_session_finish.sql`
+   3. `20260927020000_workout_cycles.sql`
+   4. `20260927030000_rir_bodyweight_sleep.sql`
+   5. `20260928000000_food_items_catalog.sql` (popula o catálogo com os 597
+      alimentos da Tabela TACO 4ª edição, ver `CHANGELOG.md`)
+
+   Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
-   manualmente o único usuário da conta pessoal (a v0 não tem tela de cadastro
-   público, por decisão de escopo).
+   manualmente o único usuário da conta pessoal (sem tela de cadastro público,
+   por decisão de escopo).
 4. Copie a URL do projeto e a `anon key` para `.env` (`VITE_SUPABASE_URL` e
    `VITE_SUPABASE_ANON_KEY`).
-5. RLS já vem habilitado pela migração, restringindo cada tabela ao próprio
+5. RLS habilitado em todas as tabelas, restringindo cada uma ao próprio
    usuário autenticado. Nenhuma chave privilegiada (`service_role`) é usada no
    frontend.
+
+## Funcionalidades
+
+- **Treino**: importa plano de treino via JSON, sugere o treino do dia,
+  registra um exercício/uma série por vez (carga, repetições, RIR opcional,
+  comentário livre por série), com barra de progresso e opção de voltar.
+  Finalizar o treino registra duração, sentimento (escala 1-5) e abre o
+  registro de cardio do dia.
+- **Ciclo**: marca a data de início de um ciclo de treino (menu "⋮" na aba
+  Treino) e mostra "Dia N do ciclo", independente de trocas no plano.
+- **Cardio**: catálogo de atividades cadastrado na hora, registro por dia
+  (duração, distância opcional, sentimento, observação).
+- **Alimentação**: catálogo de alimentos com nutrição opcional (kcal/
+  proteína/carboidrato/gordura por uma quantidade de referência), semeado com
+  a Tabela TACO. Chips de "frequentes", autocomplete, sugestão de refeição
+  pela hora do dia, total diário de kcal/proteína.
+- **Peso corporal e sono**: registro rápido diário (um número, upsert por
+  dia), na aba Resultados.
+- **Resultados**: grade semanal de dias de treino concluído (verde = treino
+  finalizado naquele dia), mais os registros de peso/sono.
 
 ## Estrutura
 
@@ -53,32 +82,23 @@ src/
   features/
     auth/           tela de login
     shared/         navegação inferior, cabeçalho de data
-    workout/        importação de plano, sugestão de treino do dia, sessão/séries
-    food/           formulário e lista de consumo por refeição
-supabase/migrations/  esquema SQL + RLS + função de importação atômica de plano
+    workout/        importação de plano, sessão/séries, ciclo de progresso, finalização
+    cycle/          ciclo de treino (data de início, "Dia N do ciclo")
+    cardio/         catálogo de atividades e registro de cardio
+    food/           catálogo de alimentos (TACO + próprios), consumo por refeição
+    bodyMetrics/    peso corporal e sono (registro rápido diário)
+    results/        grade semanal de treinos concluídos
+supabase/migrations/  esquema SQL + RLS + funções (importação de plano, cálculo nutricional)
 examples/             plano de treino de exemplo (JSON)
 schemas/               JSON Schema gerado a partir do contrato Zod
-tests/                 testes Vitest (contrato, datas, seleção de treino, hash canônico)
+tests/                 testes Vitest (contrato, datas, seleção de treino, hash canônico,
+                        progresso de sessão, grade de resultados, sugestão de refeição)
+CHANGELOG.md           histórico de mudanças, por data
 ```
 
-## O que foi verificado nesta entrega
+## Estado atual
 
-- `npm run typecheck`, `npm run build` e `npm run test` (24 testes) rodam limpos.
-- `npm run schema:generate` gera `schemas/workout-plan.schema.json` a partir do
-  mesmo schema Zod usado em runtime (sem duplicar as regras do contrato).
-- O servidor de desenvolvimento sobe e serve a página corretamente
-  (`curl` no `index.html` gerado pelo Vite).
-
-## O que NÃO foi verificado (depende de credenciais reais do Supabase)
-
-- Nenhuma chamada real a Supabase foi exercitada (login, importação de plano,
-  criação de sessão/séries, RLS em produção): não há projeto Supabase
-  configurado nesta entrega.
-- Não houve verificação visual em navegador real do fluxo completo (extensão
-  Claude para Chrome não estava conectada no momento da implementação).
-- As políticas de RLS e a função `import_workout_plan` foram escritas e
-  revisadas, mas não testadas contra um banco real.
-
-Antes de considerar a v0 pronta para uso: criar o projeto Supabase, aplicar a
-migração, configurar `.env`, criar o usuário único, e validar manualmente os
-fluxos de treino e alimentação num celular real ou emulado.
+Em uso real pelo autor, testado no celular. Ver `CHANGELOG.md` para o
+histórico de features e correções. Pendência conhecida: integração com
+Google Fit (sono/passos do Amazfit/Zepp), adiada por ser um projeto à parte
+(exige OAuth e uma Edge Function), ainda não implementada.

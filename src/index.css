@@ -299,3 +299,53 @@ button, input, select {
 .results-grid__cell--out-of-range {
     opacity: 0.25;
 }
+
+.food-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.food-chip {
+    flex-shrink: 0;
+    max-width: 100%;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid #d4d4d8;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #18181b;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.food-chip:active {
+    background: #f4f4f5;
+}
+
+.food-suggestion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.food-suggestion-list__item {
+    min-height: 40px;
+    padding: 0 10px;
+    border: none;
+    background: #ffffff;
+    text-align: left;
+    font-size: 14px;
+    color: #18181b;
+}
+
+.food-suggestion-list__item:active {
+    background: #f4f4f5;
+}

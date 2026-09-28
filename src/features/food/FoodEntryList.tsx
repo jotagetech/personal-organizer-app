@@ -1,15 +1,31 @@
 import { useState } from 'react'
 
 import { FoodEntryForm } from '@/features/food/FoodEntryForm'
-import { MEAL_CATEGORIES, MEAL_CATEGORY_LABELS, FOOD_UNIT_LABELS, type FoodEntryRow, type FoodUnit, type MealCategory } from '@/features/food/types'
+import {
+    MEAL_CATEGORIES,
+    MEAL_CATEGORY_LABELS,
+    FOOD_UNIT_LABELS,
+    type FoodEntryRow,
+    type FoodUnit,
+    type MealCategory,
+} from '@/features/food/types'
+
+type FoodEntrySubmitValues = {
+    foodName: string
+    quantity: number
+    unit: FoodUnit
+    mealCategory: MealCategory
+    foodItemId: string | null
+}
 
 type FoodEntryListProps = {
+    entryDate: string
     entries: FoodEntryRow[]
-    onUpdate: (entryId: string, values: { foodName: string; quantity: number; unit: FoodUnit; mealCategory: MealCategory }) => Promise<void>
+    onUpdate: (entryId: string, values: FoodEntrySubmitValues) => Promise<void>
     onDelete: (entryId: string) => Promise<void>
 }
 
-export function FoodEntryList({ entries, onUpdate, onDelete }: FoodEntryListProps) {
+export function FoodEntryList({ entryDate, entries, onUpdate, onDelete }: FoodEntryListProps) {
     const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
 
     if (entries.length === 0) {
@@ -31,6 +47,7 @@ export function FoodEntryList({ entries, onUpdate, onDelete }: FoodEntryListProp
                             <div key={entry.id} className="card">
                                 {editingEntryId === entry.id ? (
                                     <FoodEntryForm
+                                        entryDate={entryDate}
                                         submitLabel="Salvar"
                                         initialValues={{
                                             foodName: entry.food_name,
@@ -50,6 +67,8 @@ export function FoodEntryList({ entries, onUpdate, onDelete }: FoodEntryListProp
                                             <strong>{entry.food_name}</strong>
                                             <p style={{ margin: '2px 0 0', fontSize: 13, color: '#52525b' }}>
                                                 {entry.quantity} {FOOD_UNIT_LABELS[entry.unit as FoodUnit]}
+                                                {entry.kcal !== null ? ` · ${entry.kcal} kcal` : ''}
+                                                {entry.protein_g !== null ? ` · ${entry.protein_g} g P` : ''}
                                             </p>
                                         </div>
                                         <div style={{ display: 'flex', gap: 6 }}>
