@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 
 import {
+    deleteBodyWeightEntry,
+    deleteSleepEntry,
     listRecentBodyWeightEntries,
     listRecentSleepEntries,
     upsertBodyWeightEntry,
@@ -102,14 +104,16 @@ export function ResultsTab() {
                         placeholder="ex: 78.5"
                         listRecent={async () =>
                             (await listRecentBodyWeightEntries()).map((entry) => ({
+                                id: entry.id,
                                 entryDate: entry.entry_date,
                                 value: entry.weight_kg,
                             }))
                         }
                         save={async (entryDate, value) => {
                             const saved = await upsertBodyWeightEntry(entryDate, value)
-                            return { entryDate: saved.entry_date, value: saved.weight_kg }
+                            return { id: saved.id, entryDate: saved.entry_date, value: saved.weight_kg }
                         }}
+                        deleteEntry={deleteBodyWeightEntry}
                     />
                 </div>
                 <div style={{ flex: 1, minWidth: 160 }}>
@@ -119,14 +123,16 @@ export function ResultsTab() {
                         placeholder="ex: 7.5"
                         listRecent={async () =>
                             (await listRecentSleepEntries()).map((entry) => ({
+                                id: entry.id,
                                 entryDate: entry.entry_date,
                                 value: entry.hours,
                             }))
                         }
                         save={async (entryDate, value) => {
                             const saved = await upsertSleepEntry(entryDate, value)
-                            return { entryDate: saved.entry_date, value: saved.hours }
+                            return { id: saved.id, entryDate: saved.entry_date, value: saved.hours }
                         }}
+                        deleteEntry={deleteSleepEntry}
                     />
                 </div>
             </div>

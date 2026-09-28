@@ -40,6 +40,13 @@ export async function upsertBodyWeightEntry(entryDate: string, weightKg: number)
     return data
 }
 
+export async function deleteBodyWeightEntry(entryId: string): Promise<void> {
+    const { error } = await supabase.from('body_weight_entries').delete().eq('id', entryId)
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
 export async function listRecentSleepEntries(): Promise<SleepEntryRow[]> {
     const { data, error } = await supabase
         .from('sleep_entries')
@@ -72,4 +79,11 @@ export async function upsertSleepEntry(entryDate: string, hours: number): Promis
     }
 
     return data
+}
+
+export async function deleteSleepEntry(entryId: string): Promise<void> {
+    const { error } = await supabase.from('sleep_entries').delete().eq('id', entryId)
+    if (error) {
+        throw new Error(error.message)
+    }
 }

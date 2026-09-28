@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { todayInTimezone } from '@/lib/dateUtils'
 
-type MetricPoint = { entryDate: string; value: number }
+type MetricPoint = { id: string; entryDate: string; value: number }
 
 type QuickMetricLogProps = {
     title: string
@@ -10,9 +10,17 @@ type QuickMetricLogProps = {
     placeholder: string
     listRecent: () => Promise<MetricPoint[]>
     save: (entryDate: string, value: number) => Promise<MetricPoint>
+    deleteEntry: (id: string) => Promise<void>
 }
 
-export function QuickMetricLog({ title, unitLabel, placeholder, listRecent, save }: QuickMetricLogProps) {
+export function QuickMetricLog({
+    title,
+    unitLabel,
+    placeholder,
+    listRecent,
+    save,
+    deleteEntry,
+}: QuickMetricLogProps) {
     const [recentPoints, setRecentPoints] = useState<MetricPoint[]>([])
     const [valueText, setValueText] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -50,6 +58,15 @@ export function QuickMetricLog({ title, unitLabel, placeholder, listRecent, save
         }
     }
 
+    async function handleDeleteClick(pointId: string) {
+        const confirmedDeletion = window.confirm('Excluir esse registro?')
+        if (!confirmedDeletion) {
+            return
+        }
+        await deleteEntry(pointId)
+        setRecentPoints((previous) => previous.filter((point) => point.id !== pointId))
+    }
+
     return (
         <div className="card">
             <h3 style={{ fontSize: 14, marginTop: 0 }}>{title}</h3>
@@ -70,9 +87,34 @@ export function QuickMetricLog({ title, unitLabel, placeholder, listRecent, save
                 </button>
             </form>
             {recentPoints.length > 0 && (
-                <p style={{ fontSize: 12, color: '#71717a', marginTop: 8, marginBottom: 0 }}>
-                    {recentPoints.map((point) => `${point.entryDate.slice(5)}: ${point.value}`).join(' · ')}
-                </p>
+                <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
+                    {recentPoints.map((point) => (
+                        <li
+                            key={point.id}
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontSize: 13,
+                                color: '#52525b',
+                                padding: '6px 0',
+                                borderTop: '1px solid #e4e4e7',
+                            }}
+                        >
+                            <span>
+                                {point.entryDate.slice(5)}: {point.value}
+                            </span>
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                style={{ minHeight: 32, padding: '0 10px', fontSize: 12 }}
+                                onClick={() => handleDeleteClick(point.id)}
+                            >
+                                Excluir
+                            </button>
+                        </li>
+                    ))}
+                </ul>
             )}
         </div>
     )
