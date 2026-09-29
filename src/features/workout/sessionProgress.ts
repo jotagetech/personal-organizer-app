@@ -27,6 +27,22 @@ export function isSetResolved(row: WorkoutSetRow | undefined): boolean {
     return setStatusOf(row) !== 'pending'
 }
 
+export function isIntervalExercise(exercicio: WorkoutSnapshotExercise): boolean {
+    return exercicio.tipo === 'intervalado'
+}
+
+// O intervalado é um passo só do assistente, apesar de ter uma entrada por
+// rodada em `series`: qualquer posição dentro dele aponta para a primeira
+// rodada, que é onde o passo inteiro é mostrado.
+export function stepStartOf(snapshot: WorkoutSnapshot, position: StepPosition): StepPosition {
+    const exercicio = snapshot.exercicios[position.exerciseIndex]
+    if (!isIntervalExercise(exercicio) || position.setIndexInExercise === 0) {
+        return position
+    }
+
+    return { exerciseIndex: position.exerciseIndex, setIndexInExercise: 0 }
+}
+
 function rowAtPosition(
     snapshot: WorkoutSnapshot,
     setsByKey: Map<string, WorkoutSetRow>,
@@ -61,7 +77,18 @@ export function findFirstIncompletePosition(
         (position) => !isSetResolved(rowAtPosition(snapshot, setsByKey, position)),
     )
 
-    return firstUnresolved ?? null
+    return firstUnresolved ? stepStartOf(snapshot, firstUnresolved) : null
+}
+
+// Saindo de um intervalado, a busca começa depois da última rodada dele:
+// rodadas que ficaram sem registro são do mesmo passo, não do próximo.
+function lastPositionOfStep(snapshot: WorkoutSnapshot, position: StepPosition): StepPosition {
+    const exercicio = snapshot.exercicios[position.exerciseIndex]
+    if (!isIntervalExercise(exercicio)) {
+        return position
+    }
+
+    return { exerciseIndex: position.exerciseIndex, setIndexInExercise: exercicio.series.length - 1 }
 }
 
 // Com navegação livre entre exercícios, a próxima série a fazer não é
@@ -73,13 +100,14 @@ export function findNextUnresolvedPosition(
     from: StepPosition,
 ): StepPosition | null {
     const positions = allPositions(snapshot)
-    const fromIndex = positions.findIndex((position) => isSamePosition(position, from))
+    const lastOfCurrentStep = lastPositionOfStep(snapshot, from)
+    const fromIndex = positions.findIndex((position) => isSamePosition(position, lastOfCurrentStep))
     const startIndex = fromIndex === -1 ? 0 : fromIndex + 1
 
     for (let offset = 0; offset < positions.length; offset += 1) {
         const candidate = positions[(startIndex + offset) % positions.length]
         if (!isSetResolved(rowAtPosition(snapshot, setsByKey, candidate))) {
-            return candidate
+            return stepStartOf(snapshot, candidate)
         }
     }
 
@@ -92,6 +120,9 @@ export function firstUnresolvedSetInExercise(
     exerciseIndex: number,
 ): StepPosition {
     const exercicio = snapshot.exercicios[exerciseIndex]
+    if (isIntervalExercise(exercicio)) {
+        return { exerciseIndex, setIndexInExercise: 0 }
+    }
     const unresolvedSetIndex = exercicio.series.findIndex(
         (serie) => !isSetResolved(setsByKey.get(setKey(exercicio.exercise_key, serie.set_index))),
     )
@@ -107,6 +138,19 @@ export function isOnlyUnresolvedSet(
     return allPositions(snapshot).every(
         (candidate) =>
             isSamePosition(candidate, position) || isSetResolved(rowAtPosition(snapshot, setsByKey, candidate)),
+    )
+}
+
+// Para o rótulo "finalizar treino" no passo do intervalado: tudo fora dele já
+// está resolvido.
+export function isOnlyUnresolvedExercise(
+    snapshot: WorkoutSnapshot,
+    setsByKey: Map<string, WorkoutSetRow>,
+    exerciseIndex: number,
+): boolean {
+    return allPositions(snapshot).every(
+        (candidate) =>
+            candidate.exerciseIndex === exerciseIndex || isSetResolved(rowAtPosition(snapshot, setsByKey, candidate)),
     )
 }
 
@@ -268,7 +312,7 @@ export function retreatStep(
         return { position: step.position, dropPosition: previousDropPosition >= 0 ? previousDropPosition : null }
     }
 
-    const previousPosition = retreatPosition(snapshot, step.position)
+    const previousPosition = stepStartOf(snapshot, retreatPosition(snapshot, stepStartOf(snapshot, step.position)))
     const previousDropCount = serieAt(snapshot, previousPosition).quedas.length
     const isPreviousCompleted = setStatusOf(rowAtPosition(snapshot, setsByKey, previousPosition)) === 'completed'
     if (previousDropCount > 0 && isPreviousCompleted) {

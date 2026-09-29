@@ -6,6 +6,7 @@ export type {
     WorkoutSnapshotDrop,
     WorkoutSnapshotExercise,
     WorkoutSnapshotExerciseSet,
+    WorkoutSnapshotInterval,
 } from '@/lib/workoutSnapshotSchema'
 
 type WorkoutPlanRow = {
@@ -56,6 +57,9 @@ type WorkoutSetRow = {
     metric: SetMetric | null
     duration_seconds: number | null
     distance_m: number | null
+    // Esforço percebido (1 a 10) de uma rodada de intervalado. Opcional no
+    // tipo porque a coluna só existe depois da migração que a cria.
+    rpe?: number | null
     updated_at: string
 }
 
@@ -216,6 +220,7 @@ export type Database = {
                     metric?: SetMetric | null
                     duration_seconds?: number | null
                     distance_m?: number | null
+                    rpe?: number | null
                 },
                 Record<never, never>
             >

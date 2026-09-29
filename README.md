@@ -69,6 +69,12 @@ npm run dev
       estar aplicada no SQL Editor **antes** do deploy do app desta versão,
       porque o app novo grava essas colunas e a função
       `replace_workout_set_drops`.
+   13. `20260929020000_workout_sets_rpe.sql` (coluna `rpe`, de 1 a 10, em
+      `workout_sets`, para as rodadas do cardio intervalado, ver
+      `CHANGELOG.md`). Aditiva e idempotente. Precisa estar aplicada **antes**
+      do deploy do app desta versão: a rodada de intervalado grava `rpe`, e
+      um banco sem a coluna recusa a escrita. Séries comuns não mandam a
+      coluna e continuam funcionando com ou sem ela.
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
@@ -109,6 +115,9 @@ npm run dev
   Série de tempo tem cronômetro (bipe e aviso ao atingir o mínimo e o
   máximo da meta), e o descanso prescrito vira uma contagem regressiva
   compacta depois de cada série.
+  Cardio intervalado (bike, esteira, remo, corrida) é um exercício do
+  treino: um passo com timer guiado que alterna trabalho e recuperação,
+  mostra "Rodada 3 de 8" e grava cada rodada feita, com o RPE do bloco.
   Finalizar o treino registra duração, sentimento (escala 1-5) e abre o
   registro de cardio do dia.
 - **Ciclo**: marca a data de início de um ciclo de treino (menu de três pontos
@@ -238,11 +247,60 @@ barra). Os dois podem aparecer juntos ou separados.
 { "observacoes": "Descida controlada de 4 a 6 segundos." }
 ```
 
+**Cardio intervalado** (`tipo: "intervalado"`, no exercício): rodadas de
+trabalho alternadas com recuperação, em qualquer modalidade. Sem `tipo` (ou
+com `tipo: "series"`), o exercício é de séries como sempre foi. Campos:
+
+| Campo | O que é |
+|---|---|
+| `modalidade` | Texto livre: `bike`, `esteira`, `remo`, `corrida`... |
+| `rodadas` | Quantidade de rodadas de trabalho (1 a 50) |
+| `trabalho_segundos_min/max` | Trabalho de cada rodada, em segundos |
+| `recuperacao_segundos_min/max` | Recuperação entre rodadas, em segundos (0 emenda as rodadas) |
+| `rpe_alvo_min/max` | RPE alvo opcional, de 1 a 10 |
+| `observacoes` | Texto livre, como nos outros exercícios |
+
+Toda faixa segue a regra do resto do contrato: sempre o par, e valor fixo
+repete o número. Com faixa de trabalho (3 a 4 min, por exemplo), quem treina
+encerra cada trabalho dentro dela. Campos de série não se aplicam e são
+recusados com o caminho do campo: `series`, `forma_carga`, `equipamento`,
+`por_lado`, `descanso_segundos_min/max` (a pausa é a recuperação) e
+`rir_alvo_min/max` (use o RPE). Tiros de 30 s forte e 90 s leve, 6 na semana
+1, 8 na 2, 10 na 3 e 6 na 4:
+
+```json
+{
+  "tipo": "intervalado",
+  "id": "tiros-bike",
+  "nome": "Tiros na bike",
+  "modalidade": "bike",
+  "rodadas": 6,
+  "trabalho_segundos_min": 30,
+  "trabalho_segundos_max": 30,
+  "recuperacao_segundos_min": 90,
+  "recuperacao_segundos_max": 90,
+  "rpe_alvo_min": 8,
+  "rpe_alvo_max": 8,
+  "variacoes_semana": [
+    { "semanas": [2], "rodadas": 8 },
+    { "semanas": [3], "rodadas": 10 }
+  ]
+}
+```
+
+Resistência com blocos de 3 a 4 min e 2 min de recuperação:
+
+```json
+{ "tipo": "intervalado", "id": "resistencia-esteira", "nome": "Resistência na esteira", "modalidade": "esteira", "rodadas": 4, "trabalho_segundos_min": 180, "trabalho_segundos_max": 240, "recuperacao_segundos_min": 120, "recuperacao_segundos_max": 120 }
+```
+
 **Progressão por semana**: o plano declara um bloco (`bloco_semanas`, de 1 a
 12) e cada exercício pode ter `variacoes_semana`, uma lista em que cada item
 diz em quais `semanas` vale e o que muda nelas: `series` (substitui a lista
 inteira, então serve tanto para mudar alvo e carga quanto para tirar ou
-acrescentar séries), `descanso_segundos_min/max` e `rir_alvo_min/max`. O que a
+acrescentar séries), `descanso_segundos_min/max` e `rir_alvo_min/max`; no
+exercício intervalado, `rodadas`, `trabalho_segundos_min/max`,
+`recuperacao_segundos_min/max` e `rpe_alvo_min/max`. O que a
 variação não informa continua vindo do exercício, e uma semana sem variação
 usa as séries base. `semanas` no plano é opcional e dá uma descrição curta a
 cada semana, mostrada na aba Treino. Um bloco de 4 semanas com 3 séries que
@@ -305,12 +363,40 @@ aparecer em uma variação do mesmo exercício.
   com a semana nula. A aba Treino mostra "Semana N de M" (com a descrição,
   se houver) ao lado do badge do ciclo e o detalhe do dia em Resultados
   mostra a semana da sessão.
+- Cada rodada do intervalado é uma linha de `workout_sets`: `set_index` é o
+  número da rodada, `metric` é `tempo`, `duration_seconds` o trabalho feito
+  e `rpe` o RPE do bloco (o mesmo em toda rodada feita, nulo se não
+  informado). Rodada pulada tem `skipped_at`. O snapshot grava o
+  intervalado já resolvido para a semana (`tipo`, `intervalado` com as
+  faixas) e, em `series`, uma série de tempo por rodada, então quem só
+  conhece séries continua lendo a sessão. Snapshots antigos são lidos como
+  `tipo: "series"`.
+- Na sessão, o intervalado é um passo só. "Iniciar" liga o timer guiado:
+  trabalho e recuperação alternam sozinhos com contagem regressiva grande,
+  "Rodada 3 de 8" e bipe na troca de fase (e nos 3 últimos segundos da
+  recuperação). Com faixa de trabalho, a contagem vai até o mínimo (aviso) e
+  depois até o máximo (troca sozinha); "Encerrar trabalho" fecha a rodada
+  com o tempo feito. Dá para pausar, pular a rodada, começar a próxima antes
+  do fim da recuperação e encerrar o bloco antes (o que falta fica pulado).
+  O estado fica em localStorage com timestamps, então fechar e reabrir o
+  app retoma no ponto certo, e a tela fica acesa com wake lock. No fim, uma
+  conferência mostra cada rodada (tempo editável, feita ou pulada) e o RPE
+  do bloco em botões de 1 a 10 antes de gravar; "Lançar sem timer" abre a
+  mesma conferência já preenchida com o alvo. A gravação passa pela fila
+  otimista como as séries.
+- Em Resultados, o intervalado aparece numa linha só com o que foi feito,
+  `8 × 30 s / 90 s · RPE 8` (faixa quando as rodadas variaram, puladas no
+  fim), e a meta do dia embaixo.
 - A exportação JSON por período mantém o formato anterior e só acrescenta
   campos: por exercício `equipment`, `per_side`, `rest_seconds_min/max`,
   `target_rir_min/max` e `notes`; por série planejada `drops` (alvos das
   quedas); por série realizada `drops` (o que foi feito em cada queda); por
   treino `block_week` e `block_weeks` (semana do bloco e duração dele, nulos
-  sem bloco).
+  sem bloco); por exercício `exercise_type` (`series` ou `intervalado`) e
+  `interval` (modalidade, rodadas e faixas de trabalho, recuperação e RPE
+  alvo, nulo em exercício de séries); por série realizada `rpe`. No
+  intervalado, cada item de `planned` e `sets` é uma rodada e
+  `load_convention` não tem significado.
 
 ## Estrutura
 

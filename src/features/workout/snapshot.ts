@@ -8,6 +8,8 @@ export function buildWorkoutSnapshot(workout: Workout, planWeek: PlanWeek | null
     const exercicios = workoutForWeek.exercicios.map((exercicio) => ({
         exercise_key: exercicio.id,
         nome: exercicio.nome,
+        tipo: exercicio.tipo,
+        intervalado: exercicio.intervalado ? { ...exercicio.intervalado } : null,
         equipamento: exercicio.equipamento,
         forma_carga: exercicio.forma_carga,
         por_lado: exercicio.por_lado,

@@ -271,6 +271,7 @@ describe('buildPeriodExport', () => {
             duration_seconds: null,
             distance_m: null,
             drops: [],
+            rpe: null,
             completed_at: '2026-09-28T10:00:00.000Z',
         })
         expect(supino.sets[2]).toMatchObject({ status: 'skipped', load_kg: null, note: 'ombro', completed_at: null })
@@ -285,6 +286,7 @@ describe('buildPeriodExport', () => {
                 duration_seconds: null,
                 distance_m: null,
                 drops: [],
+                rpe: null,
                 completed_at: null,
             },
         ])
@@ -436,6 +438,8 @@ describe('buildPeriodExport', () => {
                 {
                     exercise_key: 'triceps',
                     nome: 'Tríceps na corda',
+                    tipo: 'series',
+                    intervalado: null,
                     equipamento: 'cabo',
                     forma_carga: 'total',
                     por_lado: true,
@@ -546,6 +550,80 @@ describe('buildPeriodExport', () => {
             target_rir_max: null,
             notes: null,
         })
+    })
+
+    it('exporta o intervalado com a prescrição e cada rodada com trabalho e RPE', () => {
+        const snapshot: WorkoutSnapshot = {
+            ...SNAPSHOT,
+            exercicios: [
+                {
+                    ...SNAPSHOT_EXERCISE_DEFAULTS,
+                    exercise_key: 'tiros',
+                    nome: 'Tiros na bike',
+                    tipo: 'intervalado',
+                    intervalado: {
+                        modalidade: 'bike',
+                        rodadas: 2,
+                        trabalho_segundos_min: 30,
+                        trabalho_segundos_max: 30,
+                        recuperacao_segundos_min: 90,
+                        recuperacao_segundos_max: 90,
+                        rpe_alvo_min: 8,
+                        rpe_alvo_max: 8,
+                    },
+                    forma_carga: 'peso_corporal',
+                    series: [1, 2].map((setIndex) => ({
+                        set_index: setIndex,
+                        metrica: 'tempo' as const,
+                        alvo_min: 30,
+                        alvo_max: 30,
+                        carga_sugerida: null,
+                        quedas: [],
+                    })),
+                },
+            ],
+        }
+        const raw = buildRawData({
+            workoutSessions: [buildSession({ workout_snapshot: snapshot })],
+            workoutSets: [
+                buildSet({
+                    id: 'r1',
+                    exercise_key: 'tiros',
+                    set_index: 1,
+                    metric: 'tempo',
+                    duration_seconds: 30,
+                    rpe: 8,
+                    completed_at: '2026-09-28T10:00:30.000Z',
+                }),
+            ],
+        })
+
+        const [exercise] = buildPeriodExport(raw, PERIOD, META).workouts[0].exercises
+
+        expect(exercise).toMatchObject({
+            exercise_type: 'intervalado',
+            interval: {
+                modality: 'bike',
+                rounds: 2,
+                work_seconds_min: 30,
+                work_seconds_max: 30,
+                recovery_seconds_min: 90,
+                recovery_seconds_max: 90,
+                target_rpe_min: 8,
+                target_rpe_max: 8,
+            },
+        })
+        expect(exercise.planned.map((planned) => planned.metric)).toEqual(['tempo', 'tempo'])
+        expect(exercise.sets.map((set) => [set.status, set.duration_seconds, set.rpe])).toEqual([
+            ['completed', 30, 8],
+            ['pending', null, null],
+        ])
+    })
+
+    it('exporta exercício de séries com tipo series e sem intervalado', () => {
+        const [supino] = buildPeriodExport(buildRawData(), PERIOD, META).workouts[0].exercises
+
+        expect(supino).toMatchObject({ exercise_type: 'series', interval: null })
     })
 
     it('exporta a semana do bloco gravada na sessão e deixa nula quando não havia bloco', () => {

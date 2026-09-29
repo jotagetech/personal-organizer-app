@@ -2613,6 +2613,277 @@ h1, h2, h3, h4 {
     color: var(--color-on-accent);
 }
 
+/* Cardio intervalado: prescrição, timer guiado e conferência das rodadas. Os
+   alvos têm pelo menos 48px porque o uso é ofegante, com uma mão só. */
+.interval-start__plan {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.interval-start__plan div {
+    padding: 10px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-muted);
+    text-align: center;
+}
+
+.interval-start__plan dt {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.interval-start__plan dd {
+    margin: 2px 0 0;
+    font-family: var(--font-numeric);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.interval-start__hint {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+}
+
+.interval-start__go {
+    width: 100%;
+    min-height: 64px;
+    margin-bottom: 8px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+}
+
+.interval-timer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 12px;
+    padding: 16px 12px;
+    border: 2px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+    text-align: center;
+}
+
+.interval-timer__phase {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: uppercase;
+    color: var(--color-text);
+}
+
+.interval-timer__round {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+    color: var(--color-text-secondary);
+}
+
+.interval-timer__clock {
+    font-family: var(--font-numeric);
+    font-size: 112px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+}
+
+.interval-timer__message {
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+    color: var(--color-text-secondary);
+}
+
+.interval-timer--trabalho {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    animation: timer-flash 700ms ease-out 1;
+}
+
+.interval-timer--trabalho .interval-timer__phase,
+.interval-timer--trabalho .interval-timer__clock {
+    color: var(--color-accent-text);
+}
+
+.interval-timer--na-faixa {
+    background: var(--color-accent);
+}
+
+.interval-timer--na-faixa .interval-timer__phase,
+.interval-timer--na-faixa .interval-timer__round,
+.interval-timer--na-faixa .interval-timer__clock,
+.interval-timer--na-faixa .interval-timer__message {
+    color: var(--color-on-accent);
+}
+
+.interval-timer--pausado {
+    border-style: dashed;
+    animation: none;
+    opacity: 0.75;
+}
+
+.interval-timer__main {
+    width: 100%;
+    min-height: 64px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+}
+
+.interval-timer__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.interval-timer__action {
+    flex: 1;
+    min-height: 56px;
+    font-size: 17px;
+}
+
+.interval-timer__tally {
+    margin: 10px 0 0;
+    font-size: 14px;
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.interval-timer__finish {
+    width: 100%;
+    min-height: var(--touch-target-large);
+    margin-top: 4px;
+}
+
+.interval-review__title {
+    margin: 0 0 8px;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+}
+
+.interval-review__rounds {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.interval-review__round {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 112px 96px;
+    align-items: center;
+    gap: 8px;
+}
+
+.interval-review__label {
+    font-weight: 600;
+}
+
+.interval-review__round--skipped .interval-review__label {
+    color: var(--color-skipped);
+}
+
+.interval-review__seconds {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--color-text-secondary);
+}
+
+.interval-review__seconds input {
+    width: 100%;
+    min-height: var(--touch-target-large);
+    padding: 0 10px;
+    border: 1px solid var(--color-input-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-input-bg);
+    color: var(--color-text);
+    font-family: var(--font-numeric);
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.interval-review__seconds input:disabled {
+    opacity: 0.4;
+}
+
+.interval-review__toggle {
+    min-height: var(--touch-target-large);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-text);
+    font-weight: 700;
+}
+
+.interval-review__toggle--skipped {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface);
+    color: var(--color-skipped);
+}
+
+.interval-rpe__label {
+    margin: 0 0 6px;
+    font-weight: 600;
+}
+
+.interval-rpe__target {
+    font-weight: 400;
+    color: var(--color-text-secondary);
+}
+
+.interval-rpe__options {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.interval-rpe__option {
+    min-height: var(--touch-target-large);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-family: var(--font-numeric);
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.interval-rpe__option--selected {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+}
+
+.interval-review__restart {
+    width: 100%;
+    min-height: var(--touch-target-large);
+    margin-top: 4px;
+}
+
 @keyframes timer-flash {
     0% {
         transform: scale(1.03);
@@ -2627,7 +2898,8 @@ h1, h2, h3, h4 {
 @media (prefers-reduced-motion: reduce) {
     .stopwatch--na_faixa,
     .stopwatch--passou_do_maximo,
-    .rest-bar--terminado {
+    .rest-bar--terminado,
+    .interval-timer--trabalho {
         animation: none;
     }
 }

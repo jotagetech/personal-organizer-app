@@ -2,7 +2,10 @@
 // (o iOS Safari não tem vibração). Tudo falha em silêncio, porque o aviso
 // visual sempre acompanha o sonoro.
 
-type BeepKind = 'faixa' | 'limite'
+// 'trabalho', 'recuperacao' e 'contagem' são as trocas de fase do intervalado:
+// agudo duplo para começar a fazer força, grave duplo para aliviar e um
+// toque curto em cada um dos últimos segundos da recuperação.
+type BeepKind = 'faixa' | 'limite' | 'trabalho' | 'recuperacao' | 'contagem'
 
 type AudioContextConstructor = typeof AudioContext
 
@@ -49,6 +52,9 @@ export function unlockAudio(): void {
 const BEEP_PATTERNS: Record<BeepKind, { frequency: number; count: number }> = {
     faixa: { frequency: 880, count: 1 },
     limite: { frequency: 1175, count: 3 },
+    trabalho: { frequency: 1320, count: 2 },
+    recuperacao: { frequency: 523, count: 2 },
+    contagem: { frequency: 740, count: 1 },
 }
 
 const BEEP_DURATION_S = 0.16

@@ -95,7 +95,7 @@ export function formatClock(totalSeconds: number): string {
     return `${minutes}:${seconds}`
 }
 
-function parseJsonObject(raw: string | null): Record<string, unknown> | null {
+export function parseJsonObject(raw: string | null): Record<string, unknown> | null {
     if (raw === null) {
         return null
     }
@@ -111,7 +111,7 @@ function parseJsonObject(raw: string | null): Record<string, unknown> | null {
     return null
 }
 
-function isFreshTimestamp(value: unknown, nowMs: number): value is number {
+export function isFreshTimestamp(value: unknown, nowMs: number): value is number {
     return (
         typeof value === 'number' &&
         Number.isFinite(value) &&
@@ -120,7 +120,7 @@ function isFreshTimestamp(value: unknown, nowMs: number): value is number {
     )
 }
 
-function isNonNegativeNumber(value: unknown): value is number {
+export function isNonNegativeNumber(value: unknown): value is number {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
 }
 

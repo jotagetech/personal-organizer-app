@@ -20,6 +20,8 @@ function planWithWorkouts(
                 {
                     id: 'exercicio-1',
                     nome: 'Exercício 1',
+                    tipo: 'series',
+                    intervalado: null,
                     equipamento: null,
                     forma_carga: 'total',
                     por_lado: false,

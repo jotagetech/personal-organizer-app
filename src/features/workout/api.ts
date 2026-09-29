@@ -221,6 +221,7 @@ export type SetInput = {
     durationSeconds?: number | null
     distanceM?: number | null
     drops?: OutboxDropValues[] | null
+    rpe?: number | null
 }
 
 export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
@@ -240,6 +241,9 @@ export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
                 metric: input.metric ?? null,
                 duration_seconds: input.durationSeconds ?? null,
                 distance_m: input.distanceM ?? null,
+                // Só rodadas de intervalado mandam a coluna: uma série comum
+                // continua sendo aceita por um banco ainda sem ela.
+                ...(input.rpe !== undefined ? { rpe: input.rpe } : {}),
             },
             { onConflict: 'session_id,exercise_key,set_index' },
         )

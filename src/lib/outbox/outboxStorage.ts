@@ -41,6 +41,7 @@ const outboxSetValuesSchema = z.object({
     durationSeconds: z.number().nullable().optional(),
     distanceM: z.number().nullable().optional(),
     drops: z.array(outboxDropValuesSchema).nullable().optional(),
+    rpe: z.number().nullable().optional(),
 })
 
 const outboxOperationStatusSchema = z.enum(['pending', 'failed'])

@@ -3,6 +3,8 @@ import type { WorkoutSnapshotExerciseSet } from '@/features/workout/types'
 // Campos do snapshot atual que os testes de progresso, relatório e exportação
 // não exercitam: ficam com o mesmo valor que um snapshot antigo normalizado.
 export const SNAPSHOT_EXERCISE_DEFAULTS = {
+    tipo: 'series',
+    intervalado: null,
     equipamento: null,
     por_lado: false,
     descanso_segundos_min: null,

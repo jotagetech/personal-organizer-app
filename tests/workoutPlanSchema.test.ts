@@ -129,6 +129,8 @@ describe('parseWorkoutPlanJson com versao 1 (normalização)', () => {
         expect(result.plan.treinos[0].exercicios[0]).toEqual({
             id: 'supino-reto',
             nome: 'Supino reto',
+            tipo: 'series',
+            intervalado: null,
             equipamento: null,
             forma_carga: 'total',
             por_lado: false,
@@ -405,6 +407,13 @@ describe('parseWorkoutPlanJson com progressão por semana', () => {
                 descanso_segundos_max: null,
                 rir_alvo_min: 3,
                 rir_alvo_max: 4,
+                rodadas: null,
+                trabalho_segundos_min: null,
+                trabalho_segundos_max: null,
+                recuperacao_segundos_min: null,
+                recuperacao_segundos_max: null,
+                rpe_alvo_min: null,
+                rpe_alvo_max: null,
             },
         ])
     })

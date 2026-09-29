@@ -16,9 +16,11 @@ export type OutboxDropValues = {
     distanceM: number | null
 }
 
-// Os campos opcionais existem para séries de tempo, distância e drop set.
-// Ausentes, a série é gravada como repetições; `drops` ausente ou null não
-// mexe nas quedas já salvas, enquanto uma lista (mesmo vazia) substitui todas.
+// Os campos opcionais existem para séries de tempo, distância, drop set e
+// rodadas de intervalado. Ausentes, a série é gravada como repetições; `drops`
+// ausente ou null não mexe nas quedas já salvas, enquanto uma lista (mesmo
+// vazia) substitui todas. `rpe` ausente fica fora da escrita, para séries
+// comuns nunca dependerem da coluna.
 export type OutboxSetValues = {
     loadKg: number | null
     reps: number | null
@@ -30,6 +32,7 @@ export type OutboxSetValues = {
     durationSeconds?: number | null
     distanceM?: number | null
     drops?: OutboxDropValues[] | null
+    rpe?: number | null
 }
 
 export type UpsertSetOperation = {
@@ -309,6 +312,7 @@ export function buildOverlaySetRow(
         metric: operation.values.metric ?? null,
         duration_seconds: operation.values.durationSeconds ?? null,
         distance_m: operation.values.distanceM ?? null,
+        rpe: operation.values.rpe !== undefined ? operation.values.rpe : (existingServerSet?.rpe ?? null),
         updated_at: operation.enqueuedAt,
     }
 }

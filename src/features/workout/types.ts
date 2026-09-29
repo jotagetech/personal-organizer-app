@@ -4,6 +4,7 @@ import type {
     WorkoutSnapshotDrop,
     WorkoutSnapshotExercise,
     WorkoutSnapshotExerciseSet,
+    WorkoutSnapshotInterval,
 } from '@/lib/databaseTypes'
 
 export type WorkoutPlanRow = Database['public']['Tables']['workout_plans']['Row']
@@ -17,7 +18,13 @@ export type WorkoutSessionRow = Omit<StoredWorkoutSessionRow, 'workout_snapshot'
     workout_snapshot: WorkoutSnapshot
 }
 
-export type { WorkoutSnapshot, WorkoutSnapshotDrop, WorkoutSnapshotExercise, WorkoutSnapshotExerciseSet }
+export type {
+    WorkoutSnapshot,
+    WorkoutSnapshotDrop,
+    WorkoutSnapshotExercise,
+    WorkoutSnapshotExerciseSet,
+    WorkoutSnapshotInterval,
+}
 
 export function setKey(exerciseKey: string, setIndex: number): string {
     const key = `${exerciseKey}:${setIndex}`

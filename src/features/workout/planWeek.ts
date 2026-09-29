@@ -1,6 +1,13 @@
 import { cycleWeekOn } from '@/features/cycle/cycleProgress'
 import type { IsoDate } from '@/lib/dateUtils'
-import type { Exercise, Workout, WorkoutPlan } from '@/lib/workoutPlanSchema'
+import {
+    buildIntervalExercise,
+    type Exercise,
+    type ExerciseWeekVariation,
+    type IntervalPrescription,
+    type Workout,
+    type WorkoutPlan,
+} from '@/lib/workoutPlanSchema'
 
 export type PlanWeek = {
     semana: number
@@ -35,10 +42,43 @@ export function formatPlanWeekLabel(semana: number, totalSemanas: number): strin
     return `Semana ${semana} de ${totalSemanas}`
 }
 
+// Cada par da faixa é trocado inteiro (a validação exige os dois campos
+// juntos), então basta olhar o mínimo para saber se a variação mexe nele.
+function applyWeekToIntervalExercise(
+    exercise: Exercise,
+    prescription: IntervalPrescription,
+    variation: ExerciseWeekVariation,
+): Exercise {
+    const {
+        trabalho_segundos_min: workMin,
+        trabalho_segundos_max: workMax,
+        recuperacao_segundos_min: recoveryMin,
+        recuperacao_segundos_max: recoveryMax,
+    } = variation
+    const overridesWork = workMin !== null && workMax !== null
+    const overridesRecovery = recoveryMin !== null && recoveryMax !== null
+    const overridesRpe = variation.rpe_alvo_min !== null
+    const prescriptionForWeek: IntervalPrescription = {
+        ...prescription,
+        rodadas: variation.rodadas ?? prescription.rodadas,
+        trabalho_segundos_min: overridesWork ? workMin : prescription.trabalho_segundos_min,
+        trabalho_segundos_max: overridesWork ? workMax : prescription.trabalho_segundos_max,
+        recuperacao_segundos_min: overridesRecovery ? recoveryMin : prescription.recuperacao_segundos_min,
+        recuperacao_segundos_max: overridesRecovery ? recoveryMax : prescription.recuperacao_segundos_max,
+        rpe_alvo_min: overridesRpe ? variation.rpe_alvo_min : prescription.rpe_alvo_min,
+        rpe_alvo_max: overridesRpe ? variation.rpe_alvo_max : prescription.rpe_alvo_max,
+    }
+
+    return buildIntervalExercise(exercise, prescriptionForWeek)
+}
+
 function applyWeekToExercise(exercise: Exercise, semana: number): Exercise {
     const variation = exercise.variacoes_semana.find((candidate) => candidate.semanas.includes(semana))
     if (!variation) {
         return exercise
+    }
+    if (exercise.intervalado) {
+        return applyWeekToIntervalExercise(exercise, exercise.intervalado, variation)
     }
 
     const overridesRest = variation.descanso_segundos_min !== null

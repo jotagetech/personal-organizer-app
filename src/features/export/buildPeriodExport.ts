@@ -11,7 +11,7 @@ import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSessionRow, type WorkoutSetDropRow, type WorkoutSetRow } from '@/features/workout/types'
 import type { IsoDate } from '@/lib/dateUtils'
-import type { LoadConvention, SetMetric, EquipmentType } from '@/lib/workoutPlanSchema'
+import type { EquipmentType, ExerciseKind, LoadConvention, SetMetric } from '@/lib/workoutPlanSchema'
 
 export const EXPORT_FORMAT_VERSION = 1
 
@@ -44,6 +44,7 @@ export type ExportedSet = {
     duration_seconds: number | null
     distance_m: number | null
     drops: ExportedSetDrop[]
+    rpe: number | null
     completed_at: string | null
 }
 
@@ -79,12 +80,29 @@ export type ExportedPlannedDrop = {
     suggested_load_kg: number | null
 }
 
+// Prescrição do cardio intervalado já resolvida para a semana, em segundos.
+export type ExportedInterval = {
+    modality: string
+    rounds: number
+    work_seconds_min: number
+    work_seconds_max: number
+    recovery_seconds_min: number
+    recovery_seconds_max: number
+    target_rpe_min: number | null
+    target_rpe_max: number | null
+}
+
 // load_convention 'assistencia' guarda em load_kg o peso que ajuda (menor é
 // melhor) e 'peso_corporal' guarda só o lastro extra (0 sem lastro).
 // per_side é execução unilateral, diferente de load_convention 'por_lado'.
+// Com exercise_type 'intervalado', cada item de planned/sets é uma rodada
+// (metric 'tempo', o trabalho em duration_seconds, rpe da rodada) e
+// load_convention não tem significado.
 export type ExportedExercise = {
     exercise_key: string
     name: string
+    exercise_type: ExerciseKind
+    interval: ExportedInterval | null
     load_convention: LoadConvention
     equipment: EquipmentType | null
     per_side: boolean
@@ -220,6 +238,19 @@ function buildWorkout(
     const exercises = session.workout_snapshot.exercicios.map((exercicio): ExportedExercise => ({
         exercise_key: exercicio.exercise_key,
         name: exercicio.nome,
+        exercise_type: exercicio.tipo,
+        interval: exercicio.intervalado
+            ? {
+                  modality: exercicio.intervalado.modalidade,
+                  rounds: exercicio.intervalado.rodadas,
+                  work_seconds_min: exercicio.intervalado.trabalho_segundos_min,
+                  work_seconds_max: exercicio.intervalado.trabalho_segundos_max,
+                  recovery_seconds_min: exercicio.intervalado.recuperacao_segundos_min,
+                  recovery_seconds_max: exercicio.intervalado.recuperacao_segundos_max,
+                  target_rpe_min: exercicio.intervalado.rpe_alvo_min,
+                  target_rpe_max: exercicio.intervalado.rpe_alvo_max,
+              }
+            : null,
         load_convention: exercicio.forma_carga,
         equipment: exercicio.equipamento,
         per_side: exercicio.por_lado,
@@ -268,6 +299,7 @@ function buildWorkout(
                         distance_m: drop.distanceM,
                     }),
                 ),
+                rpe: row?.rpe ?? null,
                 completed_at: row?.completed_at ?? null,
             }
         }),

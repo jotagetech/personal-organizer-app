@@ -1,6 +1,7 @@
 // Início dos cronômetros em localStorage: o timestamp sobrevive a fechar e
 // reabrir o app, e o tempo decorrido é recalculado a partir dele.
 
+import { parseIntervalTimer, type IntervalTimerState } from '@/features/workout/intervalTimer'
 import {
     parseRestTimer,
     parseStopwatchRecord,
@@ -10,6 +11,7 @@ import {
 
 const STOPWATCH_KEY = 'workout-timer:serie'
 const REST_KEY = 'workout-timer:descanso'
+const INTERVAL_KEY = 'workout-timer:intervalado'
 
 function readItem(key: string): string | null {
     try {
@@ -52,4 +54,24 @@ export function loadRestTimer(sessionDate: string): RestTimer | null {
 
 export function saveRestTimer(timer: RestTimer | null): void {
     writeItem(REST_KEY, timer === null ? null : JSON.stringify(timer))
+}
+
+// Um intervalado por vez: começar outro substitui o anterior.
+export function loadIntervalTimer(sessionDate: string, exerciseKey: string): IntervalTimerState | null {
+    const timer = parseIntervalTimer(readItem(INTERVAL_KEY), Date.now())
+    if (!timer || timer.sessionDate !== sessionDate || timer.exerciseKey !== exerciseKey) {
+        return null
+    }
+
+    return timer
+}
+
+export function saveIntervalTimer(timer: IntervalTimerState | null): void {
+    writeItem(INTERVAL_KEY, timer === null ? null : JSON.stringify(timer))
+}
+
+export function clearIntervalTimer(sessionDate: string, exerciseKey: string): void {
+    if (loadIntervalTimer(sessionDate, exerciseKey)) {
+        saveIntervalTimer(null)
+    }
 }

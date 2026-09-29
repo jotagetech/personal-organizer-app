@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/features/workout/api'
 import { DropSetStepRow } from '@/features/workout/DropSetStepRow'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
+import { IntervalStep } from '@/features/workout/IntervalStep'
 import { RestTimerBar } from '@/features/workout/RestTimerBar'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import type { PlanWeek } from '@/features/workout/planWeek'
@@ -32,6 +33,8 @@ import {
     findNextUnresolvedPosition,
     firstUnresolvedSetInExercise,
     isFirstStep,
+    isIntervalExercise,
+    isOnlyUnresolvedExercise,
     isOnlyUnresolvedSet,
     mainStepOf,
     nextStepWithinSet,
@@ -399,14 +402,30 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             return
         }
 
-        const mergedSetsByKey = mergeSavedRow(row)
+        skipRemainingSetsOf(exercicio, mergeSavedRow(row))
+    }
+
+    function handleSkipIntervalExercise() {
+        if (!snapshot || !position) {
+            return
+        }
+
+        skipRemainingSetsOf(snapshot.exercicios[position.exerciseIndex], currentEffectiveSetsByKey())
+    }
+
+    function skipRemainingSetsOf(exercicio: WorkoutSnapshotExercise, mergedSetsByKey: Map<string, WorkoutSetRow>) {
+        if (!snapshot) {
+            return
+        }
+
         const skipValues = buildSkipValuesForRemainingSets(exercicio, mergedSetsByKey, new Date().toISOString())
         if (skipValues.length === 0) {
             moveToNextUnresolved(mergedSetsByKey)
             return
         }
 
-        const confirmedSkip = window.confirm(`Pular as ${skipValues.length} séries restantes de ${exercicio.nome}?`)
+        const unitLabel = isIntervalExercise(exercicio) ? 'rodadas' : 'séries'
+        const confirmedSkip = window.confirm(`Pular as ${skipValues.length} ${unitLabel} restantes de ${exercicio.nome}?`)
         if (!confirmedSkip) {
             return
         }
@@ -432,14 +451,29 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             return skippedRow
         })
 
+        rememberLocalRows(skippedRows)
+        forgetLocalDrops(skippedRows.map((skippedRow) => setKey(skippedRow.exercise_key, skippedRow.set_index)))
+        moveToNextUnresolved(mergedSetsByKey)
+    }
+
+    function rememberLocalRows(rows: WorkoutSetRow[]) {
         setSetsByKey((previous) => {
             const next = new Map(previous)
-            for (const skippedRow of skippedRows) {
-                next.set(setKey(skippedRow.exercise_key, skippedRow.set_index), skippedRow)
+            for (const row of rows) {
+                next.set(setKey(row.exercise_key, row.set_index), row)
             }
             return next
         })
-        forgetLocalDrops(skippedRows.map((skippedRow) => setKey(skippedRow.exercise_key, skippedRow.set_index)))
+    }
+
+    // Todas as rodadas chegam juntas da conferência; o bloco não tem descanso
+    // próprio depois dele, então o assistente segue direto.
+    function handleIntervalConfirmed(rows: WorkoutSetRow[]) {
+        const mergedSetsByKey = new Map(currentEffectiveSetsByKey())
+        for (const row of rows) {
+            mergedSetsByKey.set(setKey(row.exercise_key, row.set_index), row)
+        }
+        rememberLocalRows(rows)
         moveToNextUnresolved(mergedSetsByKey)
     }
 
@@ -557,6 +591,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     }
 
     const currentExercicio = snapshot.exercicios[position.exerciseIndex]
+    const currentInterval = isIntervalExercise(currentExercicio) ? currentExercicio.intervalado : null
     const currentSet = currentExercicio.series[position.setIndexInExercise]
     const currentSetKey = setKey(currentExercicio.exercise_key, currentSet.set_index)
     const currentSetRow = effectiveSetsByKey.get(currentSetKey)
@@ -594,9 +629,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                         Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length}
                     </span>
                     <span className={isOnDropStep ? 'set-card__set-count set-card__set-count--drop' : 'set-card__set-count'}>
-                        {isOnDropStep && currentStep.dropPosition !== null
-                            ? `Série ${position.setIndexInExercise + 1} · Queda ${currentStep.dropPosition + 1} de ${currentSet.quedas.length}`
-                            : `Série ${position.setIndexInExercise + 1} de ${currentExercicio.series.length}`}
+                        {setCountLabel(currentExercicio, position, isOnDropStep ? currentStep.dropPosition : null)}
                     </span>
                 </div>
                 <h3 className="set-card__exercise-name">{currentExercicio.nome}</h3>
@@ -606,7 +639,24 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                         <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
                     ))}
                 </div>
-                {isOnDropStep && currentSetRow && currentStep.dropPosition !== null ? (
+                {currentInterval ? (
+                    <IntervalStep
+                        key={currentExercicio.exercise_key}
+                        sessionDate={sessionDate}
+                        planId={planId}
+                        snapshot={snapshot}
+                        exercicio={currentExercicio}
+                        interval={currentInterval}
+                        setsByKey={effectiveSetsByKey}
+                        confirmLabel={
+                            isOnlyUnresolvedExercise(snapshot, effectiveSetsByKey, position.exerciseIndex)
+                                ? 'Confirmar e finalizar treino'
+                                : 'Confirmar rodadas'
+                        }
+                        onConfirmed={handleIntervalConfirmed}
+                        onSkipExercise={handleSkipIntervalExercise}
+                    />
+                ) : isOnDropStep && currentSetRow && currentStep.dropPosition !== null ? (
                     <DropSetStepRow
                         key={`${currentSetKey}:queda:${currentStep.dropPosition}`}
                         sessionDate={sessionDate}
@@ -656,6 +706,22 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     )
 }
 
+function setCountLabel(
+    exercicio: WorkoutSnapshotExercise,
+    position: StepPosition,
+    dropPosition: number | null,
+): string {
+    if (isIntervalExercise(exercicio)) {
+        return `Intervalado · ${exercicio.series.length} rodadas`
+    }
+    if (dropPosition !== null) {
+        const dropCount = exercicio.series[position.setIndexInExercise].quedas.length
+        return `Série ${position.setIndexInExercise + 1} · Queda ${dropPosition + 1} de ${dropCount}`
+    }
+
+    return `Série ${position.setIndexInExercise + 1} de ${exercicio.series.length}`
+}
+
 function dropConfirmLabel(isLastDrop: boolean, isWorkoutOtherwiseDone: boolean): string {
     if (!isLastDrop) {
         return 'Confirmar queda'
@@ -667,7 +733,9 @@ function dropConfirmLabel(isLastDrop: boolean, isWorkoutOtherwiseDone: boolean):
 // Etiquetas e observações do plano ficam no card, acima dos campos, e valem
 // para a série e para as quedas do mesmo jeito.
 function ExerciseDetails({ exercicio }: { exercicio: WorkoutSnapshotExercise }) {
-    const tags = exerciseTags(exercicio.equipamento, exercicio.por_lado)
+    const tags = exercicio.intervalado
+        ? [exercicio.intervalado.modalidade]
+        : exerciseTags(exercicio.equipamento, exercicio.por_lado)
     if (tags.length === 0 && !exercicio.observacoes) {
         return null
     }

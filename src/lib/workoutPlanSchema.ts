@@ -41,11 +41,18 @@ export const EQUIPMENT_TYPES = [
 
 export const SET_METRICS = ['repeticoes', 'tempo', 'distancia'] as const
 
+// Ausente no arquivo, o exercício é de séries, como sempre foi.
+export const EXERCISE_KINDS = ['series', 'intervalado'] as const
+
 export const MAX_RIR = 10
 export const MAX_BLOCK_WEEKS = 12
 const MAX_DROPS_PER_SET = 10
 const MAX_OBSERVATION_LENGTH = 2000
 const MAX_WEEK_DESCRIPTION_LENGTH = 120
+export const MAX_INTERVAL_ROUNDS = 50
+const MAX_MODALITY_LENGTH = 60
+export const MIN_RPE = 1
+export const MAX_RPE = 10
 
 const SET_METRIC_DESCRIPTION =
     'Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois.'
@@ -62,6 +69,7 @@ export type Weekday = (typeof WEEKDAYS)[number]
 export type LoadConvention = (typeof LOAD_CONVENTIONS)[number]
 export type EquipmentType = (typeof EQUIPMENT_TYPES)[number]
 export type SetMetric = (typeof SET_METRICS)[number]
+export type ExerciseKind = (typeof EXERCISE_KINDS)[number]
 
 // Contrato versão 1, mantido exatamente como era para que arquivos antigos e
 // planos já salvos continuem sendo aceitos sem nenhuma alteração.
@@ -231,12 +239,14 @@ function refineRestAndRirPairs(value: Record<string, unknown>, ctx: z.Refinement
 // Uma variação troca só o que muda nas semanas indicadas; o que ela não
 // informa continua vindo do exercício. `series` substitui a lista inteira,
 // o que cobre tanto mudar o alvo quanto tirar ou acrescentar séries.
+const variationWeeksSchema = z
+    .array(z.number().int().positive())
+    .min(1)
+    .describe('Semanas do bloco (a partir de 1) em que a variação vale.')
+
 const weekVariationV2Schema = z
     .object({
-        semanas: z
-            .array(z.number().int().positive())
-            .min(1)
-            .describe('Semanas do bloco (a partir de 1) em que a variação vale.'),
+        semanas: variationWeeksSchema,
         series: z.array(workoutSetV2Schema).min(1).optional(),
         ...restAndRirShape,
     })
@@ -263,8 +273,9 @@ const weekDescriptionV2Schema = z
     })
     .strict()
 
-const exerciseV2Schema = z
+const seriesExerciseV2Schema = z
     .object({
+        tipo: z.literal('series').optional().describe('Ausente vale como series.'),
         id: nonEmptyText,
         nome: nonEmptyText,
         equipamento: z.enum(EQUIPMENT_TYPES).optional(),
@@ -287,8 +298,116 @@ const exerciseV2Schema = z
             .describe('Progressão por semana do bloco. Exige bloco_semanas no plano; semana sem variação usa as séries base.'),
     })
     .strict()
+
+// Cardio intervalado: rodadas de trabalho alternadas com recuperação. Não tem
+// carga nem séries; cada rodada feita é registrada com o tempo de trabalho.
+const INTERVAL_FIELDS_HINT = 'use rodadas, trabalho_segundos_min/max e recuperacao_segundos_min/max'
+
+function notApplicableToInterval(hint?: string) {
+    const message = hint
+        ? `não se aplica a exercício intervalado: ${hint}`
+        : 'não se aplica a exercício intervalado'
+
+    return z.never({ message }).optional()
+}
+
+const intervalTargetShape = {
+    rodadas: z.number().int().min(1).max(MAX_INTERVAL_ROUNDS).describe('Quantidade de rodadas de trabalho.'),
+    trabalho_segundos_min: z.number().int().positive(),
+    trabalho_segundos_max: z
+        .number()
+        .int()
+        .positive()
+        .describe('Com faixa (min menor que max), quem treina encerra a fase de trabalho dentro dela.'),
+    recuperacao_segundos_min: z.number().int().min(0),
+    recuperacao_segundos_max: z.number().int().min(0),
+}
+
+const rpeTargetShape = {
+    rpe_alvo_min: z.number().int().min(MIN_RPE).max(MAX_RPE).optional(),
+    rpe_alvo_max: z.number().int().min(MIN_RPE).max(MAX_RPE).optional(),
+}
+
+const intervalOverrideShape = {
+    rodadas: intervalTargetShape.rodadas.optional(),
+    trabalho_segundos_min: intervalTargetShape.trabalho_segundos_min.optional(),
+    trabalho_segundos_max: intervalTargetShape.trabalho_segundos_max.optional(),
+    recuperacao_segundos_min: intervalTargetShape.recuperacao_segundos_min.optional(),
+    recuperacao_segundos_max: intervalTargetShape.recuperacao_segundos_max.optional(),
+    ...rpeTargetShape,
+}
+
+function refineIntervalPairs(value: Record<string, unknown>, ctx: z.RefinementCtx): void {
+    refinePairedRange(value, 'trabalho_segundos_min', 'trabalho_segundos_max', ctx)
+    refinePairedRange(value, 'recuperacao_segundos_min', 'recuperacao_segundos_max', ctx)
+    refinePairedRange(value, 'rpe_alvo_min', 'rpe_alvo_max', ctx)
+}
+
+const intervalWeekVariationV2Schema = z
+    .object({
+        semanas: variationWeeksSchema,
+        ...intervalOverrideShape,
+        series: notApplicableToInterval(INTERVAL_FIELDS_HINT),
+        descanso_segundos_min: notApplicableToInterval('a pausa entre rodadas é recuperacao_segundos_min/max'),
+        descanso_segundos_max: notApplicableToInterval('a pausa entre rodadas é recuperacao_segundos_min/max'),
+        rir_alvo_min: notApplicableToInterval('use rpe_alvo_min/rpe_alvo_max'),
+        rir_alvo_max: notApplicableToInterval('use rpe_alvo_min/rpe_alvo_max'),
+    })
+    .strict()
+    .describe('Substitui, nas semanas indicadas, as rodadas, o trabalho, a recuperação e/ou o RPE alvo.')
+    .superRefine((variation, ctx) => {
+        const overrideFields = Object.keys(intervalOverrideShape) as (keyof typeof intervalOverrideShape)[]
+        if (!overrideFields.some((field) => variation[field] !== undefined)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message:
+                    'informe o que muda na semana: rodadas, trabalho_segundos_min/max, recuperacao_segundos_min/max ou rpe_alvo_min/max',
+            })
+        }
+        refineIntervalPairs(variation, ctx)
+    })
+
+const intervalExerciseV2Schema = z
+    .object({
+        tipo: z.literal('intervalado'),
+        id: nonEmptyText,
+        nome: nonEmptyText,
+        modalidade: nonEmptyText
+            .max(MAX_MODALITY_LENGTH)
+            .describe('Texto livre: bike, esteira, remo, corrida, o que for usado.'),
+        ...intervalTargetShape,
+        ...rpeTargetShape,
+        observacoes: nonEmptyText.max(MAX_OBSERVATION_LENGTH).optional(),
+        variacoes_semana: z
+            .array(intervalWeekVariationV2Schema)
+            .min(1)
+            .optional()
+            .describe('Progressão por semana do bloco. Exige bloco_semanas no plano; semana sem variação usa os valores base.'),
+        series: notApplicableToInterval(INTERVAL_FIELDS_HINT),
+        forma_carga: notApplicableToInterval('exercício intervalado não registra carga'),
+        equipamento: notApplicableToInterval('use modalidade'),
+        por_lado: notApplicableToInterval(),
+        descanso_segundos_min: notApplicableToInterval('a pausa entre rodadas é recuperacao_segundos_min/max'),
+        descanso_segundos_max: notApplicableToInterval('a pausa entre rodadas é recuperacao_segundos_min/max'),
+        rir_alvo_min: notApplicableToInterval('use rpe_alvo_min/rpe_alvo_max'),
+        rir_alvo_max: notApplicableToInterval('use rpe_alvo_min/rpe_alvo_max'),
+    })
+    .strict()
+    .describe('Cardio intervalado: rodadas de trabalho em segundos alternadas com recuperação.')
+
+const exerciseV2Schema = z
+    .discriminatedUnion('tipo', [seriesExerciseV2Schema, intervalExerciseV2Schema], {
+        errorMap: (issue, ctx) =>
+            issue.code === z.ZodIssueCode.invalid_union_discriminator
+                ? { message: 'tipo de exercício inválido: use "series" ou "intervalado" (ausente vale como series)' }
+                : { message: ctx.defaultError },
+    })
     .superRefine((exercise, ctx) => {
-        refineRestAndRirPairs(exercise, ctx)
+        if (exercise.tipo === 'intervalado') {
+            refineIntervalPairs(exercise, ctx)
+        } else {
+            refineRestAndRirPairs(exercise, ctx)
+        }
         refineUniqueVariationWeeks(exercise.variacoes_semana ?? [], ctx)
     })
 
@@ -351,8 +470,22 @@ export type WorkoutSet = {
     quedas: PlannedDrop[]
 }
 
+// Prescrição do intervalado. Um valor fixo repete o número nos dois campos
+// da faixa, como no resto do contrato; RPE alvo é opcional.
+export type IntervalPrescription = {
+    modalidade: string
+    rodadas: number
+    trabalho_segundos_min: number
+    trabalho_segundos_max: number
+    recuperacao_segundos_min: number
+    recuperacao_segundos_max: number
+    rpe_alvo_min: number | null
+    rpe_alvo_max: number | null
+}
+
 // Campos nulos numa variação significam "igual ao exercício"; `series` nula
-// mantém as séries base.
+// mantém as séries base. Os campos de intervalado só aparecem preenchidos em
+// variação de exercício intervalado, e os de série só na de séries.
 export type ExerciseWeekVariation = {
     semanas: number[]
     series: WorkoutSet[] | null
@@ -360,6 +493,13 @@ export type ExerciseWeekVariation = {
     descanso_segundos_max: number | null
     rir_alvo_min: number | null
     rir_alvo_max: number | null
+    rodadas: number | null
+    trabalho_segundos_min: number | null
+    trabalho_segundos_max: number | null
+    recuperacao_segundos_min: number | null
+    recuperacao_segundos_max: number | null
+    rpe_alvo_min: number | null
+    rpe_alvo_max: number | null
 }
 
 export type PlanWeekDescription = {
@@ -367,9 +507,15 @@ export type PlanWeekDescription = {
     descricao: string
 }
 
+// Num exercício intervalado, `series` tem uma entrada de tempo por rodada
+// (alvo = trabalho) e os campos de carga ficam neutros (peso corporal, sem
+// equipamento, descanso ou RIR). Assim quem só conhece séries continua
+// funcionando: cada rodada é contada, retomada e registrada como uma série.
 export type Exercise = {
     id: string
     nome: string
+    tipo: ExerciseKind
+    intervalado: IntervalPrescription | null
     equipamento: EquipmentType | null
     forma_carga: LoadConvention
     por_lado: boolean
@@ -409,8 +555,11 @@ export type WorkoutPlanValidationResult =
 
 type V1Set = WorkoutPlanV1Document['treinos'][number]['exercicios'][number]['series'][number]
 type V2Exercise = WorkoutPlanV2Document['treinos'][number]['exercicios'][number]
-type V2Set = V2Exercise['series'][number]
-type V2WeekVariation = NonNullable<V2Exercise['variacoes_semana']>[number]
+type V2SeriesExercise = Exclude<V2Exercise, { tipo: 'intervalado' }>
+type V2IntervalExercise = Extract<V2Exercise, { tipo: 'intervalado' }>
+type V2Set = V2SeriesExercise['series'][number]
+type V2WeekVariation = NonNullable<V2SeriesExercise['variacoes_semana']>[number]
+type V2IntervalWeekVariation = NonNullable<V2IntervalExercise['variacoes_semana']>[number]
 type V2Drop = NonNullable<V2Set['quedas']>[number]
 
 function normalizeV1Set(set: V1Set): WorkoutSet {
@@ -437,6 +586,8 @@ function normalizeV1Plan(document: WorkoutPlanV1Document): WorkoutPlan {
             exercicios: workout.exercicios.map((exercise) => ({
                 id: exercise.id,
                 nome: exercise.nome,
+                tipo: 'series' as const,
+                intervalado: null,
                 equipamento: null,
                 forma_carga: exercise.forma_carga,
                 por_lado: false,
@@ -475,6 +626,16 @@ function normalizeV2Set(set: V2Set): WorkoutSet {
     }
 }
 
+const EMPTY_INTERVAL_OVERRIDE = {
+    rodadas: null,
+    trabalho_segundos_min: null,
+    trabalho_segundos_max: null,
+    recuperacao_segundos_min: null,
+    recuperacao_segundos_max: null,
+    rpe_alvo_min: null,
+    rpe_alvo_max: null,
+} as const
+
 function normalizeV2WeekVariation(variation: V2WeekVariation): ExerciseWeekVariation {
     return {
         semanas: variation.semanas,
@@ -483,13 +644,93 @@ function normalizeV2WeekVariation(variation: V2WeekVariation): ExerciseWeekVaria
         descanso_segundos_max: variation.descanso_segundos_max ?? null,
         rir_alvo_min: variation.rir_alvo_min ?? null,
         rir_alvo_max: variation.rir_alvo_max ?? null,
+        ...EMPTY_INTERVAL_OVERRIDE,
     }
 }
 
+function normalizeV2IntervalWeekVariation(variation: V2IntervalWeekVariation): ExerciseWeekVariation {
+    return {
+        semanas: variation.semanas,
+        series: null,
+        descanso_segundos_min: null,
+        descanso_segundos_max: null,
+        rir_alvo_min: null,
+        rir_alvo_max: null,
+        rodadas: variation.rodadas ?? null,
+        trabalho_segundos_min: variation.trabalho_segundos_min ?? null,
+        trabalho_segundos_max: variation.trabalho_segundos_max ?? null,
+        recuperacao_segundos_min: variation.recuperacao_segundos_min ?? null,
+        recuperacao_segundos_max: variation.recuperacao_segundos_max ?? null,
+        rpe_alvo_min: variation.rpe_alvo_min ?? null,
+        rpe_alvo_max: variation.rpe_alvo_max ?? null,
+    }
+}
+
+export function intervalRoundSets(prescription: IntervalPrescription): WorkoutSet[] {
+    return Array.from({ length: prescription.rodadas }, () => ({
+        metrica: 'tempo' as const,
+        alvo_min: prescription.trabalho_segundos_min,
+        alvo_max: prescription.trabalho_segundos_max,
+        carga_sugerida: null,
+        quedas: [],
+    }))
+}
+
+// Campos de carga neutros para quem lê o exercício como se fosse de séries:
+// peso corporal não pede carga para concluir uma rodada.
+export function buildIntervalExercise(
+    base: { id: string; nome: string; observacoes: string | null; variacoes_semana: ExerciseWeekVariation[] },
+    prescription: IntervalPrescription,
+): Exercise {
+    return {
+        id: base.id,
+        nome: base.nome,
+        tipo: 'intervalado',
+        intervalado: prescription,
+        equipamento: null,
+        forma_carga: 'peso_corporal',
+        por_lado: false,
+        descanso_segundos_min: null,
+        descanso_segundos_max: null,
+        rir_alvo_min: null,
+        rir_alvo_max: null,
+        observacoes: base.observacoes,
+        series: intervalRoundSets(prescription),
+        variacoes_semana: base.variacoes_semana,
+    }
+}
+
+function normalizeV2IntervalExercise(exercise: V2IntervalExercise): Exercise {
+    const prescription: IntervalPrescription = {
+        modalidade: exercise.modalidade,
+        rodadas: exercise.rodadas,
+        trabalho_segundos_min: exercise.trabalho_segundos_min,
+        trabalho_segundos_max: exercise.trabalho_segundos_max,
+        recuperacao_segundos_min: exercise.recuperacao_segundos_min,
+        recuperacao_segundos_max: exercise.recuperacao_segundos_max,
+        rpe_alvo_min: exercise.rpe_alvo_min ?? null,
+        rpe_alvo_max: exercise.rpe_alvo_max ?? null,
+    }
+    const base = {
+        id: exercise.id,
+        nome: exercise.nome,
+        observacoes: exercise.observacoes ?? null,
+        variacoes_semana: (exercise.variacoes_semana ?? []).map(normalizeV2IntervalWeekVariation),
+    }
+
+    return buildIntervalExercise(base, prescription)
+}
+
 function normalizeV2Exercise(exercise: V2Exercise): Exercise {
+    if (exercise.tipo === 'intervalado') {
+        return normalizeV2IntervalExercise(exercise)
+    }
+
     return {
         id: exercise.id,
         nome: exercise.nome,
+        tipo: 'series',
+        intervalado: null,
         equipamento: exercise.equipamento ?? null,
         forma_carga: exercise.forma_carga,
         por_lado: exercise.por_lado ?? false,

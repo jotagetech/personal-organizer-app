@@ -1,6 +1,12 @@
 import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
-import { setKey, type WorkoutSetDropRow, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
+import {
+    setKey,
+    type WorkoutSetDropRow,
+    type WorkoutSetRow,
+    type WorkoutSnapshot,
+    type WorkoutSnapshotInterval,
+} from '@/features/workout/types'
 import type { OutboxDropValues } from '@/lib/outbox/outboxQueue'
 import type { LoadConvention, SetMetric } from '@/lib/workoutPlanSchema'
 
@@ -13,6 +19,7 @@ export type WorkoutSetSummary = {
     metric: SetMetric
     drops: OutboxDropValues[]
     rir: number | null
+    rpe: number | null
     note: string | null
     isCompleted: boolean
     status: SetStatus
@@ -23,6 +30,9 @@ export type WorkoutExerciseSummary = {
     exerciseName: string
     loadConvention: LoadConvention
     perSide: boolean
+    // Prescrição do intervalado; nula em exercício de séries. Nele, cada
+    // item de `sets` é uma rodada.
+    interval: WorkoutSnapshotInterval | null
     sets: WorkoutSetSummary[]
 }
 
@@ -61,6 +71,7 @@ export function summarizeWorkoutSets(
                 metric: matchingSet?.metric ?? serie.metrica,
                 drops: dropsBySetKey.get(key) ?? [],
                 rir: matchingSet?.rir ?? null,
+                rpe: matchingSet?.rpe ?? null,
                 note: matchingSet?.note ?? null,
                 isCompleted: status === 'completed',
                 status,
@@ -73,6 +84,7 @@ export function summarizeWorkoutSets(
             exerciseName: exercicio.nome,
             loadConvention: exercicio.forma_carga,
             perSide: exercicio.por_lado,
+            interval: exercicio.tipo === 'intervalado' ? exercicio.intervalado : null,
             sets: exerciseSets,
         }
         return exerciseSummary

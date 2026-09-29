@@ -56,6 +56,26 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   o detalhe do dia em Resultados mostra a semana e a exportação ganha
   `block_week` e `block_weeks` por treino. Planos e sessões já salvos
   continuam iguais, sem migração.
+- Cardio intervalado como exercício do treino do dia (`tipo:
+  "intervalado"`), com `modalidade` livre, `rodadas`,
+  `trabalho_segundos_min/max`, `recuperacao_segundos_min/max`,
+  `rpe_alvo_min/max` opcional e `observacoes`, e progressão por semana via
+  `variacoes_semana` (rodadas, trabalho, recuperação e RPE). Campos de série
+  num intervalado são recusados com o caminho do campo. O JSON Schema e o
+  plano de exemplo trazem os tiros de 30 s / 90 s (6, 8, 10 e 6 rodadas) e a
+  resistência de 3 a 4 min com 2 min de recuperação. Na sessão, o
+  intervalado é um passo com timer guiado: trabalho e recuperação alternando
+  sozinhos, contagem regressiva grande, "Rodada 3 de 8", bipe na troca de
+  fase, aviso no mínimo e troca no máximo de uma faixa de trabalho, pausar,
+  pular rodada, começar a próxima antes e encerrar o bloco antes; retoma ao
+  reabrir o app e mantém a tela acesa. No fim, as rodadas são conferidas
+  (tempo editável, feita ou pulada, RPE do bloco de 1 a 10) antes de
+  gravar, uma linha de `workout_sets` por rodada, pela fila otimista.
+  Resultados mostra `8 × 30 s / 90 s · RPE 8` e a exportação ganha
+  `exercise_type`, `interval` e `rpe`, só acrescentados. Migração
+  `20260929020000_workout_sets_rpe.sql` (coluna `rpe` em `workout_sets`),
+  que precisa ser aplicada no SQL Editor antes do deploy. O cardio livre do
+  fim do treino continua igual.
 
 ### Alterado
 

@@ -6,7 +6,7 @@
 
 import { z } from 'zod'
 
-import { EQUIPMENT_TYPES, LOAD_CONVENTIONS, SET_METRICS } from '@/lib/workoutPlanSchema'
+import { EQUIPMENT_TYPES, EXERCISE_KINDS, LOAD_CONVENTIONS, SET_METRICS } from '@/lib/workoutPlanSchema'
 
 export const CURRENT_SNAPSHOT_VERSION = 2
 
@@ -26,9 +26,25 @@ const snapshotSetSchema = z.object({
     quedas: z.array(snapshotDropSchema).default([]),
 })
 
+// Prescrição do intervalado já resolvida para a semana. As rodadas também
+// aparecem em `series` (uma série de tempo por rodada), que é o que um
+// cliente que não conhece o tipo continua lendo.
+const snapshotIntervalSchema = z.object({
+    modalidade: z.string(),
+    rodadas: z.number().int().positive(),
+    trabalho_segundos_min: z.number(),
+    trabalho_segundos_max: z.number(),
+    recuperacao_segundos_min: z.number(),
+    recuperacao_segundos_max: z.number(),
+    rpe_alvo_min: z.number().nullable().default(null),
+    rpe_alvo_max: z.number().nullable().default(null),
+})
+
 const snapshotExerciseSchema = z.object({
     exercise_key: z.string(),
     nome: z.string(),
+    tipo: z.enum(EXERCISE_KINDS).default('series'),
+    intervalado: snapshotIntervalSchema.nullable().default(null),
     equipamento: z.enum(EQUIPMENT_TYPES).nullable().default(null),
     forma_carga: z.enum(LOAD_CONVENTIONS),
     por_lado: z.boolean().default(false),
@@ -76,6 +92,7 @@ const legacySnapshotSchema = z.object({
 
 export type WorkoutSnapshotDrop = z.output<typeof snapshotDropSchema>
 export type WorkoutSnapshotExerciseSet = z.output<typeof snapshotSetSchema>
+export type WorkoutSnapshotInterval = z.output<typeof snapshotIntervalSchema>
 export type WorkoutSnapshotExercise = z.output<typeof snapshotExerciseSchema>
 export type WorkoutSnapshot = z.output<typeof workoutSnapshotV2Schema>
 export type LegacyWorkoutSnapshot = z.output<typeof legacySnapshotSchema>
@@ -92,6 +109,8 @@ function upgradeLegacySnapshot(legacy: LegacyWorkoutSnapshot): WorkoutSnapshot {
         exercicios: legacy.exercicios.map((exercicio) => ({
             exercise_key: exercicio.exercise_key,
             nome: exercicio.nome,
+            tipo: 'series' as const,
+            intervalado: null,
             equipamento: null,
             forma_carga: exercicio.forma_carga,
             por_lado: false,

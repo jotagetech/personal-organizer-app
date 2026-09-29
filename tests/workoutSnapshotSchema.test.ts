@@ -70,6 +70,8 @@ describe('normalizeWorkoutSnapshot', () => {
                 {
                     exercise_key: 'supino-reto',
                     nome: 'Supino reto',
+                    tipo: 'series',
+                    intervalado: null,
                     equipamento: null,
                     forma_carga: 'total',
                     por_lado: false,
