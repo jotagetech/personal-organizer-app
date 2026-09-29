@@ -9,7 +9,7 @@ import { resolveRoutineForDate } from '@/features/routine/resolveRoutine'
 import type { RoutineRow } from '@/features/routine/types'
 import { deriveDaySignals } from '@/features/shared/daySignals'
 import { getSessionForDate } from '@/features/workout/api'
-import type { WorkoutSessionRow, WorkoutSetRow } from '@/features/workout/types'
+import type { WorkoutSessionRow, WorkoutSetDropRow, WorkoutSetRow } from '@/features/workout/types'
 import { supabase } from '@/lib/supabaseClient'
 import type { IsoDate } from '@/lib/dateUtils'
 
@@ -32,6 +32,7 @@ export async function listFinishedSessionDates(sinceDate: IsoDate): Promise<IsoD
 export type DaySummary = {
     workoutSession: WorkoutSessionRow | null
     workoutSets: WorkoutSetRow[]
+    workoutDrops: WorkoutSetDropRow[]
     cardioEntries: CardioEntryRow[]
     activityTypes: CardioActivityTypeRow[]
     foodEntries: FoodEntryRow[]
@@ -65,6 +66,7 @@ export async function getDaySummary(date: IsoDate): Promise<DaySummary> {
     const daySummary: DaySummary = {
         workoutSession: workout?.session ?? null,
         workoutSets: workout?.sets ?? [],
+        workoutDrops: workout?.drops ?? [],
         cardioEntries,
         activityTypes,
         foodEntries,

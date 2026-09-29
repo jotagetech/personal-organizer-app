@@ -65,7 +65,11 @@ function buildHighlights(summary: DaySummary): string[] {
     const highlights: string[] = []
 
     if (summary.workoutSession?.finished_at) {
-        const workoutSummary = summarizeWorkoutSets(summary.workoutSession.workout_snapshot, summary.workoutSets)
+        const workoutSummary = summarizeWorkoutSets(
+            summary.workoutSession.workout_snapshot,
+            summary.workoutSets,
+            summary.workoutDrops,
+        )
         const totalSets = workoutSummary.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)
         const allSets = workoutSummary.exercises.flatMap((exercise) => exercise.sets)
         const completedSets = allSets.filter((set) => set.status === 'completed').length

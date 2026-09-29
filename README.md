@@ -63,6 +63,12 @@ npm run dev
    11. `20260929000000_food_items_seed_per_user.sql` (catálogo TACO copiado
       para toda conta nova e para contas existentes sem ele, ver
       `CHANGELOG.md`)
+   12. `20260929010000_workout_sets_metrics_and_drops.sql` (métrica, segundos e
+      metros em `workout_sets`, regra de conclusão por métrica e tabela
+      `workout_set_drops` das quedas de drop set, ver `CHANGELOG.md`). Precisa
+      estar aplicada no SQL Editor **antes** do deploy do app desta versão,
+      porque o app novo grava essas colunas e a função
+      `replace_workout_set_drops`.
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
@@ -96,6 +102,10 @@ npm run dev
 - **Treino**: importa plano de treino via JSON, sugere o treino do dia,
   registra um exercício/uma série por vez (carga, repetições, RIR opcional,
   comentário livre por série), com barra de progresso e opção de voltar.
+  Séries podem ser de repetições, tempo ou distância, com drop set (cada
+  queda é um passo próprio), e o card mostra equipamento, execução por lado,
+  RIR alvo, descanso prescrito e observações do plano (ver "Plano de treino
+  (contrato)").
   Finalizar o treino registra duração, sentimento (escala 1-5) e abre o
   registro de cardio do dia.
 - **Ciclo**: marca a data de início de um ciclo de treino (menu de três pontos
@@ -115,7 +125,133 @@ npm run dev
   alimentação por refeição, peso e sono), com um relatório do dia no topo:
   placar da rotina (feito vs. pendente) e até 4 destaques do dia, com uma
   frase de abertura que muda conforme a proporção de itens de rotina
-  concluídos.
+  concluídos. As séries aparecem na unidade da métrica, com as quedas de drop
+  set sob a série principal.
+
+## Plano de treino (contrato)
+
+O plano é um JSON importado na aba Treino. Um arquivo completo de exemplo está
+em `examples/plano-exemplo.json` e o JSON Schema em
+`schemas/workout-plan.schema.json` (gerado com `npm run schema:generate`).
+
+**Versões.** O contrato atual é a `versao: 2`. Arquivos `versao: 1` (só
+repetições, com `carga_sugerida`) continuam sendo aceitos sem nenhuma
+alteração, e planos e sessões já salvos com o formato antigo são lidos
+normalmente: o app normaliza tudo para o formato atual na leitura. Uma série
+antiga sem métrica gravada vale como repetições.
+
+### O que a versão 2 acrescenta
+
+Cada item abaixo é opcional, e uma série escrita como na versão 1 continua
+sendo uma série de repetições.
+
+**Repetições** (igual à versão 1; valor fixo repete o número nos dois campos):
+
+```json
+{ "repeticoes_min": 8, "repeticoes_max": 12, "carga_sugerida": 60 }
+```
+
+**Tempo**, em segundos:
+
+```json
+{ "segundos_min": 20, "segundos_max": 40 }
+```
+
+**Distância**, em metros:
+
+```json
+{ "metros_min": 25, "metros_max": 40, "carga_sugerida": 24 }
+```
+
+Cada série usa exatamente uma métrica.
+
+**Drop set**: `quedas` na série, cada uma com a mesma métrica da série e
+`carga_sugerida` própria. Na sessão, cada queda vira um passo depois da série
+principal (até 10 por série):
+
+```json
+{
+  "repeticoes_min": 10,
+  "repeticoes_max": 12,
+  "carga_sugerida": 30,
+  "quedas": [
+    { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 22.5 },
+    { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 15 }
+  ]
+}
+```
+
+**Forma de carga** (`forma_carga`, no exercício): diz o que o número digitado
+como carga significa.
+
+| Valor | O que se digita |
+|---|---|
+| `total` | Carga toda (com a barra, se for barra) |
+| `por_lado` | Carga de cada lado da barra |
+| `por_halter` | Peso de um halter |
+| `peso_corporal` | Só o lastro extra; vazio é sem lastro e fica gravado como 0 |
+| `assistencia` | Peso que ajuda (máquina assistida ou elástico); menos é progresso |
+
+```json
+{ "id": "barra-fixa-assistida", "nome": "Barra fixa assistida", "forma_carga": "assistencia", "series": [{ "repeticoes_min": 6, "repeticoes_max": 8, "carga_sugerida": 40 }] }
+```
+
+**Por lado** (`por_lado: true`, no exercício): execução unilateral (cada
+perna, cada braço). O alvo da série vale para cada lado:
+
+```json
+{ "id": "afundo-bulgaro", "nome": "Afundo búlgaro", "forma_carga": "por_halter", "por_lado": true, "series": [{ "repeticoes_min": 8, "repeticoes_max": 8, "carga_sugerida": 12 }] }
+```
+
+Atenção para não confundir os dois: `por_lado: true` fala de **como o exercício
+é executado** (um lado por vez), enquanto `forma_carga: "por_lado"` fala de
+**quanto peso o número da carga representa** (o que está em cada lado da
+barra). Os dois podem aparecer juntos ou separados.
+
+**Descanso** prescrito, em segundos (`descanso_segundos_min` e
+`descanso_segundos_max`, sempre o par):
+
+```json
+{ "descanso_segundos_min": 90, "descanso_segundos_max": 120 }
+```
+
+**RIR alvo** (`rir_alvo_min` e `rir_alvo_max`, sempre o par, de 0 a 10):
+
+```json
+{ "rir_alvo_min": 2, "rir_alvo_max": 3 }
+```
+
+**Equipamento** (`equipamento`): etiqueta informativa, com `barra`,
+`halteres`, `maquina`, `cabo`, `kettlebell`, `elastico`, `peso_corporal` ou
+`outro`. O `id` do exercício continua sendo a chave do histórico:
+
+```json
+{ "equipamento": "cabo" }
+```
+
+**Observações** (`observacoes`): texto livre do exercício, mostrado no card:
+
+```json
+{ "observacoes": "Descida controlada de 4 a 6 segundos." }
+```
+
+### Como os dados ficam no banco e nas telas
+
+- `workout_sets.metric` vem preenchida pelo app novo; é nula só em séries
+  antigas e significa repetições. O valor fica em `reps`, `duration_seconds`
+  ou `distance_m`, conforme a métrica.
+- As quedas ficam em `workout_set_drops` (`drop_index` a partir de 1), só
+  existem em série concluída e não têm status nem RIR próprios. Uma queda do
+  meio pode ficar toda nula. Série pulada não guarda quedas.
+- Em Resultados, o detalhe do dia mostra a unidade certa (`35 s`, `32,5 m`),
+  a assistência identificada (`assist. 40 kg`), peso corporal sem lastro sem
+  "0 kg" e as quedas sob a série (`↳ 22,5 kg × 9 reps`). O app não calcula
+  volume total, então tempo e distância nunca são somados como repetições nem
+  a assistência como carga.
+- A exportação JSON por período mantém o formato anterior e só acrescenta
+  campos: por exercício `equipment`, `per_side`, `rest_seconds_min/max`,
+  `target_rir_min/max` e `notes`; por série planejada `drops` (alvos das
+  quedas); por série realizada `drops` (o que foi feito em cada queda).
 
 ## Estrutura
 

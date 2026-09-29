@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { summarizeWorkoutSets } from '@/features/results/daySummary'
-import type { WorkoutSetRow } from '@/features/workout/types'
+import type { WorkoutSetDropRow, WorkoutSetRow } from '@/features/workout/types'
 import type { WorkoutSnapshot } from '@/lib/databaseTypes'
 import { EMPTY_SET_METRIC_COLUMNS, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
 
@@ -120,5 +120,76 @@ describe('summarizeWorkoutSets', () => {
         expect(skippedSet.status).toBe('skipped')
         expect(skippedSet.isCompleted).toBe(false)
         expect(skippedSet.note).toBe('cotovelo')
+    })
+
+    it('traz métrica, valores de tempo e distância, e a forma de carga do exercício', () => {
+        const snapshot: WorkoutSnapshot = {
+            ...SNAPSHOT,
+            exercicios: [
+                {
+                    ...SNAPSHOT_EXERCISE_DEFAULTS,
+                    exercise_key: 'prancha',
+                    nome: 'Prancha lateral',
+                    forma_carga: 'peso_corporal',
+                    por_lado: true,
+                    series: [
+                        { set_index: 0, metrica: 'tempo', alvo_min: 20, alvo_max: 40, carga_sugerida: null, quedas: [] },
+                    ],
+                },
+            ],
+        }
+        const sets = [
+            buildSetRow({
+                exercise_key: 'prancha',
+                set_index: 0,
+                metric: 'tempo',
+                load_kg: 0,
+                reps: null,
+                duration_seconds: 35,
+            }),
+        ]
+
+        const [exercise] = summarizeWorkoutSets(snapshot, sets).exercises
+
+        expect(exercise.loadConvention).toBe('peso_corporal')
+        expect(exercise.perSide).toBe(true)
+        expect(exercise.sets[0]).toMatchObject({ metric: 'tempo', durationSeconds: 35, distanceM: null, drops: [] })
+    })
+
+    it('trata série sem métrica gravada como repetições', () => {
+        const summary = summarizeWorkoutSets(SNAPSHOT, [buildSetRow({ exercise_key: 'supino', set_index: 0 })])
+
+        expect(summary.exercises[0].sets[0].metric).toBe('repeticoes')
+    })
+
+    it('anexa as quedas de cada série na ordem, preservando a queda do meio vazia', () => {
+        const dropRow = (overrides: Partial<WorkoutSetDropRow>): WorkoutSetDropRow => ({
+            id: 'drop',
+            set_id: 'set-supino-1',
+            drop_index: 1,
+            load_kg: null,
+            reps: null,
+            duration_seconds: null,
+            distance_m: null,
+            updated_at: '2026-09-28T12:00:00.000Z',
+            ...overrides,
+        })
+        const sets = [
+            buildSetRow({ id: 'set-supino-0', exercise_key: 'supino', set_index: 0 }),
+            buildSetRow({ id: 'set-supino-1', exercise_key: 'supino', set_index: 1 }),
+        ]
+        const drops = [
+            dropRow({ id: 'd3', drop_index: 3, load_kg: 20, reps: 6 }),
+            dropRow({ id: 'd1', drop_index: 1, load_kg: 30, reps: 9 }),
+        ]
+
+        const [supino] = summarizeWorkoutSets(SNAPSHOT, sets, drops).exercises
+
+        expect(supino.sets[0].drops).toEqual([])
+        expect(supino.sets[1].drops).toEqual([
+            { loadKg: 30, reps: 9, durationSeconds: null, distanceM: null },
+            { loadKg: null, reps: null, durationSeconds: null, distanceM: null },
+            { loadKg: 20, reps: 6, durationSeconds: null, distanceM: null },
+        ])
     })
 })

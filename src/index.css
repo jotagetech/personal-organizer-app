@@ -1398,6 +1398,19 @@ h1, h2, h3, h4 {
     color: var(--color-text-muted);
 }
 
+.day-workout__set-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.day-workout__set-drop {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    overflow-wrap: anywhere;
+}
+
 .day-workout__set-value {
     min-width: 0;
     font-weight: 600;

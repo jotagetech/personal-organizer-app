@@ -7,16 +7,18 @@ import { resolveRoutineForDate } from '@/features/routine/resolveRoutine'
 import type { RoutineDayEntryRow, RoutineItemRow, RoutineRowSource, RoutineRowState } from '@/features/routine/types'
 import { deriveDaySignals } from '@/features/shared/deriveDaySignals'
 import { deriveSessionActiveWindow } from '@/features/workout/sessionDuration'
+import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
-import { setKey, type WorkoutSessionRow, type WorkoutSetRow } from '@/features/workout/types'
+import { setKey, type WorkoutSessionRow, type WorkoutSetDropRow, type WorkoutSetRow } from '@/features/workout/types'
 import type { IsoDate } from '@/lib/dateUtils'
-import type { LoadConvention, SetMetric } from '@/lib/workoutPlanSchema'
+import type { LoadConvention, SetMetric, EquipmentType } from '@/lib/workoutPlanSchema'
 
 export const EXPORT_FORMAT_VERSION = 1
 
 export type PeriodExportRawData = {
     workoutSessions: WorkoutSessionRow[]
     workoutSets: WorkoutSetRow[]
+    workoutSetDrops: WorkoutSetDropRow[]
     cardioEntries: CardioEntryRow[]
     activityTypes: CardioActivityTypeRow[]
     foodEntries: FoodEntryRow[]
@@ -41,7 +43,19 @@ export type ExportedSet = {
     note: string | null
     duration_seconds: number | null
     distance_m: number | null
+    drops: ExportedSetDrop[]
     completed_at: string | null
+}
+
+// drop_index começa em 1, como no banco. Uma queda do meio que não foi
+// preenchida sai com todos os valores nulos, para o índice das seguintes
+// continuar valendo.
+export type ExportedSetDrop = {
+    drop_index: number
+    load_kg: number | null
+    reps: number | null
+    duration_seconds: number | null
+    distance_m: number | null
 }
 
 // target_min/target_max estão na unidade de `metric` (repetições, segundos ou
@@ -55,12 +69,30 @@ export type ExportedPlannedSet = {
     reps_min: number | null
     reps_max: number | null
     suggested_load_kg: number | null
+    drops: ExportedPlannedDrop[]
 }
 
+export type ExportedPlannedDrop = {
+    drop_index: number
+    target_min: number
+    target_max: number
+    suggested_load_kg: number | null
+}
+
+// load_convention 'assistencia' guarda em load_kg o peso que ajuda (menor é
+// melhor) e 'peso_corporal' guarda só o lastro extra (0 sem lastro).
+// per_side é execução unilateral, diferente de load_convention 'por_lado'.
 export type ExportedExercise = {
     exercise_key: string
     name: string
     load_convention: LoadConvention
+    equipment: EquipmentType | null
+    per_side: boolean
+    rest_seconds_min: number | null
+    rest_seconds_max: number | null
+    target_rir_min: number | null
+    target_rir_max: number | null
+    notes: string | null
     planned: ExportedPlannedSet[]
     sets: ExportedSet[]
 }
@@ -171,14 +203,26 @@ function durationInMinutes(startIso: string, endIso: string): number {
 
 // Séries seguem a ordem da ficha congelada na sessão, então uma série ainda
 // não registrada aparece como pendente em vez de sumir do exercício.
-function buildWorkout(session: WorkoutSessionRow, sets: WorkoutSetRow[]): ExportedWorkout {
+function buildWorkout(
+    session: WorkoutSessionRow,
+    sets: WorkoutSetRow[],
+    dropRows: WorkoutSetDropRow[],
+): ExportedWorkout {
     const setsByKey = new Map(sets.map((set) => [setKey(set.exercise_key, set.set_index), set]))
+    const dropsBySetKey = groupDropsBySetKey(sets, dropRows)
     const activeWindow = deriveSessionActiveWindow(sets)
 
     const exercises = session.workout_snapshot.exercicios.map((exercicio): ExportedExercise => ({
         exercise_key: exercicio.exercise_key,
         name: exercicio.nome,
         load_convention: exercicio.forma_carga,
+        equipment: exercicio.equipamento,
+        per_side: exercicio.por_lado,
+        rest_seconds_min: exercicio.descanso_segundos_min,
+        rest_seconds_max: exercicio.descanso_segundos_max,
+        target_rir_min: exercicio.rir_alvo_min,
+        target_rir_max: exercicio.rir_alvo_max,
+        notes: exercicio.observacoes,
         planned: exercicio.series.map((serie): ExportedPlannedSet => {
             const isRepsSet = serie.metrica === 'repeticoes'
             return {
@@ -189,6 +233,14 @@ function buildWorkout(session: WorkoutSessionRow, sets: WorkoutSetRow[]): Export
                 reps_min: isRepsSet ? serie.alvo_min : null,
                 reps_max: isRepsSet ? serie.alvo_max : null,
                 suggested_load_kg: serie.carga_sugerida,
+                drops: serie.quedas.map(
+                    (queda): ExportedPlannedDrop => ({
+                        drop_index: queda.drop_index,
+                        target_min: queda.alvo_min,
+                        target_max: queda.alvo_max,
+                        suggested_load_kg: queda.carga_sugerida,
+                    }),
+                ),
             }
         }),
         sets: exercicio.series.map((serie) => {
@@ -202,6 +254,15 @@ function buildWorkout(session: WorkoutSessionRow, sets: WorkoutSetRow[]): Export
                 note: row?.note ?? null,
                 duration_seconds: row?.duration_seconds ?? null,
                 distance_m: row?.distance_m ?? null,
+                drops: (dropsBySetKey.get(setKey(exercicio.exercise_key, serie.set_index)) ?? []).map(
+                    (drop, dropPosition): ExportedSetDrop => ({
+                        drop_index: dropPosition + 1,
+                        load_kg: drop.loadKg,
+                        reps: drop.reps,
+                        duration_seconds: drop.durationSeconds,
+                        distance_m: drop.distanceM,
+                    }),
+                ),
                 completed_at: row?.completed_at ?? null,
             }
         }),
@@ -267,6 +328,7 @@ export function buildPeriodExport(raw: PeriodExportRawData, period: ExportPeriod
         .filter((session) => isInPeriod(session.session_date, period))
         .sort(byDateThenCreation((session) => session.session_date))
     const setsBySessionId = groupBy(raw.workoutSets, (set) => set.session_id)
+    const dropRowsBySetId = groupBy(raw.workoutSetDrops, (dropRow) => dropRow.set_id)
     const cardioInPeriod = raw.cardioEntries
         .filter((entry) => isInPeriod(entry.entry_date, period))
         .sort(byDateThenCreation((entry) => entry.entry_date))
@@ -286,7 +348,11 @@ export function buildPeriodExport(raw: PeriodExportRawData, period: ExportPeriod
             current_cycle_start_date: meta.currentCycleStartDate,
             units: { load: 'kg', weight: 'kg', sleep: 'hours', distance: 'km', duration: 'minutes' },
         },
-        workouts: sessionsInPeriod.map((session) => buildWorkout(session, setsBySessionId.get(session.id) ?? [])),
+        workouts: sessionsInPeriod.map((session) => {
+            const sessionSets = setsBySessionId.get(session.id) ?? []
+            const sessionDropRows = sessionSets.flatMap((set) => dropRowsBySetId.get(set.id) ?? [])
+            return buildWorkout(session, sessionSets, sessionDropRows)
+        }),
         cardio: cardioInPeriod.map((entry) => ({
             date: entry.entry_date,
             activity: activityNameById.get(entry.activity_type_id) ?? 'Atividade',

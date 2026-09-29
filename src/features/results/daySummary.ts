@@ -1,10 +1,17 @@
 import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
-import { setKey, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
+import { groupDropsBySetKey } from '@/features/workout/setDrops'
+import { setKey, type WorkoutSetDropRow, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
+import type { OutboxDropValues } from '@/lib/outbox/outboxQueue'
+import type { LoadConvention, SetMetric } from '@/lib/workoutPlanSchema'
 
 export type WorkoutSetSummary = {
     setIndex: number
     loadKg: number | null
     reps: number | null
+    durationSeconds: number | null
+    distanceM: number | null
+    metric: SetMetric
+    drops: OutboxDropValues[]
     rir: number | null
     note: string | null
     isCompleted: boolean
@@ -14,6 +21,8 @@ export type WorkoutSetSummary = {
 export type WorkoutExerciseSummary = {
     exerciseKey: string
     exerciseName: string
+    loadConvention: LoadConvention
+    perSide: boolean
     sets: WorkoutSetSummary[]
 }
 
@@ -26,7 +35,12 @@ export type WorkoutSummary = {
 // registradas (o exercise_key delas não existe mais no snapshot atual);
 // separá-las evita perder o registro histórico ao mesmo tempo que evita
 // tratá-las como parte do treino de hoje.
-export function summarizeWorkoutSets(snapshot: WorkoutSnapshot, sets: WorkoutSetRow[]): WorkoutSummary {
+export function summarizeWorkoutSets(
+    snapshot: WorkoutSnapshot,
+    sets: WorkoutSetRow[],
+    dropRows: WorkoutSetDropRow[] = [],
+): WorkoutSummary {
+    const dropsBySetKey = groupDropsBySetKey(sets, dropRows)
     const setsByKey = new Map(sets.map((set) => [setKey(set.exercise_key, set.set_index), set]))
     const knownKeys = new Set<string>()
 
@@ -41,6 +55,11 @@ export function summarizeWorkoutSets(snapshot: WorkoutSnapshot, sets: WorkoutSet
                 setIndex: serie.set_index,
                 loadKg: matchingSet?.load_kg ?? null,
                 reps: matchingSet?.reps ?? null,
+                durationSeconds: matchingSet?.duration_seconds ?? null,
+                distanceM: matchingSet?.distance_m ?? null,
+                // Série gravada antes da coluna existir não tem métrica e é de repetições.
+                metric: matchingSet?.metric ?? serie.metrica,
+                drops: dropsBySetKey.get(key) ?? [],
                 rir: matchingSet?.rir ?? null,
                 note: matchingSet?.note ?? null,
                 isCompleted: status === 'completed',
@@ -52,6 +71,8 @@ export function summarizeWorkoutSets(snapshot: WorkoutSnapshot, sets: WorkoutSet
         const exerciseSummary: WorkoutExerciseSummary = {
             exerciseKey: exercicio.exercise_key,
             exerciseName: exercicio.nome,
+            loadConvention: exercicio.forma_carga,
+            perSide: exercicio.por_lado,
             sets: exerciseSets,
         }
         return exerciseSummary

@@ -12,6 +12,30 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   numa tabela de referência (`food_items_seed`) sem acesso pelo cliente, e
   contas já existentes sem o catálogo recebem a cópia ao aplicar a
   migração `20260929000000_food_items_seed_per_user.sql`.
+- Contrato versão 2 do plano de treino, com série de repetições, de tempo
+  (`segundos_min`/`segundos_max`) ou de distância (`metros_min`/`metros_max`),
+  drop set (`quedas`), `equipamento`, `forma_carga: "assistencia"` (menos é
+  progresso), `por_lado` (execução unilateral), `descanso_segundos_min/max`,
+  `rir_alvo_min/max` e `observacoes`. Arquivos versão 1 continuam aceitos e
+  planos e sessões já salvos são lidos normalmente. No README, `por_lado` do
+  exercício (um lado por vez) e `forma_carga: "por_lado"` (carga de cada lado
+  da barra) estão explicados lado a lado, com um exemplo de cada campo.
+- Lançamento de tempo, distância e drop set na sessão de treino: o alvo
+  aparece na unidade da série, o campo de carga diz o que o número significa
+  em cada forma de carga e cada queda do drop set vira um passo próprio.
+- Migração `20260929010000_workout_sets_metrics_and_drops.sql`, que precisa
+  ser aplicada no SQL Editor antes do deploy: `workout_sets` ganha `metric`,
+  `duration_seconds` e `distance_m`, a regra de série concluída passa a olhar
+  a métrica (sem `metric` continua exigindo carga e repetições) e as quedas
+  ficam em `workout_set_drops`, gravadas por `replace_workout_set_drops`.
+- Detalhe do dia em Resultados mostra a série na unidade certa (`35 s`,
+  `32,5 m`), a assistência como `assist. 40 kg`, peso corporal sem lastro sem
+  "0 kg" e as quedas sob a série principal (`↳ 22,5 kg × 9 reps`). O app não
+  tem total de volume, então nada soma tempo ou distância como repetição.
+- Exportação JSON por período com os campos novos, só acrescentados (o
+  formato anterior continua igual): por exercício `equipment`, `per_side`,
+  `rest_seconds_min/max`, `target_rir_min/max` e `notes`; por série planejada
+  e por série realizada, `drops`.
 
 ### Alterado
 

@@ -8,7 +8,7 @@ import type { FoodEntryRow } from '@/features/food/types'
 import { listRoutineItems } from '@/features/routine/api'
 import type { RoutineDayEntryRow } from '@/features/routine/types'
 import { normalizeSessionRows } from '@/features/workout/api'
-import type { WorkoutSessionRow, WorkoutSetRow } from '@/features/workout/types'
+import type { WorkoutSessionRow, WorkoutSetDropRow, WorkoutSetRow } from '@/features/workout/types'
 import { DEFAULT_TIMEZONE } from '@/lib/dateUtils'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -74,6 +74,29 @@ async function listWorkoutSetsForSessions(sessionIds: string[]): Promise<Workout
     )
 
     return setsPerBatch.flat()
+}
+
+// Mesmo lote de ids e mesma paginação das séries: a série é a dona da queda.
+async function listDropsForSets(setIds: string[]): Promise<WorkoutSetDropRow[]> {
+    const idBatches: string[][] = []
+    for (let start = 0; start < setIds.length; start += SESSION_IDS_PER_REQUEST) {
+        idBatches.push(setIds.slice(start, start + SESSION_IDS_PER_REQUEST))
+    }
+
+    const dropsPerBatch = await Promise.all(
+        idBatches.map((idBatch) =>
+            fetchAllPages<WorkoutSetDropRow>((from, to) =>
+                supabase
+                    .from('workout_set_drops')
+                    .select('*')
+                    .in('set_id', idBatch)
+                    .order('id', { ascending: true })
+                    .range(from, to),
+            ),
+        ),
+    )
+
+    return dropsPerBatch.flat()
 }
 
 function listCardioEntriesInPeriod(period: ExportPeriod): Promise<CardioEntryRow[]> {
@@ -191,11 +214,13 @@ export async function fetchPeriodExportData(
         getCurrentCycle(),
     ])
     const workoutSets = await listWorkoutSetsForSessions(workoutSessions.map((session) => session.id))
+    const workoutSetDrops = await listDropsForSets(workoutSets.map((set) => set.id))
 
     return {
         raw: {
             workoutSessions,
             workoutSets,
+            workoutSetDrops,
             cardioEntries,
             activityTypes,
             foodEntries,

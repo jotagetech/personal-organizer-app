@@ -11,9 +11,10 @@ import type { FoodEntryRow, FoodUnit } from '@/features/food/types'
 import { getDaySummary, type DaySummary } from '@/features/results/api'
 import { buildDayReport, type DayReport, type DayReportPendingItem } from '@/features/results/dayReport'
 import { summarizeWorkoutSets, type WorkoutExerciseSummary, type WorkoutSetSummary } from '@/features/results/daySummary'
+import { formatDropResult, formatSetResult } from '@/features/results/setResultText'
 import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
 import type { SetStatus } from '@/features/workout/sessionProgress'
-import type { WorkoutSessionRow, WorkoutSetRow } from '@/features/workout/types'
+import type { WorkoutSessionRow, WorkoutSetDropRow, WorkoutSetRow } from '@/features/workout/types'
 import { todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 
 const SECTION_ICON_SIZE = 18
@@ -77,6 +78,7 @@ export function DayDetail({ selectedDate }: DayDetailProps) {
             <WorkoutDaySection
                 session={summary.workoutSession}
                 sets={summary.workoutSets}
+                drops={summary.workoutDrops}
                 onOpenWorkout={() => goToTab('treino')}
             />
             <CardioDaySection entries={summary.cardioEntries} activityTypes={summary.activityTypes} />
@@ -166,15 +168,16 @@ function pendingChipClassName(item: DayReportPendingItem): string {
 type WorkoutDaySectionProps = {
     session: WorkoutSessionRow | null
     sets: WorkoutSetRow[]
+    drops: WorkoutSetDropRow[]
     onOpenWorkout: () => void
 }
 
-function WorkoutDaySection({ session, sets, onOpenWorkout }: WorkoutDaySectionProps) {
+function WorkoutDaySection({ session, sets, drops, onOpenWorkout }: WorkoutDaySectionProps) {
     return (
         <div className="card">
             <SectionHeader icon={Dumbbell} title="Treino" actionLabel="Abrir no Treino" onAction={onOpenWorkout} />
             {session ? (
-                <WorkoutSessionDetail session={session} sets={sets} />
+                <WorkoutSessionDetail session={session} sets={sets} drops={drops} />
             ) : (
                 <p className="day-detail__empty">Nenhum treino registrado neste dia.</p>
             )}
@@ -182,8 +185,14 @@ function WorkoutDaySection({ session, sets, onOpenWorkout }: WorkoutDaySectionPr
     )
 }
 
-function WorkoutSessionDetail({ session, sets }: { session: WorkoutSessionRow; sets: WorkoutSetRow[] }) {
-    const workoutSummary = summarizeWorkoutSets(session.workout_snapshot, sets)
+type WorkoutSessionDetailProps = {
+    session: WorkoutSessionRow
+    sets: WorkoutSetRow[]
+    drops: WorkoutSetDropRow[]
+}
+
+function WorkoutSessionDetail({ session, sets, drops }: WorkoutSessionDetailProps) {
+    const workoutSummary = summarizeWorkoutSets(session.workout_snapshot, sets, drops)
     const activeWindow = deriveSessionActiveWindow(sets)
     const sessionDetailParts = [
         activeWindow ? `Duração: ${formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}` : null,
@@ -220,7 +229,15 @@ function WorkoutExerciseDetail({ exercise }: { exercise: WorkoutExerciseSummary 
                 {exercise.sets.map((set) => (
                     <li key={set.setIndex} className={SET_STATUS_CLASS_NAMES[set.status]}>
                         <span className="day-workout__set-label">Série {set.setIndex}</span>
-                        <span className="day-workout__set-value">{formatSetSummary(set)}</span>
+                        <div className="day-workout__set-body">
+                            <span className="day-workout__set-value">{formatSetSummary(set, exercise)}</span>
+                            {set.status === 'completed' &&
+                                set.drops.map((drop, dropPosition) => (
+                                    <span key={dropPosition} className="day-workout__set-drop">
+                                        {formatDropResult(exercise.loadConvention, set.metric, drop, exercise.perSide)}
+                                    </span>
+                                ))}
+                        </div>
                     </li>
                 ))}
             </ul>
@@ -234,7 +251,7 @@ const SET_STATUS_CLASS_NAMES: Record<SetStatus, string> = {
     pending: 'day-workout__set day-workout__set--pending',
 }
 
-function formatSetSummary(set: WorkoutSetSummary): string {
+function formatSetSummary(set: WorkoutSetSummary, exercise: WorkoutExerciseSummary): string {
     if (set.status === 'skipped') {
         return set.note ? `pulada · ${set.note}` : 'pulada'
     }
@@ -242,11 +259,10 @@ function formatSetSummary(set: WorkoutSetSummary): string {
         return 'não registrada'
     }
 
-    const loadText = set.loadKg !== null ? `${set.loadKg} kg` : '?'
-    const repsText = set.reps !== null ? `${set.reps} reps` : '?'
+    const resultText = formatSetResult(exercise.loadConvention, set.metric, set, exercise.perSide)
     const rirText = set.rir !== null ? ` · RIR ${set.rir}` : ''
     const noteText = set.note ? ` · ${set.note}` : ''
-    const setSummaryText = `${loadText} × ${repsText}${rirText}${noteText}`
+    const setSummaryText = `${resultText}${rirText}${noteText}`
 
     return setSummaryText
 }

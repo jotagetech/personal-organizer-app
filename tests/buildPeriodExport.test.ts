@@ -10,7 +10,7 @@ import {
 } from '@/features/export/buildPeriodExport'
 import type { FoodEntryRow } from '@/features/food/types'
 import type { RoutineDayEntryRow, RoutineItemRow } from '@/features/routine/types'
-import type { WorkoutSessionRow, WorkoutSetRow, WorkoutSnapshot } from '@/features/workout/types'
+import type { WorkoutSessionRow, WorkoutSetDropRow, WorkoutSetRow, WorkoutSnapshot } from '@/features/workout/types'
 import { EMPTY_SET_METRIC_COLUMNS, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
 
 const PERIOD = { start: '2026-09-28', end: '2026-09-30' } // segunda a quarta
@@ -178,6 +178,7 @@ function buildSleep(entryDate: string, hours: number): SleepEntryRow {
 function buildRawData(overrides: Partial<PeriodExportRawData> = {}): PeriodExportRawData {
     return {
         workoutSessions: [buildSession()],
+        workoutSetDrops: [],
         workoutSets: [
             buildSet({ id: 's2', set_index: 2, load_kg: 62.5, reps: 8, rir: 1, completed_at: '2026-09-28T10:40:00.000Z' }),
             buildSet({
@@ -254,6 +255,7 @@ describe('buildPeriodExport', () => {
             reps_min: 8,
             reps_max: 10,
             suggested_load_kg: 60,
+            drops: [],
         })
         expect(supino.sets.map((set) => set.status)).toEqual(['completed', 'completed', 'skipped'])
         expect(supino.sets[0]).toEqual({
@@ -265,6 +267,7 @@ describe('buildPeriodExport', () => {
             note: 'fácil',
             duration_seconds: null,
             distance_m: null,
+            drops: [],
             completed_at: '2026-09-28T10:00:00.000Z',
         })
         expect(supino.sets[2]).toMatchObject({ status: 'skipped', load_kg: null, note: 'ombro', completed_at: null })
@@ -278,6 +281,7 @@ describe('buildPeriodExport', () => {
                 note: null,
                 duration_seconds: null,
                 distance_m: null,
+                drops: [],
                 completed_at: null,
             },
         ])
@@ -414,6 +418,127 @@ describe('buildPeriodExport', () => {
             format_version: 1,
             current_cycle_start_date: '2026-09-01',
             units: { load: 'kg', weight: 'kg', sleep: 'hours', distance: 'km', duration: 'minutes' },
+        })
+    })
+
+    it('exporta os campos do exercício e as quedas planejadas e realizadas de cada série', () => {
+        const snapshot: WorkoutSnapshot = {
+            versao: 2,
+            workout_key: 'treino_a',
+            nome: 'Treino A',
+            exercicios: [
+                {
+                    exercise_key: 'triceps',
+                    nome: 'Tríceps na corda',
+                    equipamento: 'cabo',
+                    forma_carga: 'total',
+                    por_lado: true,
+                    descanso_segundos_min: 60,
+                    descanso_segundos_max: 90,
+                    rir_alvo_min: 0,
+                    rir_alvo_max: 1,
+                    observacoes: 'Última série em drop set.',
+                    series: [
+                        {
+                            set_index: 1,
+                            metrica: 'repeticoes',
+                            alvo_min: 10,
+                            alvo_max: 12,
+                            carga_sugerida: 30,
+                            quedas: [
+                                { drop_index: 1, alvo_min: 8, alvo_max: 10, carga_sugerida: 22.5 },
+                                { drop_index: 2, alvo_min: 8, alvo_max: 10, carga_sugerida: 15 },
+                            ],
+                        },
+                        { set_index: 2, metrica: 'repeticoes', alvo_min: 10, alvo_max: 12, carga_sugerida: 30, quedas: [] },
+                    ],
+                },
+            ],
+        }
+        const dropRow = (overrides: Partial<WorkoutSetDropRow>): WorkoutSetDropRow => ({
+            id: 'drop',
+            set_id: 'ts1',
+            drop_index: 1,
+            load_kg: null,
+            reps: null,
+            duration_seconds: null,
+            distance_m: null,
+            updated_at: '2026-09-28T10:00:00.000Z',
+            ...overrides,
+        })
+        const raw = buildRawData({
+            workoutSessions: [buildSession({ workout_snapshot: snapshot })],
+            workoutSets: [
+                buildSet({
+                    id: 'ts1',
+                    exercise_key: 'triceps',
+                    set_index: 1,
+                    load_kg: 30,
+                    reps: 11,
+                    completed_at: '2026-09-28T10:00:00.000Z',
+                }),
+                buildSet({
+                    id: 'ts2',
+                    exercise_key: 'triceps',
+                    set_index: 2,
+                    load_kg: 30,
+                    reps: 10,
+                    completed_at: '2026-09-28T10:05:00.000Z',
+                }),
+            ],
+            workoutSetDrops: [
+                dropRow({ id: 'd2', drop_index: 2, load_kg: 15, reps: 7 }),
+                dropRow({ id: 'd1', drop_index: 1, load_kg: 22.5, reps: 9 }),
+            ],
+        })
+
+        const [exercise] = buildPeriodExport(raw, PERIOD, META).workouts[0].exercises
+
+        expect(exercise).toMatchObject({
+            equipment: 'cabo',
+            per_side: true,
+            rest_seconds_min: 60,
+            rest_seconds_max: 90,
+            target_rir_min: 0,
+            target_rir_max: 1,
+            notes: 'Última série em drop set.',
+        })
+        expect(exercise.planned[0].drops).toEqual([
+            { drop_index: 1, target_min: 8, target_max: 10, suggested_load_kg: 22.5 },
+            { drop_index: 2, target_min: 8, target_max: 10, suggested_load_kg: 15 },
+        ])
+        expect(exercise.sets[0].drops).toEqual([
+            { drop_index: 1, load_kg: 22.5, reps: 9, duration_seconds: null, distance_m: null },
+            { drop_index: 2, load_kg: 15, reps: 7, duration_seconds: null, distance_m: null },
+        ])
+        expect(exercise.sets[1].drops).toEqual([])
+    })
+
+    it('exporta série de tempo com a unidade própria e exercício antigo com os campos novos vazios', () => {
+        const raw = buildRawData({
+            workoutSets: [
+                buildSet({
+                    id: 's1',
+                    set_index: 1,
+                    metric: 'tempo',
+                    load_kg: 0,
+                    duration_seconds: 35,
+                    completed_at: '2026-09-28T10:00:00.000Z',
+                }),
+            ],
+        })
+
+        const [supino] = buildPeriodExport(raw, PERIOD, META).workouts[0].exercises
+
+        expect(supino.sets[0]).toMatchObject({ load_kg: 0, reps: null, duration_seconds: 35, distance_m: null })
+        expect(supino).toMatchObject({
+            equipment: null,
+            per_side: false,
+            rest_seconds_min: null,
+            rest_seconds_max: null,
+            target_rir_min: null,
+            target_rir_max: null,
+            notes: null,
         })
     })
 

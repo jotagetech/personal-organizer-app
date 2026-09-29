@@ -63,6 +63,7 @@ function buildSummary(overrides: Partial<DaySummary> = {}): DaySummary {
     const baseSummary: DaySummary = {
         workoutSession: null,
         workoutSets: [],
+        workoutDrops: [],
         cardioEntries: [],
         activityTypes: [],
         foodEntries: [],
@@ -355,5 +356,62 @@ describe('buildDayReport', () => {
 
         expect(report.band).toBe('none')
         expect(report.headline).not.toContain('ainda')
+    })
+
+    it('conta série de tempo e de distância como uma série cada, sem somar unidades diferentes', () => {
+        const timedSnapshot: WorkoutSnapshot = {
+            ...SNAPSHOT,
+            exercicios: [
+                {
+                    ...SNAPSHOT_EXERCISE_DEFAULTS,
+                    exercise_key: 'prancha',
+                    nome: 'Prancha',
+                    forma_carga: 'peso_corporal',
+                    series: [
+                        { set_index: 0, metrica: 'tempo', alvo_min: 30, alvo_max: 45, carga_sugerida: null, quedas: [] },
+                        { set_index: 1, metrica: 'distancia', alvo_min: 20, alvo_max: 30, carga_sugerida: null, quedas: [] },
+                    ],
+                },
+            ],
+        }
+        const summary = buildSummary({
+            workoutSession: {
+                id: 'session-1',
+                user_id: 'user-1',
+                session_date: TODAY,
+                plan_id: 'plan-1',
+                workout_key: 'treino_a',
+                workout_snapshot: timedSnapshot,
+                finished_at: '2026-09-28T13:00:00.000Z',
+                feeling_scale: null,
+                feeling_note: null,
+                created_at: '2026-09-28T12:00:00.000Z',
+                updated_at: '2026-09-28T13:00:00.000Z',
+            },
+            workoutSets: [
+                buildWorkoutSet({
+                    exercise_key: 'prancha',
+                    set_index: 0,
+                    metric: 'tempo',
+                    load_kg: 0,
+                    reps: null,
+                    duration_seconds: 40,
+                    completed_at: '2026-09-28T12:10:00.000Z',
+                }),
+                buildWorkoutSet({
+                    exercise_key: 'prancha',
+                    set_index: 1,
+                    metric: 'distancia',
+                    load_kg: 0,
+                    reps: null,
+                    distance_m: 25,
+                    completed_at: '2026-09-28T12:20:00.000Z',
+                }),
+            ],
+        })
+
+        const report = buildDayReport(summary, [], TODAY, TODAY)
+
+        expect(report.highlights[0]).toBe('Treino: 2 de 2 séries, 10 min')
     })
 })
