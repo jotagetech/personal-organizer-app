@@ -9,3 +9,6 @@ coverage/
 # Documento de especificação/instrução do projeto, nunca vai para o repositório
 instrucoes-app-treino-alimentacao-v0.md
 CLAUDE.md
+
+.vercel
+supabase/.temp/
