@@ -147,6 +147,14 @@ npm run dev
   cancelamento passam pela fila otimista, então funcionam sem sinal. Sair da aba Treino (ou fechar o app) e voltar para a
   mesma data reabre o mesmo passo: o treino escolhido, o exercício e a
   série da navegação livre e a queda do drop set em que estava.
+  A lista de exercícios do treino tem "Adicionar exercício" enquanto o
+  treino não foi finalizado: o nome sugere exercícios dos outros dias do
+  plano e extras usados em sessões anteriores (copiando a configuração e o
+  mesmo `exercise_key`), e um nome novo abre um formulário curto com a
+  medida da série, o número de séries, o alvo e o descanso opcional (vazio
+  usa o padrão do plano). O extra entra só no treino daquele dia, no fim da
+  lista e com a etiqueta "extra", sem mudar o plano; funciona sem sinal pela
+  fila otimista e não inicia o treino.
   Finalizar o treino para o relógio, mostra o tempo total, registra a
   duração (do início ao fim, sem o tempo pausado; em sessões anteriores ao
   início marcado, da primeira à última série concluída), a avaliação
@@ -506,9 +514,14 @@ aparecer em uma variação do mesmo exercício.
   treino `started_at` (início marcado, nulo em sessões anteriores a ele),
   e com ele `duration_minutes` passa a ser de `started_at` a `finished_at`
   menos o tempo pausado; por treino `paused_seconds` (total pausado, zero
-  sem pausa). No
+  sem pausa); por exercício `is_extra` (acrescentado só àquela sessão,
+  fora do treino do plano). No
   intervalado, cada item de `planned` e `sets` é uma rodada e
   `load_convention` não tem significado.
+- Um exercício extra fica só no snapshot da sessão, com `extra: true`. A
+  chave dele (`extra-` mais o nome em slug, com sufixo quando já existe) é
+  gravada uma vez e reaproveitada quando a sugestão é escolhida de novo em
+  outra sessão, o que liga o histórico do exercício.
 
 ## Estrutura
 

@@ -7,6 +7,32 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Adicionar exercício extra ao treino do dia. A lista de exercícios do treino
+  ganha "Adicionar exercício" enquanto o treino não foi finalizado. O campo de
+  nome sugere, enquanto digita, os exercícios de todos os dias do plano ativo
+  e os extras já usados em sessões anteriores (lidos dos snapshots, sem tabela
+  nova), sem repetir `exercise_key` e sem os que já estão no treino de hoje.
+  Escolher uma sugestão copia a configuração dela (tipo, séries, medidas,
+  descanso, já resolvidos para a semana do bloco) e o mesmo `exercise_key`,
+  então o histórico continua ligado. Nome sem correspondência abre um
+  formulário curto: medida da série (repetições, tempo ou distância), número
+  de séries, alvo e descanso opcional (vazio usa o padrão do plano). A chave
+  nova é `extra-` mais o nome em slug, com sufixo numérico quando já existe
+  no plano, em extras anteriores ou no treino de hoje. O exercício entra só no
+  snapshot da sessão de hoje, no fim da lista, marcado com `extra: true`
+  (campo opcional; snapshots antigos continuam válidos), e o assistente vai
+  para a primeira série dele. Adicionar não inicia o treino. Progresso,
+  contagem, retomada, finalização automática, detalhe do dia em Resultados,
+  relatório e exportação leem o extra do snapshot como qualquer exercício; a
+  exportação ganha `is_extra` por exercício e a lista do treino mostra a
+  etiqueta "extra". Na fila otimista, a operação nova `add_extra_exercise`
+  leva o exercício e o snapshot, cria a sessão sozinha quando ela ainda não
+  existe no servidor (inclusive antes de "Iniciar treino") e é enviada depois
+  do início e antes de pausa, séries e finalização da mesma data. O envio lê
+  o snapshot gravado e acrescenta o exercício só se a chave ainda não estiver
+  lá, então reenviar é idempotente e dois extras feitos sem sinal (uma
+  operação por exercício) somam em vez de um sobrescrever o outro. Trocar o
+  treino do dia descarta os extras ainda pendentes. Sem migração.
 - Pausar, retomar e cancelar o início do treino. Com o treino em andamento,
   o relógio do topo ganha "Pausar"; pausado, ele mostra "Pausado", congela o
   tempo exibido e oferece "Retomar", quantas vezes for preciso. Confirmar ou
