@@ -125,8 +125,8 @@ export function CardioEntryForm({
                     />
                 </div>
             )}
-            <div style={{ display: 'flex', gap: 8 }}>
-                <div className="field" style={{ flex: 1 }}>
+            <div className="form-grid">
+                <div className="field">
                     <label htmlFor="cardio-duration">Duração (min)</label>
                     <input
                         id="cardio-duration"
@@ -137,7 +137,7 @@ export function CardioEntryForm({
                         placeholder="ex: 30"
                     />
                 </div>
-                <div className="field" style={{ flex: 1 }}>
+                <div className="field">
                     <label htmlFor="cardio-distance">Distância (km)</label>
                     <input
                         id="cardio-distance"
@@ -171,7 +171,7 @@ export function CardioEntryForm({
                     onChange={(event) => setNote(event.target.value)}
                 />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="form-actions">
                 <button type="submit" className="primary-button" disabled={isSubmitting}>
                     {isSubmitting ? 'Salvando...' : 'Salvar cardio'}
                 </button>

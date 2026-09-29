@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { useState } from 'react'
 
 import { CardioSection } from '@/features/cardio/CardioSection'
@@ -9,6 +10,9 @@ import { setKey, type WorkoutSessionRow, type WorkoutSetRow } from '@/features/w
 import type { IsoDate } from '@/lib/dateUtils'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+const BADGE_ICON_SIZE = 18
+const BADGE_ICON_STROKE = 3
 
 type WorkoutFinishPanelProps = {
     session: WorkoutSessionRow
@@ -56,19 +60,34 @@ export function WorkoutFinishPanel({ session, sessionDate, sets, onSessionUpdate
 
     return (
         <div>
-            <div className="card">
-                <p style={{ marginTop: 0, marginBottom: 4, fontWeight: 600 }}>Treino concluído</p>
-                <p style={{ marginTop: 0, fontSize: 13, color: '#52525b' }}>
-                    {statusCounts.completed} {statusCounts.completed === 1 ? 'concluída' : 'concluídas'} ·{' '}
-                    {statusCounts.skipped} {statusCounts.skipped === 1 ? 'pulada' : 'puladas'}
-                    {activeWindow &&
-                        ` · Duração: ${formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}`}
-                </p>
+            <div className="card finish-card">
+                <div className="finish-card__header">
+                    <span className="finish-card__badge">
+                        <Check size={BADGE_ICON_SIZE} strokeWidth={BADGE_ICON_STROKE} aria-hidden="true" />
+                    </span>
+                    <h3 className="page-title">Treino concluído</h3>
+                </div>
+                <dl className="finish-stats">
+                    <div className="finish-stats__item">
+                        <dt>{statusCounts.completed === 1 ? 'Concluída' : 'Concluídas'}</dt>
+                        <dd>{statusCounts.completed}</dd>
+                    </div>
+                    <div className="finish-stats__item">
+                        <dt>{statusCounts.skipped === 1 ? 'Pulada' : 'Puladas'}</dt>
+                        <dd>{statusCounts.skipped}</dd>
+                    </div>
+                    {activeWindow && (
+                        <div className="finish-stats__item finish-stats__item--wide">
+                            <dt>Duração</dt>
+                            <dd>{formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}</dd>
+                        </div>
+                    )}
+                </dl>
                 <div className="field">
                     <label>Como foi o treino?</label>
                     <FeelingScaleInput value={session.feeling_scale} onChange={handleFeelingScaleChange} />
                 </div>
-                <div className="field" style={{ marginBottom: 0 }}>
+                <div className="field field--last">
                     <label htmlFor="workout-feeling-note">Detalhar (opcional)</label>
                     <input
                         id="workout-feeling-note"

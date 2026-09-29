@@ -1,3 +1,4 @@
+import { Flame, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import {
@@ -11,6 +12,9 @@ import { CardioEntryList } from '@/features/cardio/CardioEntryList'
 import type { CardioActivityTypeRow, CardioEntryRow } from '@/features/cardio/types'
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import type { IsoDate } from '@/lib/dateUtils'
+
+const HEADING_ICON_SIZE = 18
+const BUTTON_ICON_SIZE = 18
 
 type CardioSectionProps = {
     sessionDate: IsoDate
@@ -63,7 +67,7 @@ export function CardioSection({ sessionDate }: CardioSectionProps) {
     }, [sessionDate])
 
     if (isLoading) {
-        return <p>Carregando cardio...</p>
+        return <p className="text-muted">Carregando cardio...</p>
     }
 
     if (errorMessage) {
@@ -73,8 +77,11 @@ export function CardioSection({ sessionDate }: CardioSectionProps) {
     const showPrompt = entries.length === 0 && !isAdding && !hasDismissedPrompt
 
     return (
-        <div>
-            <h3 style={{ fontSize: 14, marginBottom: 6 }}>Cardio / outras atividades</h3>
+        <section className="cardio-section">
+            <h3 className="section-title cardio-section__title">
+                <Flame size={HEADING_ICON_SIZE} aria-hidden="true" />
+                Cardio e outras atividades
+            </h3>
             <CardioEntryList
                 entries={entries}
                 activityTypes={activityTypes}
@@ -86,8 +93,8 @@ export function CardioSection({ sessionDate }: CardioSectionProps) {
             />
             {showPrompt && (
                 <div className="card">
-                    <p style={{ marginTop: 0 }}>Vai fazer cardio hoje?</p>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <p className="cardio-section__prompt">Vai fazer cardio hoje?</p>
+                    <div className="form-actions">
                         <button type="button" className="primary-button" onClick={() => setIsAdding(true)}>
                             Sim
                         </button>
@@ -119,10 +126,11 @@ export function CardioSection({ sessionDate }: CardioSectionProps) {
                 </div>
             )}
             {!showPrompt && !isAdding && (
-                <button type="button" className="secondary-button" onClick={() => setIsAdding(true)}>
-                    {entries.length > 0 ? '+ Adicionar outro cardio' : '+ Adicionar cardio'}
+                <button type="button" className="secondary-button full-width" onClick={() => setIsAdding(true)}>
+                    <Plus size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                    {entries.length > 0 ? 'Adicionar outro cardio' : 'Adicionar cardio'}
                 </button>
             )}
-        </div>
+        </section>
     )
 }

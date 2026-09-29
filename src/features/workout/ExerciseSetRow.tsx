@@ -1,3 +1,4 @@
+import { Check, ChevronsRight, MessageSquare, SkipForward, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { useOutbox } from '@/contexts/OutboxContext'
@@ -5,6 +6,9 @@ import { buildOverlaySetRow, type OutboxSetValues, type UpsertSetOperation } fro
 import type { WorkoutSetRow, WorkoutSnapshot } from '@/features/workout/types'
 
 const SAVE_DEBOUNCE_MS = 600
+const ACTION_ICON_SIZE = 16
+const CONFIRM_ICON_SIZE = 22
+const CONFIRM_ICON_STROKE = 3
 
 type SetFieldState = {
     loadKgText: string
@@ -231,19 +235,24 @@ export function ExerciseSetRow({
     )
 
     return (
-        <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#52525b' }}>
-                <span>Série {setIndex}</span>
+        <div className="set-card__body">
+            <div className="set-card__targets">
                 <span>
-                    Meta: {formatRepRange(repeticoesMin, repeticoesMax)}
-                    {cargaSugerida !== null ? ` · Sugestão: ${cargaSugerida} kg` : ''}
+                    Meta{' '}
+                    <strong className="set-card__target-value">{formatRepRange(repeticoesMin, repeticoesMax)}</strong>{' '}
+                    reps
                 </span>
+                {cargaSugerida !== null && (
+                    <span>
+                        Sugestão <strong className="set-card__target-value">{cargaSugerida}</strong> kg
+                    </span>
+                )}
             </div>
             {isSkipped ? (
                 <p className="set-skipped-badge">Série pulada</p>
             ) : (
-                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                    <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <div className="set-fields">
+                    <div className="field set-fields__field">
                         <label>Carga (kg)</label>
                         <input
                             type="text"
@@ -254,7 +263,7 @@ export function ExerciseSetRow({
                             placeholder="ex: 60"
                         />
                     </div>
-                    <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                    <div className="field set-fields__field">
                         <label>Realizadas</label>
                         <input
                             type="text"
@@ -265,7 +274,7 @@ export function ExerciseSetRow({
                             placeholder="ex: 10"
                         />
                     </div>
-                    <div className="field" style={{ width: 64, flexShrink: 0, marginBottom: 0 }}>
+                    <div className="field set-fields__field">
                         <label>RIR</label>
                         <input
                             type="text"
@@ -279,7 +288,7 @@ export function ExerciseSetRow({
                 </div>
             )}
             {isNoteOpen ? (
-                <div className="field" style={{ marginTop: 8, marginBottom: 0 }}>
+                <div className="field set-card__note">
                     <label>Comentário (dor, desconforto, observação)</label>
                     <textarea
                         rows={2}
@@ -292,38 +301,36 @@ export function ExerciseSetRow({
             ) : (
                 <button
                     type="button"
-                    className="secondary-button"
-                    style={{ marginTop: 8 }}
+                    className="ghost-button set-card__note-toggle"
                     onClick={() => setIsNoteOpen(true)}
                 >
-                    💬 Comentário
+                    <MessageSquare size={ACTION_ICON_SIZE} aria-hidden="true" />
+                    Comentário
                 </button>
             )}
             {isSkipped ? (
-                <button
-                    type="button"
-                    className="secondary-button"
-                    style={{ width: '100%', marginTop: 10 }}
-                    onClick={handleUndoSkipClick}
-                >
+                <button type="button" className="secondary-button set-card__undo-skip" onClick={handleUndoSkipClick}>
+                    <Undo2 size={ACTION_ICON_SIZE} aria-hidden="true" />
                     Desfazer pulo
                 </button>
             ) : (
                 <>
                     <button
                         type="button"
-                        className="primary-button"
-                        style={{ width: '100%', marginTop: 10 }}
+                        className="primary-button set-card__confirm"
                         disabled={!canConfirm}
                         onClick={handleConfirmClick}
                     >
+                        <Check size={CONFIRM_ICON_SIZE} strokeWidth={CONFIRM_ICON_STROKE} aria-hidden="true" />
                         {confirmLabel}
                     </button>
                     <div className="set-skip-actions">
-                        <button type="button" className="secondary-button" onClick={handleSkipSetClick}>
+                        <button type="button" className="ghost-button" onClick={handleSkipSetClick}>
+                            <SkipForward size={ACTION_ICON_SIZE} aria-hidden="true" />
                             Pular série
                         </button>
-                        <button type="button" className="secondary-button" onClick={handleSkipExerciseClick}>
+                        <button type="button" className="ghost-button" onClick={handleSkipExerciseClick}>
+                            <ChevronsRight size={ACTION_ICON_SIZE} aria-hidden="true" />
                             Pular exercício
                         </button>
                     </div>

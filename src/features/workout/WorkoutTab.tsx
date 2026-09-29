@@ -1,3 +1,4 @@
+import { CalendarPlus, EllipsisVertical, FileUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { getCurrentCycle } from '@/features/cycle/api'
@@ -10,6 +11,9 @@ import { WorkoutSessionView } from '@/features/workout/WorkoutSessionView'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 
 type ActivePanel = 'import_plan' | 'start_cycle' | null
+
+const MENU_ICON_SIZE = 22
+const MENU_ITEM_ICON_SIZE = 18
 
 export function WorkoutTab() {
     const { selectedDate } = useSelectedDate()
@@ -52,7 +56,7 @@ export function WorkoutTab() {
     }, [])
 
     if (isLoadingPlan) {
-        return <p>Carregando plano...</p>
+        return <p className="text-muted">Carregando plano...</p>
     }
 
     if (loadErrorMessage) {
@@ -61,8 +65,7 @@ export function WorkoutTab() {
                 Falha ao carregar: {loadErrorMessage}
                 <button
                     type="button"
-                    className="secondary-button"
-                    style={{ display: 'block', marginTop: 8 }}
+                    className="secondary-button error-list__retry"
                     onClick={reloadActivePlan}
                 >
                     Tentar de novo
@@ -81,7 +84,7 @@ export function WorkoutTab() {
 
     return (
         <div>
-            <div className="workout-toolbar">
+            <div className="page-header page-header--compact">
                 <CycleStatusBadge cycle={cycle} referenceDate={selectedDate} />
                 <div className="overflow-menu" ref={menuRef}>
                     <button
@@ -90,7 +93,7 @@ export function WorkoutTab() {
                         aria-label="Mais ações"
                         onClick={() => setIsMenuOpen((previous) => !previous)}
                     >
-                        ⋮
+                        <EllipsisVertical size={MENU_ICON_SIZE} aria-hidden="true" />
                     </button>
                     {isMenuOpen && activePanel === null && (
                         <div className="overflow-menu__panel">
@@ -102,6 +105,7 @@ export function WorkoutTab() {
                                     setIsMenuOpen(false)
                                 }}
                             >
+                                <FileUp size={MENU_ITEM_ICON_SIZE} aria-hidden="true" />
                                 Importar novo plano
                             </button>
                             <button
@@ -109,6 +113,7 @@ export function WorkoutTab() {
                                 className="overflow-menu__item"
                                 onClick={() => setActivePanel('start_cycle')}
                             >
+                                <CalendarPlus size={MENU_ITEM_ICON_SIZE} aria-hidden="true" />
                                 Iniciar novo ciclo
                             </button>
                         </div>

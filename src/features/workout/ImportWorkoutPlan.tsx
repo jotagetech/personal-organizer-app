@@ -1,6 +1,9 @@
+import { FileUp } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { importWorkoutPlanFromText } from '@/features/workout/api'
+
+const PICK_ICON_SIZE = 20
 
 type ImportWorkoutPlanProps = {
     onImported: () => void
@@ -42,14 +45,14 @@ export function ImportWorkoutPlan({ onImported }: ImportWorkoutPlanProps) {
 
     return (
         <div className="card">
-            <h2 style={{ fontSize: 16, marginTop: 0 }}>Importar treino</h2>
-            <p style={{ fontSize: 13, color: '#52525b' }}>
+            <h2 className="section-title">Importar treino</h2>
+            <p className="text-small text-secondary import-plan__hint">
                 Selecione o arquivo .json do plano de treino gerado fora do aplicativo.
             </p>
             {errors.length > 0 && (
                 <div className="error-list">
                     <strong>Não foi possível importar o plano:</strong>
-                    <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                    <ul className="error-list__items">
                         {errors.map((error) => (
                             <li key={`${error.path}-${error.message}`}>
                                 <code>{error.path}</code>: {error.message}
@@ -59,13 +62,26 @@ export function ImportWorkoutPlan({ onImported }: ImportWorkoutPlanProps) {
                 </div>
             )}
             {statusMessage && <p className="save-status">{statusMessage}</p>}
-            <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/json,.json"
-                onChange={handleFileSelected}
-                disabled={isImporting}
-            />
+            <label className={pickButtonClass(isImporting)}>
+                <FileUp size={PICK_ICON_SIZE} aria-hidden="true" />
+                {isImporting ? 'Importando...' : 'Escolher arquivo .json'}
+                <input
+                    ref={fileInputRef}
+                    className="visually-hidden"
+                    type="file"
+                    accept="application/json,.json"
+                    onChange={handleFileSelected}
+                    disabled={isImporting}
+                />
+            </label>
         </div>
     )
+}
+
+function pickButtonClass(isImporting: boolean): string {
+    const className = isImporting
+        ? 'primary-button import-plan__pick import-plan__pick--busy'
+        : 'primary-button import-plan__pick'
+
+    return className
 }

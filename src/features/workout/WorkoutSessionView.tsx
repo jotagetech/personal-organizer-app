@@ -1,3 +1,4 @@
+import { ArrowLeftRight, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Minus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/features/workout/api'
@@ -34,6 +35,10 @@ import {
 } from '@/lib/outbox/outboxQueue'
 import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
 import type { Workout, WorkoutPlan } from '@/lib/workoutPlanSchema'
+
+const BUTTON_ICON_SIZE = 18
+const STATUS_ICON_SIZE = 14
+const STATUS_ICON_STROKE = 3
 
 type WorkoutSessionViewProps = {
     plan: WorkoutPlan
@@ -353,7 +358,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     }, [snapshot, position, session, sessionDate, outbox.pendingCount])
 
     if (isLoading) {
-        return <p>Carregando treino...</p>
+        return <p className="text-muted">Carregando treino...</p>
     }
 
     if (loadErrorMessage) {
@@ -362,8 +367,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                 Falha ao carregar treino: {loadErrorMessage}
                 <button
                     type="button"
-                    className="secondary-button"
-                    style={{ display: 'block', marginTop: 8 }}
+                    className="secondary-button error-list__retry"
                     onClick={() => setReloadToken((token) => token + 1)}
                 >
                     Tentar de novo
@@ -375,30 +379,28 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     if (workoutChoices) {
         return (
             <div>
-                <p>Escolha o treino para este dia:</p>
-                {switchWorkoutErrorMessage && (
-                    <div className="error-list" style={{ marginBottom: 8 }}>
-                        {switchWorkoutErrorMessage}
-                    </div>
-                )}
-                {workoutChoices.map((workout) => (
-                    <button
-                        key={workout.id}
-                        type="button"
-                        className="secondary-button"
-                        style={{ display: 'block', width: '100%', marginBottom: 8, textAlign: 'left' }}
-                        disabled={isSwitchingWorkout}
-                        onClick={() => handleChooseWorkout(workout)}
-                    >
-                        {workout.nome}
-                    </button>
-                ))}
+                <h2 className="page-title workout-choice__title">Escolha o treino para este dia</h2>
+                {switchWorkoutErrorMessage && <div className="error-list">{switchWorkoutErrorMessage}</div>}
+                <div className="menu-list">
+                    {workoutChoices.map((workout) => (
+                        <button
+                            key={workout.id}
+                            type="button"
+                            className="menu-list__item workout-choice__item"
+                            disabled={isSwitchingWorkout}
+                            onClick={() => handleChooseWorkout(workout)}
+                        >
+                            <span className="menu-list__text workout-choice__name">{workout.nome}</span>
+                            <ChevronRight className="menu-list__chevron" size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                        </button>
+                    ))}
+                </div>
             </div>
         )
     }
 
     if (!snapshot) {
-        return <p>Nenhum treino disponível no plano ativo.</p>
+        return <p className="text-muted">Nenhum treino disponível no plano ativo.</p>
     }
 
     const effectiveSetsByKey = overlayPendingSets(setsByKey, outbox.getOperationsForDate(sessionDate), sessionDate)
@@ -441,36 +443,43 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                 onToggle={() => setIsExercisePickerOpen((isOpen) => !isOpen)}
                 onSelect={handleSelectExercise}
             />
-            <div className="progress-track">
-                {segmentStatuses.map((status, segmentIndex) => (
-                    <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
-                ))}
-            </div>
-            <p style={{ fontSize: 13, color: '#52525b', marginBottom: 4 }}>
-                Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length} · Série{' '}
-                {position.setIndexInExercise + 1} de {currentExercicio.series.length}
-            </p>
-            <h3 style={{ fontSize: 16, marginTop: 0, marginBottom: 8 }}>{currentExercicio.nome}</h3>
-            <ExerciseSetRow
-                key={setKey(currentExercicio.exercise_key, currentSet.set_index)}
-                sessionDate={sessionDate}
-                planId={planId}
-                snapshot={snapshot}
-                exerciseKey={currentExercicio.exercise_key}
-                setIndex={currentSet.set_index}
-                repeticoesMin={currentSet.repeticoes_min}
-                repeticoesMax={currentSet.repeticoes_max}
-                cargaSugerida={currentSet.carga_sugerida}
-                existingSet={effectiveSetsByKey.get(setKey(currentExercicio.exercise_key, currentSet.set_index))}
-                confirmLabel={isFinalUnresolvedSet ? 'Confirmar e finalizar treino' : 'Confirmar'}
-                onConfirmed={handleSetResolved}
-                onSkipped={handleSetResolved}
-                onSkipExercise={handleSkipExercise}
-                onLocalSave={handleLocalSetSaved}
-            />
+            <section className="card set-card">
+                <div className="set-card__eyebrow">
+                    <span>
+                        Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length}
+                    </span>
+                    <span className="set-card__set-count">
+                        Série {position.setIndexInExercise + 1} de {currentExercicio.series.length}
+                    </span>
+                </div>
+                <h3 className="set-card__exercise-name">{currentExercicio.nome}</h3>
+                <div className="progress-track">
+                    {segmentStatuses.map((status, segmentIndex) => (
+                        <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
+                    ))}
+                </div>
+                <ExerciseSetRow
+                    key={setKey(currentExercicio.exercise_key, currentSet.set_index)}
+                    sessionDate={sessionDate}
+                    planId={planId}
+                    snapshot={snapshot}
+                    exerciseKey={currentExercicio.exercise_key}
+                    setIndex={currentSet.set_index}
+                    repeticoesMin={currentSet.repeticoes_min}
+                    repeticoesMax={currentSet.repeticoes_max}
+                    cargaSugerida={currentSet.carga_sugerida}
+                    existingSet={effectiveSetsByKey.get(setKey(currentExercicio.exercise_key, currentSet.set_index))}
+                    confirmLabel={isFinalUnresolvedSet ? 'Confirmar e finalizar treino' : 'Confirmar'}
+                    onConfirmed={handleSetResolved}
+                    onSkipped={handleSetResolved}
+                    onSkipExercise={handleSkipExercise}
+                    onLocalSave={handleLocalSetSaved}
+                />
+            </section>
             {!isVeryFirstSet && (
-                <button type="button" className="secondary-button" style={{ marginTop: 8 }} onClick={handleGoBack}>
-                    ◀ Voltar
+                <button type="button" className="ghost-button" onClick={handleGoBack}>
+                    <ChevronLeft size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                    Voltar
                 </button>
             )}
         </div>
@@ -495,7 +504,17 @@ function ExercisePicker({ progress, currentExerciseIndex, isOpen, onToggle, onSe
     return (
         <div className="exercise-picker">
             <button type="button" className="exercise-picker__toggle" aria-expanded={isOpen} onClick={onToggle}>
-                Exercícios · {currentExerciseIndex + 1} de {progress.length} {isOpen ? '▴' : '▾'}
+                <span>
+                    Exercícios{' '}
+                    <span className="exercise-picker__count">
+                        {currentExerciseIndex + 1} de {progress.length}
+                    </span>
+                </span>
+                {isOpen ? (
+                    <ChevronUp size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                ) : (
+                    <ChevronDown size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                )}
             </button>
             {isOpen && (
                 <div className="exercise-picker__list">
@@ -507,7 +526,8 @@ function ExercisePicker({ progress, currentExerciseIndex, isOpen, onToggle, onSe
                             aria-current={exercise.exerciseIndex === currentExerciseIndex ? 'step' : undefined}
                             onClick={() => onSelect(exercise.exerciseIndex)}
                         >
-                            <span>{exercise.nome}</span>
+                            <ExerciseStatusMarker exercise={exercise} />
+                            <span className="exercise-picker__name">{exercise.nome}</span>
                             <span className="exercise-picker__status">{formatExerciseStatus(exercise)}</span>
                         </button>
                     ))}
@@ -531,12 +551,32 @@ function exercisePickerItemClass(exercise: ExerciseProgress, currentExerciseInde
     return classNames.join(' ')
 }
 
+function ExerciseStatusMarker({ exercise }: { exercise: ExerciseProgress }) {
+    if (exercise.skipped === exercise.total) {
+        return (
+            <span className="exercise-picker__marker exercise-picker__marker--skipped">
+                <Minus size={STATUS_ICON_SIZE} strokeWidth={STATUS_ICON_STROKE} aria-hidden="true" />
+            </span>
+        )
+    }
+    if (exercise.completed + exercise.skipped === exercise.total) {
+        return (
+            <span className="exercise-picker__marker exercise-picker__marker--done">
+                <Check size={STATUS_ICON_SIZE} strokeWidth={STATUS_ICON_STROKE} aria-hidden="true" />
+            </span>
+        )
+    }
+    const markerNumber = exercise.exerciseIndex + 1
+
+    return <span className="exercise-picker__marker">{markerNumber}</span>
+}
+
 function formatExerciseStatus(exercise: ExerciseProgress): string {
     if (exercise.skipped === exercise.total) {
         return 'pulado'
     }
     if (exercise.completed === exercise.total) {
-        return '✓'
+        return 'feito'
     }
     const skippedSuffix = exercise.skipped > 0 ? ` · ${exercise.skipped} pulada(s)` : ''
 
@@ -551,9 +591,10 @@ function WorkoutSnapshotHeader({
     onRequestSwitchWorkout: () => void
 }) {
     return (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <h2 style={{ fontSize: 16, margin: 0 }}>{nome}</h2>
-            <button type="button" className="secondary-button" onClick={onRequestSwitchWorkout}>
+        <div className="page-header">
+            <h2 className="page-title workout-header__name">{nome}</h2>
+            <button type="button" className="secondary-button workout-header__switch" onClick={onRequestSwitchWorkout}>
+                <ArrowLeftRight size={BUTTON_ICON_SIZE} aria-hidden="true" />
                 Trocar treino
             </button>
         </div>

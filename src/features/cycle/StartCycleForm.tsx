@@ -42,7 +42,7 @@ export function StartCycleForm({ onStarted, onCancel }: StartCycleFormProps) {
                     onChange={(event) => setStartDate(event.target.value)}
                 />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="form-actions">
                 <button type="submit" className="primary-button" disabled={isSubmitting}>
                     {isSubmitting ? 'Iniciando...' : 'Iniciar ciclo'}
                 </button>
