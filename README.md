@@ -89,6 +89,11 @@ npm run dev
       retomar e cancelar o início gravam essas colunas, e sem elas a escrita
       falha e aparece como falha no status de sincronização (as séries
       continuam sendo enviadas).
+   16. `20260929050000_push_notifications.sql` (tabelas `push_subscriptions`
+      e `scheduled_pushes` e função `register_push_subscription`, para a
+      notificação de fim de descanso, ver a seção Notificações abaixo).
+      Aditiva e idempotente. Sem ela o app continua funcionando; só ativar
+      notificações e agendar o aviso de descanso falham, em silêncio.
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
@@ -101,6 +106,86 @@ npm run dev
 5. RLS habilitado em todas as tabelas, restringindo cada uma ao próprio
    usuário autenticado. Nenhuma chave privilegiada (`service_role`) é usada no
    frontend.
+
+## Notificações
+
+Aviso de fim do descanso entre séries por Web Push, que chega com a tela
+bloqueada. No iPhone (iOS 16.4 ou mais novo) só funciona com o app aberto
+pelo ícone da tela de início. Com a tela bloqueada o iOS congela o
+JavaScript da página, então o aviso sai do servidor:
+
+1. Ao começar um descanso, o app grava em `scheduled_pushes` o horário do
+   fim (início mais o máximo da faixa mais os "+15 s"). "+15 s" remarca;
+   "Pular", "Fechar", finalizar o treino, pausar e trocar de treino cancelam
+   (retomar agenda de novo, se o descanso ainda não acabou). É uma chamada
+   direta ao Supabase, fora da fila offline: sem rede fica só o bipe do app.
+2. O `pg_cron` confere a tabela a cada 5 segundos e, quando há push vencido,
+   chama a Edge Function `send-due-pushes` via `pg_net`.
+3. A função marca o push como enviado, manda o Web Push (VAPID) para todas as
+   assinaturas do usuário e apaga as que respondem 404 ou 410. Push com mais
+   de 60 segundos de atraso é descartado sem envio.
+4. O service worker (`public/sw.js`, sem cache e sem interceptar
+   requisições) mostra a notificação; tocar nela abre ou foca o app.
+
+Com o app aberto na tela chegam os dois avisos, bipe e notificação: o
+service worker sempre mostra a notificação, porque o iOS pode revogar a
+permissão de quem recebe push sem mostrar nada.
+
+### Configuração
+
+Nenhum segredo vai para o repositório. Os valores ficam nos segredos da Edge
+Function e no Supabase Vault.
+
+1. **Chaves VAPID**: um par gerado uma vez (ex: `npx web-push
+   generate-vapid-keys`), guardado fora do repositório. A chave pública vai
+   para `VITE_VAPID_PUBLIC_KEY` no `.env` e nas variáveis de ambiente do
+   Vercel (e exige novo deploy do frontend); a privada só nos segredos da
+   função.
+2. **Migração**: aplicar `20260929050000_push_notifications.sql` no SQL
+   Editor.
+3. **Extensões**: ligar `pg_cron` e `pg_net` em Database, Extensions.
+4. **Segredos da função** (Edge Functions, Secrets), com estes nomes:
+   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (um contato no
+   formato `mailto:voce@exemplo.com`) e `PUSH_CRON_SECRET` (um valor
+   aleatório longo, ex: `openssl rand -hex 32`). `SUPABASE_URL` e
+   `SUPABASE_SERVICE_ROLE_KEY` já existem por padrão.
+5. **Publicar a função** pelo editor de Edge Functions do painel, com o nome
+   `send-due-pushes` e o conteúdo de
+   `supabase/functions/send-due-pushes/index.ts`, e **desligar a verificação
+   de JWT** (Enforce JWT verification). Quem chama é o `pg_cron`, que não tem
+   JWT de usuário; a proteção é o header `x-push-cron-secret`, conferido
+   contra `PUSH_CRON_SECRET`, e sem ele a função responde 401 sem tocar no
+   banco.
+6. **Vault**: no SQL Editor, criar os dois segredos que o agendador lê,
+   trocando o ref do projeto e o valor do segredo:
+
+   ```sql
+   select vault.create_secret(
+       'https://SEU_PROJECT_REF.supabase.co/functions/v1/send-due-pushes',
+       'send_due_pushes_url',
+       'URL da Edge Function send-due-pushes'
+   );
+   select vault.create_secret(
+       'MESMO_VALOR_DO_PUSH_CRON_SECRET',
+       'push_cron_secret',
+       'Segredo conferido pela Edge Function send-due-pushes'
+   );
+   ```
+
+   Para trocar um valor depois: `select vault.update_secret(id, 'novo
+   valor')`, com o `id` de `select id, name from vault.secrets`.
+7. **Agendador**: rodar `supabase/scheduler/send_due_pushes_cron.sql` no SQL
+   Editor. Ele agenda o job `send-due-pushes` (a cada 5 segundos, só chama a
+   função quando há push vencido) e uma limpeza diária do histórico do
+   `pg_cron`. Para parar: `select cron.unschedule('send-due-pushes')`.
+8. **No aparelho**: abrir o app pelo ícone da tela de início, ir em Menu,
+   Notificações, e tocar em "Ativar notificações". A permissão vale por
+   aparelho; "Desativar" apaga a assinatura deste aparelho.
+
+Para conferir o caminho do servidor: `select * from cron.job_run_details
+order by start_time desc limit 20`, `select * from net._http_response order
+by created desc limit 20` (resposta da função, com a contagem de enviados) e
+os logs da função no painel.
 
 ## Funcionalidades
 
@@ -540,7 +625,11 @@ src/
     food/           catálogo de alimentos (TACO + próprios), consumo por refeição
     bodyMetrics/    peso corporal e sono (registro rápido diário)
     results/        grade semanal de treinos concluídos
+    notifications/  service worker, assinatura de push e ativação no Menu
 supabase/migrations/  esquema SQL + RLS + funções (importação de plano, cálculo nutricional)
+supabase/functions/   Edge Function send-due-pushes (Deno, fora do tsc e do build do Vite)
+supabase/scheduler/   SQL do pg_cron que chama a Edge Function
+public/sw.js          service worker do Web Push
 examples/             plano de treino de exemplo (JSON)
 schemas/               JSON Schema gerado a partir do contrato Zod
 tests/                 testes Vitest (contrato, datas, seleção de treino, hash canônico,
@@ -558,7 +647,8 @@ Google Fit (sono/passos do Amazfit/Zepp), adiada por ser um projeto à parte
 Instalável na tela de início (manifest e ícones em `public/`, nome
 "Organizer"), abrindo em tela cheia como app.
 
-Sem service worker: a aba precisa estar aberta antes de o sinal cair. Uma
+O service worker (`public/sw.js`) existe só para as notificações e não
+guarda cache: a aba precisa estar aberta antes de o sinal cair. Uma
 série de treino confirmada com a aba já aberta entra na fila de envio e
 sincroniza sozinha assim que a rede volta, mas recarregar a página (ou abrir
 o app do zero) sem conexão não funciona, porque o próprio HTML/JS ainda

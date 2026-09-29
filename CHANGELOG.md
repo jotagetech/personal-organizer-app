@@ -7,6 +7,31 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Notificação de fim do descanso entre séries por Web Push, que chega com a
+  tela bloqueada (no iPhone, iOS 16.4 ou mais novo com o app aberto pelo
+  ícone da tela de início). A aba Menu ganha a seção Notificações, com
+  "Ativar notificações" (pede a permissão no toque, assina o push com
+  `VITE_VAPID_PUBLIC_KEY` e grava a assinatura), o estado neste aparelho
+  (ativadas, bloqueadas nos ajustes, não suportado), a explicação de abrir
+  pelo ícone da tela de início quando aberto no Safari e "Desativar".
+  Começar um descanso agenda o push para o fim dele ("Descanso concluído",
+  com o nome do próximo exercício); "+15 s" remarca; "Pular", "Fechar",
+  finalizar o treino, pausar e trocar de treino cancelam, e retomar agenda
+  de novo se o descanso ainda não acabou. Trocar de treino passa também a
+  fechar o descanso na tela. O agendamento é uma chamada direta ao
+  Supabase, fora da fila offline, só com as notificações ativadas no
+  aparelho: sem rede fica só o bipe. Service worker novo (`public/sw.js`),
+  só para push, sem cache. Edge Function `send-due-pushes` (publicada com a
+  verificação de JWT desligada e protegida pelo header
+  `x-push-cron-secret`) envia os pushes vencidos com VAPID, descarta os
+  atrasados mais de 60 segundos e apaga assinaturas que respondem 404 ou
+  410; o `pg_cron` a chama via `pg_net` a cada 5 segundos, só quando há
+  push vencido, lendo URL e segredo do Supabase Vault
+  (`supabase/scheduler/send_due_pushes_cron.sql`). Migração
+  `20260929050000_push_notifications.sql` (tabelas `push_subscriptions` e
+  `scheduled_pushes`, com RLS do próprio usuário, e função
+  `register_push_subscription`). Passo a passo da configuração no README,
+  seção Notificações.
 - Adicionar exercício extra ao treino do dia. A lista de exercícios do treino
   ganha "Adicionar exercício" enquanto o treino não foi finalizado. O campo de
   nome sugere, enquanto digita, os exercícios de todos os dias do plano ativo
