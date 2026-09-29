@@ -27,6 +27,11 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Lançar vários itens da mesma refeição em sequência: a refeição passa a ser
+  o primeiro campo do formulário de alimentação e continua escolhida depois
+  de salvar (só alimento, quantidade e unidade são limpos, e o foco volta ao
+  campo de alimento), com uma confirmação curta do item adicionado. Tocar num
+  alimento frequente preenche o item sem trocar a refeição já escolhida.
 - Ferramenta "Exportar período" no Menu: gera um JSON com todos os
   registros de um intervalo de datas (treinos com cada série e seu status,
   cardio, alimentos com totais por dia, rotina resolvida dia a dia, peso e

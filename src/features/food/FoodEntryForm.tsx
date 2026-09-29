@@ -7,6 +7,12 @@ import {
     searchFoodItems,
     type FrequentFoodItem,
 } from '@/features/food/api'
+import {
+    applyFrequentItem,
+    EMPTY_FORM_VALUES,
+    formValuesAfterSubmit,
+    type FoodEntryFormValues,
+} from '@/features/food/foodFormValues'
 import { suggestMealCategoryForHour } from '@/features/food/mealSuggestion'
 import {
     FOOD_UNITS,
@@ -22,12 +28,7 @@ import { todayInTimezone } from '@/lib/dateUtils'
 const SEARCH_DEBOUNCE_MS = 250
 const MIN_SEARCH_TEXT_LENGTH = 2
 
-export type FoodEntryFormValues = {
-    foodName: string
-    quantityText: string
-    unit: FoodUnit
-    mealCategory: MealCategory
-}
+export type { FoodEntryFormValues }
 
 type FoodEntryFormSubmitValues = {
     foodName: string
@@ -45,13 +46,6 @@ type FoodEntryFormProps = {
     submitLabel: string
 }
 
-const EMPTY_FORM_VALUES: FoodEntryFormValues = {
-    foodName: '',
-    quantityText: '',
-    unit: 'g',
-    mealCategory: 'cafe_da_manha',
-}
-
 export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, submitLabel }: FoodEntryFormProps) {
     const [values, setValues] = useState<FoodEntryFormValues>(initialValues ?? EMPTY_FORM_VALUES)
     const [selectedFoodItemId, setSelectedFoodItemId] = useState<string | null>(null)
@@ -59,6 +53,8 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
     const [frequentItems, setFrequentItems] = useState<FrequentFoodItem[]>([])
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [lastAddedMessage, setLastAddedMessage] = useState<string | null>(null)
+    const foodNameInputRef = useRef<HTMLInputElement | null>(null)
     const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     useEffect(() => {
@@ -73,6 +69,7 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
 
     function handleFoodNameChange(rawValue: string) {
         setValues({ ...values, foodName: rawValue })
+        setLastAddedMessage(null)
         setSelectedFoodItemId(null)
 
         if (searchDebounceRef.current) {
@@ -94,12 +91,8 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
     }
 
     function handleSelectFrequentItem(frequentItem: FrequentFoodItem) {
-        setValues({
-            foodName: frequentItem.item.name,
-            quantityText: String(frequentItem.lastQuantity),
-            unit: frequentItem.lastUnit,
-            mealCategory: frequentItem.lastMealCategory,
-        })
+        setValues(applyFrequentItem(values, frequentItem))
+        setLastAddedMessage(null)
         setSelectedFoodItemId(frequentItem.item.id)
         setSuggestions([])
     }
@@ -145,8 +138,10 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
                 mealCategory: values.mealCategory,
                 foodItemId,
             })
-            setValues(EMPTY_FORM_VALUES)
+            setValues(formValuesAfterSubmit(values))
             setSelectedFoodItemId(null)
+            setLastAddedMessage(`${trimmedFoodName} adicionado em ${MEAL_CATEGORY_LABELS[values.mealCategory]}.`)
+            foodNameInputRef.current?.focus()
         } catch (submitError) {
             const message = submitError instanceof Error ? submitError.message : 'Falha ao salvar'
             setErrorMessage(message)
@@ -158,6 +153,21 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
     return (
         <form onSubmit={handleSubmit}>
             {errorMessage && <div className="error-list">{errorMessage}</div>}
+            <div className="field">
+                <label htmlFor="food-meal">Refeição</label>
+                <select
+                    id="food-meal"
+                    value={values.mealCategory}
+                    onChange={(event) => setValues({ ...values, mealCategory: event.target.value as MealCategory })}
+                >
+                    {MEAL_CATEGORIES.map((mealCategory) => (
+                        <option key={mealCategory} value={mealCategory}>
+                            {MEAL_CATEGORY_LABELS[mealCategory]}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            {lastAddedMessage && <p className="save-status">{lastAddedMessage}</p>}
             {frequentItems.length > 0 && (
                 <div className="food-chip-row">
                     {frequentItems.map((frequentItem) => (
@@ -176,6 +186,7 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
                 <label htmlFor="food-name">Alimento</label>
                 <input
                     id="food-name"
+                    ref={foodNameInputRef}
                     type="text"
                     value={values.foodName}
                     onChange={(event) => handleFoodNameChange(event.target.value)}
@@ -223,20 +234,6 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
                         ))}
                     </select>
                 </div>
-            </div>
-            <div className="field">
-                <label htmlFor="food-meal">Refeição</label>
-                <select
-                    id="food-meal"
-                    value={values.mealCategory}
-                    onChange={(event) => setValues({ ...values, mealCategory: event.target.value as MealCategory })}
-                >
-                    {MEAL_CATEGORIES.map((mealCategory) => (
-                        <option key={mealCategory} value={mealCategory}>
-                            {MEAL_CATEGORY_LABELS[mealCategory]}
-                        </option>
-                    ))}
-                </select>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
                 <button type="submit" className="primary-button" disabled={isSubmitting}>
