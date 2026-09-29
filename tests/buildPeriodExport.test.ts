@@ -667,6 +667,15 @@ describe('buildPeriodExport', () => {
         expect(oldWorkout).toMatchObject({ started_at: null, duration_minutes: 40 })
     })
 
+    it('exporta o tempo pausado e desconta ele da duração', () => {
+        const pausedSession = buildSession({ started_at: '2026-09-28T09:50:00.000Z', paused_seconds: 20 * 60 })
+        const [pausedWorkout] = buildPeriodExport(buildRawData({ workoutSessions: [pausedSession] }), PERIOD, META).workouts
+        const [oldWorkout] = buildPeriodExport(buildRawData(), PERIOD, META).workouts
+
+        expect(pausedWorkout).toMatchObject({ paused_seconds: 1200, duration_minutes: 80 })
+        expect(oldWorkout).toMatchObject({ paused_seconds: 0 })
+    })
+
     it('não expõe user_id em nenhum ponto do resultado', () => {
         const serialized = JSON.stringify(buildPeriodExport(buildRawData(), PERIOD, META))
 

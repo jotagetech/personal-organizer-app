@@ -5,6 +5,7 @@ import {
     durationInMinutes,
     formatDurationMinutes,
     resolveSessionDuration,
+    resolveSessionPausedSeconds,
 } from '@/features/workout/sessionDuration'
 import type { WorkoutSetRow } from '@/features/workout/types'
 import { EMPTY_SET_METRIC_COLUMNS } from './workoutFixtures'
@@ -185,5 +186,33 @@ describe('resolveSessionDuration com pausas', () => {
         const session = { started_at: startedAt, finished_at: finishedAt, paused_at: 'ontem', paused_seconds: -30 }
 
         expect(resolveSessionDuration(session, [])).toEqual({ startIso: startedAt, endIso: finishedAt })
+    })
+})
+
+describe('resolveSessionPausedSeconds', () => {
+    it('em andamento, conta só as pausas encerradas', () => {
+        const session = {
+            started_at: '2026-09-28T12:00:00.000Z',
+            finished_at: null,
+            paused_at: '2026-09-28T12:30:00.000Z',
+            paused_seconds: 90,
+        }
+
+        expect(resolveSessionPausedSeconds(session)).toBe(90)
+    })
+
+    it('finalizada com pausa aberta, conta a pausa até o fim', () => {
+        const session = {
+            started_at: '2026-09-28T12:00:00.000Z',
+            finished_at: '2026-09-28T12:40:00.000Z',
+            paused_at: '2026-09-28T12:30:00.000Z',
+            paused_seconds: 90,
+        }
+
+        expect(resolveSessionPausedSeconds(session)).toBe(690)
+    })
+
+    it('sessão antiga, sem as colunas de pausa, conta zero', () => {
+        expect(resolveSessionPausedSeconds({ started_at: null, finished_at: '2026-09-28T12:40:00.000Z' })).toBe(0)
     })
 })

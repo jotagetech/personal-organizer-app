@@ -41,12 +41,23 @@ function isForwardWindow(startIso: string, endIso: string): boolean {
     return isForward
 }
 
+// Tempo pausado da sessão em segundos. Numa sessão finalizada, uma pausa que
+// ficou aberta conta até o fim; em andamento, só as pausas já encerradas.
+export function resolveSessionPausedSeconds(session: SessionTimes): number {
+    const pauseState = pauseStateFromSession(session)
+    if (!session.finished_at) {
+        return pauseState.pausedSeconds
+    }
+
+    return pausedSecondsUntil(pauseState, new Date(session.finished_at).getTime())
+}
+
 // O tempo pausado entra adiantando o começo da janela, para quem só mede
-// fim menos começo já receber a duração descontada. Uma pausa ainda aberta
-// numa sessão finalizada conta até o fim, e a janela nunca fica invertida.
+// fim menos começo já receber a duração descontada. A janela nunca fica
+// invertida, mesmo com mais pausa do que treino.
 function discountPausedTime(session: SessionTimes, startedAt: string, finishedAt: string): SessionActiveWindow {
     const finishedTime = new Date(finishedAt).getTime()
-    const pausedMs = pausedSecondsUntil(pauseStateFromSession(session), finishedTime) * MS_PER_SECOND
+    const pausedMs = resolveSessionPausedSeconds({ ...session, finished_at: finishedAt }) * MS_PER_SECOND
     if (pausedMs === 0) {
         return { startIso: startedAt, endIso: finishedAt }
     }

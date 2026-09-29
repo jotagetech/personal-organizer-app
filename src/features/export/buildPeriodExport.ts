@@ -10,6 +10,7 @@ import {
     deriveSessionActiveWindow,
     durationInMinutes,
     resolveSessionDuration,
+    resolveSessionPausedSeconds,
 } from '@/features/workout/sessionDuration'
 import { snapshotSetRest } from '@/features/workout/restPrescription'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
@@ -128,8 +129,9 @@ export type ExportedExercise = {
 // (a partir de 1) e block_weeks a duração do bloco; ambos nulos quando o
 // plano não tinha bloco ou não havia ciclo em andamento. started_at é o
 // início marcado do treino (nulo em sessões anteriores a ele); com ele e
-// finished_at, duration_minutes é o intervalo entre os dois, senão continua
-// sendo a janela da primeira à última série concluída.
+// finished_at, duration_minutes é o intervalo entre os dois menos o tempo
+// pausado, senão continua sendo a janela da primeira à última série
+// concluída. paused_seconds é o total pausado (zero em sessões sem pausa).
 export type ExportedWorkout = {
     date: IsoDate
     workout_name: string
@@ -141,6 +143,7 @@ export type ExportedWorkout = {
     started_at: string | null
     finished_at: string | null
     duration_minutes: number | null
+    paused_seconds: number
     feeling_scale: number | null
     feeling_note: string | null
     exercises: ExportedExercise[]
@@ -329,6 +332,7 @@ function buildWorkout(
         started_at: session.started_at ?? null,
         finished_at: session.finished_at,
         duration_minutes: durationWindow ? durationInMinutes(durationWindow) : null,
+        paused_seconds: resolveSessionPausedSeconds(session),
         feeling_scale: session.feeling_scale,
         feeling_note: session.feeling_note,
         exercises,
