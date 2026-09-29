@@ -1,3 +1,4 @@
+import { EllipsisVertical, Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { useDayStatus } from '@/contexts/DayStatusContext'
@@ -13,6 +14,9 @@ import { FoodEntryForm } from '@/features/food/FoodEntryForm'
 import { FoodEntryList } from '@/features/food/FoodEntryList'
 import { FoodItemsCatalog } from '@/features/food/FoodItemsCatalog'
 import type { FoodEntryRow } from '@/features/food/types'
+
+const MENU_ICON_SIZE = 22
+const BUTTON_ICON_SIZE = 18
 
 export function FoodTab() {
     const { selectedDate } = useSelectedDate()
@@ -68,7 +72,8 @@ export function FoodTab() {
 
     return (
         <div>
-            <div className="workout-toolbar">
+            <div className="page-header">
+                <h2 className="page-title">Alimentação</h2>
                 <div className="overflow-menu" ref={menuRef}>
                     <button
                         type="button"
@@ -76,7 +81,7 @@ export function FoodTab() {
                         aria-label="Mais ações"
                         onClick={() => setIsMenuOpen((previous) => !previous)}
                     >
-                        ⋮
+                        <EllipsisVertical size={MENU_ICON_SIZE} aria-hidden="true" />
                     </button>
                     {isMenuOpen && (
                         <div className="overflow-menu__panel">
@@ -97,9 +102,9 @@ export function FoodTab() {
             <DailyTotalsCard entries={entries} />
             {isFormOpen ? (
                 <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 style={{ fontSize: 16, margin: 0 }}>Adicionar consumo</h2>
-                        <button type="button" className="secondary-button" onClick={() => setIsFormOpen(false)}>
+                    <div className="row-between food-entry-card__header">
+                        <h2 className="section-title">Adicionar consumo</h2>
+                        <button type="button" className="ghost-button" onClick={() => setIsFormOpen(false)}>
                             Fechar
                         </button>
                     </div>
@@ -114,11 +119,16 @@ export function FoodTab() {
                     />
                 </div>
             ) : (
-                <button type="button" className="secondary-button" onClick={() => setIsFormOpen(true)}>
-                    + Adicionar consumo
+                <button
+                    type="button"
+                    className="secondary-button full-width food-tab__open-form"
+                    onClick={() => setIsFormOpen(true)}
+                >
+                    <Plus size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                    Adicionar consumo
                 </button>
             )}
-            {isLoading && <p>Carregando...</p>}
+            {isLoading && <p className="text-muted">Carregando...</p>}
             {errorMessage && <div className="error-list">{errorMessage}</div>}
             {!isLoading && !errorMessage && (
                 <FoodEntryList

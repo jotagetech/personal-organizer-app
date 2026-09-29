@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import {
@@ -27,6 +28,7 @@ import { todayInTimezone } from '@/lib/dateUtils'
 
 const SEARCH_DEBOUNCE_MS = 250
 const MIN_SEARCH_TEXT_LENGTH = 2
+const SUGGESTION_ICON_SIZE = 16
 
 export type { FoodEntryFormValues }
 
@@ -170,6 +172,7 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
             {lastAddedMessage && <p className="save-status">{lastAddedMessage}</p>}
             {frequentItems.length > 0 && (
                 <div className="food-chip-row">
+                    <p className="food-chip-row__label">Frequentes</p>
                     {frequentItems.map((frequentItem) => (
                         <button
                             key={frequentItem.item.id}
@@ -202,14 +205,15 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
                                 className="food-suggestion-list__item"
                                 onClick={() => handleSelectSuggestion(suggestion)}
                             >
+                                <Search size={SUGGESTION_ICON_SIZE} aria-hidden="true" />
                                 {suggestion.name}
                             </button>
                         ))}
                     </div>
                 )}
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-                <div className="field" style={{ flex: 1 }}>
+            <div className="form-grid">
+                <div className="field">
                     <label htmlFor="food-quantity">Quantidade</label>
                     <input
                         id="food-quantity"
@@ -220,7 +224,7 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
                         placeholder="ex: 150"
                     />
                 </div>
-                <div className="field" style={{ flex: 1 }}>
+                <div className="field">
                     <label htmlFor="food-unit">Unidade</label>
                     <select
                         id="food-unit"
@@ -235,8 +239,8 @@ export function FoodEntryForm({ entryDate, initialValues, onSubmit, onCancel, su
                     </select>
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-                <button type="submit" className="primary-button" disabled={isSubmitting}>
+            <div className="form-actions">
+                <button type="submit" className="primary-button food-entry-form__submit" disabled={isSubmitting}>
                     {isSubmitting ? 'Salvando...' : submitLabel}
                 </button>
                 {onCancel && (

@@ -1,3 +1,4 @@
+import { Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { useUndoableActions } from '@/contexts/UndoableActionContext'
@@ -11,6 +12,8 @@ import {
     type FoodUnit,
     type MealCategory,
 } from '@/features/food/types'
+
+const ROW_ACTION_ICON_SIZE = 20
 
 type FoodEntrySubmitValues = {
     foodName: string
@@ -48,7 +51,7 @@ export function FoodEntryList({ entryDate, entries, onUpdate, onDelete }: FoodEn
         return (
             <>
                 {deleteErrorMessage && <div className="error-list">{deleteErrorMessage}</div>}
-                <p style={{ color: '#71717a' }}>Nenhum consumo registrado neste dia.</p>
+                <p className="text-muted">Nenhum consumo registrado neste dia.</p>
             </>
         )
     }
@@ -63,62 +66,73 @@ export function FoodEntryList({ entryDate, entries, onUpdate, onDelete }: FoodEn
                 }
 
                 return (
-                    <div key={mealCategory} style={{ marginBottom: 16 }}>
-                        <h3 style={{ fontSize: 14, marginBottom: 6 }}>{MEAL_CATEGORY_LABELS[mealCategory]}</h3>
-                        {entriesForMeal.map((entry) => (
-                            <div
-                                key={entry.id}
-                                className={
-                                    lacksNutrition(entry) && editingEntryId !== entry.id ? 'card card--no-nutrition' : 'card'
-                                }
-                            >
-                                {editingEntryId === entry.id ? (
-                                    <FoodEntryForm
-                                        entryDate={entryDate}
-                                        submitLabel="Salvar"
-                                        initialValues={{
-                                            foodName: entry.food_name,
-                                            quantityText: String(entry.quantity),
-                                            unit: entry.unit as FoodUnit,
-                                            mealCategory: entry.meal_category as MealCategory,
-                                        }}
-                                        onCancel={() => setEditingEntryId(null)}
-                                        onSubmit={async (values) => {
-                                            await onUpdate(entry.id, values)
-                                            setEditingEntryId(null)
-                                        }}
-                                    />
+                    <section key={mealCategory}>
+                        <h3 className="food-entry-list__meal-title">{MEAL_CATEGORY_LABELS[mealCategory]}</h3>
+                        <div className="card food-list">
+                            {entriesForMeal.map((entry) =>
+                                editingEntryId === entry.id ? (
+                                    <div key={entry.id} className="food-list__row food-list__row--editing">
+                                        <FoodEntryForm
+                                            entryDate={entryDate}
+                                            submitLabel="Salvar"
+                                            initialValues={{
+                                                foodName: entry.food_name,
+                                                quantityText: String(entry.quantity),
+                                                unit: entry.unit as FoodUnit,
+                                                mealCategory: entry.meal_category as MealCategory,
+                                            }}
+                                            onCancel={() => setEditingEntryId(null)}
+                                            onSubmit={async (values) => {
+                                                await onUpdate(entry.id, values)
+                                                setEditingEntryId(null)
+                                            }}
+                                        />
+                                    </div>
                                 ) : (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
-                                            <strong>{entry.food_name}</strong>
-                                            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#52525b' }}>
+                                    <div
+                                        key={entry.id}
+                                        className={
+                                            lacksNutrition(entry)
+                                                ? 'food-list__row food-list__row--no-nutrition'
+                                                : 'food-list__row'
+                                        }
+                                    >
+                                        <div className="food-list__text">
+                                            <strong className="food-list__name">{entry.food_name}</strong>
+                                            <p className="food-list__meta">
                                                 {entry.quantity} {FOOD_UNIT_LABELS[entry.unit as FoodUnit]}
-                                                {entry.kcal !== null ? ` · ${entry.kcal} kcal` : ''}
                                                 {entry.protein_g !== null ? ` · ${entry.protein_g} g P` : ''}
                                             </p>
                                         </div>
-                                        <div style={{ display: 'flex', gap: 6 }}>
+                                        {entry.kcal !== null && (
+                                            <div className="food-list__value">
+                                                <strong>{entry.kcal}</strong>
+                                                <span>kcal</span>
+                                            </div>
+                                        )}
+                                        <div className="food-list__actions">
                                             <button
                                                 type="button"
-                                                className="secondary-button"
+                                                className="icon-button"
+                                                aria-label="Editar"
                                                 onClick={() => setEditingEntryId(entry.id)}
                                             >
-                                                Editar
+                                                <Pencil size={ROW_ACTION_ICON_SIZE} aria-hidden="true" />
                                             </button>
                                             <button
                                                 type="button"
-                                                className="secondary-button"
+                                                className="icon-button"
+                                                aria-label="Excluir"
                                                 onClick={() => handleDeleteClick(entry)}
                                             >
-                                                Excluir
+                                                <Trash2 size={ROW_ACTION_ICON_SIZE} aria-hidden="true" />
                                             </button>
                                         </div>
                                     </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                                ),
+                            )}
+                        </div>
+                    </section>
                 )
             })}
         </div>

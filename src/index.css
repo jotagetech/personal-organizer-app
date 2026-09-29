@@ -1244,23 +1244,44 @@ h1, h2, h3, h4 {
     margin-bottom: 0;
 }
 
+.food-tab__open-form {
+    margin-bottom: 12px;
+}
+
+.food-entry-card__header {
+    margin-bottom: 12px;
+}
+
+.food-entry-card__header .ghost-button {
+    margin-right: -8px;
+}
+
 .food-chip-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.food-chip-row__label {
+    flex-basis: 100%;
+    margin: 0 0 -2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
 }
 
 .food-chip {
     flex-shrink: 0;
     max-width: 100%;
-    min-height: 36px;
-    padding: 0 12px;
+    min-height: var(--touch-target);
+    padding: 0 14px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-pill);
-    background: var(--color-surface);
+    background: var(--color-surface-muted);
     color: var(--color-text);
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1270,28 +1291,152 @@ h1, h2, h3, h4 {
     background: var(--color-surface-pressed);
 }
 
+/* Fica no fluxo, logo abaixo do campo, em vez de flutuar por cima: no iOS o
+   teclado aberto recorta qualquer painel absoluto perto da borda da tela. */
 .food-suggestion-list {
     display: flex;
     flex-direction: column;
-    gap: 2px;
     margin-top: 4px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
     overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-popover);
 }
 
 .food-suggestion-list__item {
-    min-height: var(--touch-target);
-    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--touch-target-large);
+    padding: 0 14px;
     border: none;
-    background: var(--color-surface);
-    text-align: left;
-    font-size: 14px;
+    background: transparent;
     color: var(--color-text);
+    font-size: 15px;
+    text-align: left;
+}
+
+.food-suggestion-list__item + .food-suggestion-list__item {
+    border-top: 1px solid var(--color-divider);
+}
+
+.food-suggestion-list__item svg {
+    flex-shrink: 0;
+    color: var(--color-text-muted);
 }
 
 .food-suggestion-list__item:active {
     background: var(--color-surface-pressed);
+}
+
+.food-entry-form__submit {
+    min-height: var(--touch-target-large);
+}
+
+.food-entry-list__meal-title {
+    margin: 4px 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+/* Lista de alimentos num card só, com divisórias, compartilhada pelos
+   consumos do dia e pelo catálogo. */
+.food-list {
+    padding-block: 4px;
+}
+
+.food-list__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--touch-target-large);
+    padding: 6px 0;
+}
+
+.food-list__row + .food-list__row {
+    border-top: 1px solid var(--color-divider);
+}
+
+.food-list__row--editing {
+    display: block;
+    padding: 12px 0;
+}
+
+/* Azul, e não amarelo: âmbar já significa "pendente" no resto do app. A
+   margem negativa deixa o fundo sangrar até perto da borda do card. */
+.food-list__row--no-nutrition {
+    margin-inline: -8px;
+    padding-inline: 8px;
+    border-radius: var(--radius-sm);
+    background: var(--color-info-surface);
+    box-shadow: inset 0 0 0 1px var(--color-info-border);
+}
+
+.food-list__row.food-list__row--no-nutrition,
+.food-list__row--no-nutrition + .food-list__row {
+    border-top-color: transparent;
+}
+
+.food-list__text {
+    flex: 1;
+    min-width: 0;
+}
+
+.food-list__name {
+    display: block;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.food-list__meta {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.food-list__value {
+    flex-shrink: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.food-list__value strong {
+    font-family: var(--font-numeric);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.food-list__value span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.food-list__actions {
+    flex-shrink: 0;
+    display: flex;
+    color: var(--color-text-secondary);
+}
+
+.food-list__actions .icon-button {
+    color: inherit;
+}
+
+.food-list__edit-name {
+    display: block;
+    margin-bottom: 12px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.food-catalog__hint {
+    margin: -4px 0 12px;
 }
 
 .undo-bar {
@@ -1338,25 +1483,66 @@ h1, h2, h3, h4 {
     opacity: 0.85;
 }
 
-.daily-totals-card__stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
+.daily-totals-card__title {
+    margin-bottom: 10px;
 }
 
-.daily-totals-card__stat {
+.daily-totals-card__kcal {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 14px;
 }
 
-.daily-totals-card__stat strong {
-    font-size: 20px;
+.daily-totals-card__kcal strong {
+    font-family: var(--font-numeric);
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
 }
 
-.daily-totals-card__stat span {
+.daily-totals-card__kcal span {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.daily-totals-card__macros {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.daily-totals-card__macro {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+}
+
+.daily-totals-card__macro-label {
     font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.daily-totals-card__macro-value {
+    font-family: var(--font-numeric);
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.daily-totals-card__macro-unit {
+    margin-left: 2px;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--color-text-muted);
 }
 
@@ -1366,7 +1552,7 @@ h1, h2, h3, h4 {
 }
 
 .daily-totals-card__hint {
-    margin: 8px 0 0;
+    margin: 10px 0 0;
     font-size: 12px;
     color: var(--color-text-muted);
 }

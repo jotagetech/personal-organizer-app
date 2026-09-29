@@ -1,3 +1,4 @@
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import {
@@ -8,6 +9,9 @@ import {
 } from '@/features/food/api'
 import { lacksNutrition } from '@/features/food/dailyTotals'
 import { FOOD_UNITS, FOOD_UNIT_LABELS, type FoodItemRow, type FoodUnit } from '@/features/food/types'
+
+const BUTTON_ICON_SIZE = 18
+const ROW_ACTION_ICON_SIZE = 20
 
 type FoodItemsCatalogProps = {
     onClose: () => void
@@ -53,10 +57,11 @@ export function FoodItemsCatalog({ onClose }: FoodItemsCatalogProps) {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <h2 style={{ fontSize: 16, margin: 0 }}>Catálogo de alimentos</h2>
+            <div className="page-header">
+                <h2 className="page-title">Catálogo de alimentos</h2>
                 <button type="button" className="secondary-button" onClick={onClose}>
-                    Fechar
+                    <ArrowLeft size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                    Voltar
                 </button>
             </div>
             <div className="field">
@@ -69,50 +74,72 @@ export function FoodItemsCatalog({ onClose }: FoodItemsCatalogProps) {
                     placeholder="ex: arroz"
                 />
             </div>
-            <p style={{ fontSize: 12, color: '#71717a', marginTop: 0 }}>
+            <p className="text-small text-muted food-catalog__hint">
                 {searchText.trim().length >= 2
                     ? `${visibleItems.length} resultado(s)`
                     : 'Seus alimentos cadastrados. Busque acima pra editar a nutrição de qualquer item da TACO.'}
             </p>
-            {visibleItems.map((item) =>
-                editingItemId === item.id ? (
-                    <FoodItemEditRow
-                        key={item.id}
-                        item={item}
-                        onCancel={() => setEditingItemId(null)}
-                        onSaved={async () => {
-                            setEditingItemId(null)
-                            await loadCustomItems()
-                            if (searchText.trim().length >= 2) {
-                                void searchFoodItems(searchText, 15).then(setSearchResults)
-                            }
-                        }}
-                    />
-                ) : (
-                    <div
-                        key={item.id}
-                        className={lacksNutrition(item) ? 'card card--no-nutrition' : 'card'}
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <strong>{item.name}</strong>
-                            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#52525b' }}>
-                                {item.kcal !== null
-                                    ? `${item.kcal} kcal / ${item.reference_quantity}${item.reference_unit}`
-                                    : 'sem nutrição cadastrada'}
-                            </p>
-                        </div>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                            <button type="button" className="secondary-button" onClick={() => setEditingItemId(item.id)}>
-                                Editar
-                            </button>
-                            {!item.is_seed && (
-                                <button type="button" className="secondary-button" onClick={() => handleDelete(item.id)}>
-                                    Excluir
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                ),
+            {visibleItems.length > 0 && (
+                <div className="card food-list">
+                    {visibleItems.map((item) =>
+                        editingItemId === item.id ? (
+                            <FoodItemEditRow
+                                key={item.id}
+                                item={item}
+                                onCancel={() => setEditingItemId(null)}
+                                onSaved={async () => {
+                                    setEditingItemId(null)
+                                    await loadCustomItems()
+                                    if (searchText.trim().length >= 2) {
+                                        void searchFoodItems(searchText, 15).then(setSearchResults)
+                                    }
+                                }}
+                            />
+                        ) : (
+                            <div
+                                key={item.id}
+                                className={
+                                    lacksNutrition(item) ? 'food-list__row food-list__row--no-nutrition' : 'food-list__row'
+                                }
+                            >
+                                <div className="food-list__text">
+                                    <strong className="food-list__name">{item.name}</strong>
+                                    <p className="food-list__meta">
+                                        {item.kcal !== null
+                                            ? `por ${item.reference_quantity}${item.reference_unit}`
+                                            : 'sem nutrição cadastrada'}
+                                    </p>
+                                </div>
+                                {item.kcal !== null && (
+                                    <div className="food-list__value">
+                                        <strong>{item.kcal}</strong>
+                                        <span>kcal</span>
+                                    </div>
+                                )}
+                                <div className="food-list__actions">
+                                    <button
+                                        type="button"
+                                        className="icon-button"
+                                        aria-label="Editar"
+                                        onClick={() => setEditingItemId(item.id)}
+                                    >
+                                        <Pencil size={ROW_ACTION_ICON_SIZE} aria-hidden="true" />
+                                    </button>
+                                    {!item.is_seed && (
+                                        <button
+                                            type="button"
+                                            className="icon-button"
+                                            aria-label="Excluir"
+                                            onClick={() => handleDelete(item.id)}
+                                        >
+                                            <Trash2 size={ROW_ACTION_ICON_SIZE} aria-hidden="true" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ),
+                    )}
+                </div>
             )}
         </div>
     )
@@ -172,11 +199,11 @@ function FoodItemEditRow({
     }
 
     return (
-        <div className="card">
-            <strong>{item.name}</strong>
+        <div className="food-list__row food-list__row--editing">
+            <strong className="food-list__edit-name">{item.name}</strong>
             {errorMessage && <div className="error-list">{errorMessage}</div>}
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+            <div className="form-grid">
+                <div className="field">
                     <label>Quantidade de referência</label>
                     <input
                         type="text"
@@ -186,7 +213,7 @@ function FoodItemEditRow({
                         placeholder="ex: 100"
                     />
                 </div>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <div className="field">
                     <label>Unidade</label>
                     <select value={referenceUnit} onChange={(event) => setReferenceUnit(event.target.value as FoodUnit)}>
                         {FOOD_UNITS.map((unit) => (
@@ -196,28 +223,24 @@ function FoodItemEditRow({
                         ))}
                     </select>
                 </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <div className="field">
                     <label>Kcal</label>
                     <input type="text" inputMode="decimal" value={kcalText} onChange={(event) => setKcalText(event.target.value)} />
                 </div>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <div className="field">
                     <label>Proteína (g)</label>
                     <input type="text" inputMode="decimal" value={proteinText} onChange={(event) => setProteinText(event.target.value)} />
                 </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <div className="field">
                     <label>Carboidrato (g)</label>
                     <input type="text" inputMode="decimal" value={carbsText} onChange={(event) => setCarbsText(event.target.value)} />
                 </div>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <div className="field">
                     <label>Gordura (g)</label>
                     <input type="text" inputMode="decimal" value={fatText} onChange={(event) => setFatText(event.target.value)} />
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <div className="form-actions">
                 <button type="button" className="primary-button" disabled={isSubmitting} onClick={handleSave}>
                     {isSubmitting ? 'Salvando...' : 'Salvar'}
                 </button>
