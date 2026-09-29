@@ -17,19 +17,22 @@ import {
 import { clearOutboxQueue, loadOutboxQueue, saveOutboxQueue, type OutboxStorageAdapter } from '@/lib/outbox/outboxStorage'
 import { findFirstIncompletePosition } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
+import { EMPTY_SET_METRIC_COLUMNS, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
 
 function snapshotWithOneExercise(): WorkoutSnapshot {
     return {
+        versao: 2,
         workout_key: 'treino-a',
         nome: 'Treino A',
         exercicios: [
             {
+                ...SNAPSHOT_EXERCISE_DEFAULTS,
                 exercise_key: 'supino',
                 nome: 'Supino',
                 forma_carga: 'total',
                 series: [
-                    { set_index: 1, repeticoes_min: 8, repeticoes_max: 12, carga_sugerida: null },
-                    { set_index: 2, repeticoes_min: 8, repeticoes_max: 12, carga_sugerida: null },
+                    repsSnapshotSet(1, 8, 12, null),
+                    repsSnapshotSet(2, 8, 12, null),
                 ],
             },
         ],
@@ -210,6 +213,7 @@ describe('overlayPendingSets', () => {
             note: null,
             completed_at: null,
             skipped_at: null,
+            ...EMPTY_SET_METRIC_COLUMNS,
             updated_at: '2026-09-28T11:00:00.000Z',
         }
         const serverSetsByKey = new Map([[setKey('supino', 1), serverSet]])
@@ -368,6 +372,29 @@ describe('buildOverlaySetRow', () => {
         expect(row.completed_at).toBeNull()
         expect(row.note).toBe('joelho')
     })
+
+    it('mapeia métrica, tempo e distância, e trata a ausência deles como série de repetições', () => {
+        const timedOperation = upsertSetOperation({
+            values: {
+                loadKg: null,
+                reps: null,
+                rir: null,
+                note: null,
+                completedAt: '2026-09-28T12:10:00.000Z',
+                skippedAt: null,
+                metric: 'tempo',
+                durationSeconds: 35,
+            },
+        })
+        const repsOperation = upsertSetOperation()
+
+        expect(buildOverlaySetRow(timedOperation, undefined)).toMatchObject({
+            metric: 'tempo',
+            duration_seconds: 35,
+            distance_m: null,
+        })
+        expect(buildOverlaySetRow(repsOperation, undefined)).toMatchObject(EMPTY_SET_METRIC_COLUMNS)
+    })
 })
 
 describe('persistência da fila com séries puladas', () => {
@@ -407,5 +434,55 @@ describe('persistência da fila com séries puladas', () => {
         saveOutboxQueue(storage, [skippedOperation])
 
         expect(loadOutboxQueue(storage)).toEqual([skippedOperation])
+    })
+
+    it('converte snapshot no formato antigo enfileirado antes da atualização, sem descartar a fila', () => {
+        const legacySnapshot = {
+            workout_key: 'treino_a',
+            nome: 'Treino A',
+            exercicios: [
+                {
+                    exercise_key: 'supino',
+                    nome: 'Supino',
+                    forma_carga: 'total',
+                    series: [{ set_index: 1, repeticoes_min: 8, repeticoes_max: 12, carga_sugerida: null }],
+                },
+            ],
+        }
+        const legacyOperation = { ...upsertSetOperation(), snapshot: legacySnapshot }
+        const storage = createFakeStorage(JSON.stringify({ formatVersion: 1, operations: [legacyOperation] }))
+
+        const [loadedOperation] = loadOutboxQueue(storage)
+
+        expect(loadedOperation.kind).toBe('upsert_set')
+        if (loadedOperation.kind === 'upsert_set') {
+            expect(loadedOperation.snapshot.versao).toBe(2)
+            expect(loadedOperation.snapshot.exercicios[0].series[0]).toEqual(repsSnapshotSet(1, 8, 12, null))
+        }
+    })
+
+    it('preserva métrica, tempo, distância e quedas na ida e volta pelo armazenamento', () => {
+        const storage = createFakeStorage()
+        const dropSetOperation = upsertSetOperation({
+            values: {
+                loadKg: 30,
+                reps: 12,
+                rir: 0,
+                note: null,
+                completedAt: '2026-09-28T12:10:00.000Z',
+                skippedAt: null,
+                metric: 'repeticoes',
+                durationSeconds: null,
+                distanceM: null,
+                drops: [
+                    { loadKg: 20, reps: 10, durationSeconds: null, distanceM: null },
+                    { loadKg: 10, reps: 8, durationSeconds: null, distanceM: null },
+                ],
+            },
+        })
+
+        saveOutboxQueue(storage, [dropSetOperation])
+
+        expect(loadOutboxQueue(storage)).toEqual([dropSetOperation])
     })
 })

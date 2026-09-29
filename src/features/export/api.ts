@@ -7,6 +7,7 @@ import type { ExportPeriod } from '@/features/export/period'
 import type { FoodEntryRow } from '@/features/food/types'
 import { listRoutineItems } from '@/features/routine/api'
 import type { RoutineDayEntryRow } from '@/features/routine/types'
+import { normalizeSessionRows } from '@/features/workout/api'
 import type { WorkoutSessionRow, WorkoutSetRow } from '@/features/workout/types'
 import { DEFAULT_TIMEZONE } from '@/lib/dateUtils'
 import { supabase } from '@/lib/supabaseClient'
@@ -34,8 +35,8 @@ async function fetchAllPages<Row>(fetchPage: (from: number, to: number) => Promi
     }
 }
 
-function listWorkoutSessionsInPeriod(period: ExportPeriod): Promise<WorkoutSessionRow[]> {
-    return fetchAllPages((from, to) =>
+async function listWorkoutSessionsInPeriod(period: ExportPeriod): Promise<WorkoutSessionRow[]> {
+    const storedSessions = await fetchAllPages((from, to) =>
         supabase
             .from('workout_sessions')
             .select('*')
@@ -45,6 +46,8 @@ function listWorkoutSessionsInPeriod(period: ExportPeriod): Promise<WorkoutSessi
             .order('id', { ascending: true })
             .range(from, to),
     )
+
+    return normalizeSessionRows(storedSessions)
 }
 
 // Os ids vão na query string do filtro "in"; em lotes, um ano de sessões não

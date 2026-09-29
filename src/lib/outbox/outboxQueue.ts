@@ -3,9 +3,22 @@
 // erro, pra poder testar sem mock de I/O.
 
 import { setKey, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
+import type { SetMetric } from '@/lib/workoutPlanSchema'
 
 export type OutboxOperationStatus = 'pending' | 'failed'
 
+// Cada queda de um drop set é gravada como registro próprio; a posição na
+// lista define o índice da queda (a primeira é 1).
+export type OutboxDropValues = {
+    loadKg: number | null
+    reps: number | null
+    durationSeconds: number | null
+    distanceM: number | null
+}
+
+// Os campos opcionais existem para séries de tempo, distância e drop set.
+// Ausentes, a série é gravada como repetições; `drops` ausente ou null não
+// mexe nas quedas já salvas, enquanto uma lista (mesmo vazia) substitui todas.
 export type OutboxSetValues = {
     loadKg: number | null
     reps: number | null
@@ -13,6 +26,10 @@ export type OutboxSetValues = {
     note: string | null
     completedAt: string | null
     skippedAt: string | null
+    metric?: SetMetric | null
+    durationSeconds?: number | null
+    distanceM?: number | null
+    drops?: OutboxDropValues[] | null
 }
 
 export type UpsertSetOperation = {
@@ -272,6 +289,9 @@ export function buildOverlaySetRow(
         note: operation.values.note,
         completed_at: operation.values.completedAt,
         skipped_at: operation.values.skippedAt,
+        metric: operation.values.metric ?? null,
+        duration_seconds: operation.values.durationSeconds ?? null,
+        distance_m: operation.values.distanceM ?? null,
         updated_at: operation.enqueuedAt,
     }
 }

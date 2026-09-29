@@ -1,24 +1,12 @@
-import type { LoadConvention } from '@/lib/workoutPlanSchema'
+import type { SetMetric } from '@/lib/workoutPlanSchema'
+import type { StoredWorkoutSnapshot } from '@/lib/workoutSnapshotSchema'
 
-export type WorkoutSnapshotExerciseSet = {
-    set_index: number
-    repeticoes_min: number
-    repeticoes_max: number
-    carga_sugerida: number | null
-}
-
-export type WorkoutSnapshotExercise = {
-    exercise_key: string
-    nome: string
-    forma_carga: LoadConvention
-    series: WorkoutSnapshotExerciseSet[]
-}
-
-export type WorkoutSnapshot = {
-    workout_key: string
-    nome: string
-    exercicios: WorkoutSnapshotExercise[]
-}
+export type {
+    WorkoutSnapshot,
+    WorkoutSnapshotDrop,
+    WorkoutSnapshotExercise,
+    WorkoutSnapshotExerciseSet,
+} from '@/lib/workoutSnapshotSchema'
 
 type WorkoutPlanRow = {
     id: string
@@ -42,7 +30,9 @@ type WorkoutSessionRow = {
     session_date: string
     plan_id: string
     workout_key: string
-    workout_snapshot: WorkoutSnapshot
+    // Pode vir no formato antigo; a camada de API normaliza antes de entregar
+    // a sessão para o resto do app.
+    workout_snapshot: StoredWorkoutSnapshot
     finished_at: string | null
     feeling_scale: number | null
     feeling_note: string | null
@@ -61,6 +51,22 @@ type WorkoutSetRow = {
     note: string | null
     completed_at: string | null
     skipped_at: string | null
+    // Null é tratado como repetições, que é o que séries gravadas antes
+    // dessas colunas existirem sempre foram.
+    metric: SetMetric | null
+    duration_seconds: number | null
+    distance_m: number | null
+    updated_at: string
+}
+
+type WorkoutSetDropRow = {
+    id: string
+    set_id: string
+    drop_index: number
+    load_kg: number | null
+    reps: number | null
+    duration_seconds: number | null
+    distance_m: number | null
     updated_at: string
 }
 
@@ -207,6 +213,21 @@ export type Database = {
                     rir?: number | null
                     note?: string | null
                     skipped_at?: string | null
+                    metric?: SetMetric | null
+                    duration_seconds?: number | null
+                    distance_m?: number | null
+                },
+                Record<never, never>
+            >
+            workout_set_drops: TableDefinition<
+                WorkoutSetDropRow,
+                {
+                    id?: string
+                    updated_at?: string
+                    load_kg?: number | null
+                    reps?: number | null
+                    duration_seconds?: number | null
+                    distance_m?: number | null
                 },
                 Record<never, never>
             >
@@ -312,6 +333,13 @@ export type Database = {
                     p_snapshot: unknown
                 }
                 Returns: WorkoutSessionRow[]
+            }
+            replace_workout_set_drops: {
+                Args: {
+                    p_set_id: string
+                    p_drops: unknown
+                }
+                Returns: WorkoutSetDropRow[]
             }
         }
     }

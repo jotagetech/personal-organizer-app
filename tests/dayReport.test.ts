@@ -5,21 +5,24 @@ import { buildDayReport } from '@/features/results/dayReport'
 import type { RoutineRow } from '@/features/routine/types'
 import type { WorkoutSetRow } from '@/features/workout/types'
 import type { WorkoutSnapshot } from '@/lib/databaseTypes'
+import { EMPTY_SET_METRIC_COLUMNS, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
 
 const TODAY = '2026-09-28'
 const PAST_DATE = '2026-09-20'
 
 const SNAPSHOT: WorkoutSnapshot = {
+    versao: 2,
     workout_key: 'treino_a',
     nome: 'Treino A',
     exercicios: [
         {
+            ...SNAPSHOT_EXERCISE_DEFAULTS,
             exercise_key: 'supino',
             nome: 'Supino reto',
             forma_carga: 'total',
             series: [
-                { set_index: 0, repeticoes_min: 8, repeticoes_max: 10, carga_sugerida: 40 },
-                { set_index: 1, repeticoes_min: 8, repeticoes_max: 10, carga_sugerida: 40 },
+                repsSnapshotSet(0, 8, 10, 40),
+                repsSnapshotSet(1, 8, 10, 40),
             ],
         },
     ],
@@ -32,7 +35,7 @@ const SNAPSHOT_WITH_THREE_SETS: WorkoutSnapshot = {
             ...SNAPSHOT.exercicios[0],
             series: [
                 ...SNAPSHOT.exercicios[0].series,
-                { set_index: 2, repeticoes_min: 8, repeticoes_max: 10, carga_sugerida: 40 },
+                repsSnapshotSet(2, 8, 10, 40),
             ],
         },
     ],
@@ -50,6 +53,7 @@ function buildWorkoutSet(overrides: Partial<WorkoutSetRow>): WorkoutSetRow {
         note: null,
         completed_at: null,
         skipped_at: null,
+        ...EMPTY_SET_METRIC_COLUMNS,
         updated_at: '2026-09-28T12:00:00.000Z',
     }
     return { ...baseSet, ...overrides }
@@ -204,6 +208,7 @@ describe('buildDayReport', () => {
                     note: null,
                     completed_at: '2026-09-28T12:10:00.000Z',
                     skipped_at: null,
+                    ...EMPTY_SET_METRIC_COLUMNS,
                     updated_at: '2026-09-28T12:10:00.000Z',
                 },
             ],

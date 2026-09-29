@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
 import type { WorkoutSetRow } from '@/features/workout/types'
+import { EMPTY_SET_METRIC_COLUMNS } from './workoutFixtures'
 
 function buildSetRow(overrides: Partial<WorkoutSetRow>): WorkoutSetRow {
     const baseSet: WorkoutSetRow = {
@@ -15,6 +16,7 @@ function buildSetRow(overrides: Partial<WorkoutSetRow>): WorkoutSetRow {
         note: null,
         completed_at: null,
         skipped_at: null,
+        ...EMPTY_SET_METRIC_COLUMNS,
         updated_at: '2026-09-28T12:00:00.000Z',
     }
 

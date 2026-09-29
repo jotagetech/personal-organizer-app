@@ -158,6 +158,10 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                             note: operation.values.note,
                             completedAt: operation.values.completedAt,
                             skippedAt: operation.values.skippedAt,
+                            metric: operation.values.metric,
+                            durationSeconds: operation.values.durationSeconds,
+                            distanceM: operation.values.distanceM,
+                            drops: operation.values.drops,
                         })
                     } else {
                         // A fila pode ficar horas sem sinal: a hora de fim é a do

@@ -1,11 +1,21 @@
 import { canonicalizeJson, sha256Hex } from '@/lib/canonicalJson'
 import { supabase } from '@/lib/supabaseClient'
+import type { OutboxDropValues } from '@/lib/outbox/outboxQueue'
 import {
+    normalizeStoredWorkoutPlan,
     parseWorkoutPlanJson,
+    type SetMetric,
     type WorkoutPlan,
     type WorkoutPlanValidationResult,
 } from '@/lib/workoutPlanSchema'
-import type { WorkoutSessionRow, WorkoutSetRow, WorkoutSnapshot } from '@/features/workout/types'
+import { normalizeWorkoutSnapshot } from '@/lib/workoutSnapshotSchema'
+import type {
+    StoredWorkoutSessionRow,
+    WorkoutSessionRow,
+    WorkoutSetDropRow,
+    WorkoutSetRow,
+    WorkoutSnapshot,
+} from '@/features/workout/types'
 
 export type ImportPlanResult =
     | { success: true; planId: string; alreadyImported: boolean }
@@ -17,11 +27,15 @@ export async function importWorkoutPlanFromText(rawText: string): Promise<Import
         return { success: false, errors: validationResult.errors }
     }
 
-    const contentHash = await sha256Hex(canonicalizeJson(validationResult.plan))
+    // O banco guarda o documento como veio (v1 ou v2), não o formato interno:
+    // o hash de um arquivo v1 reimportado continua igual ao de antes, e a
+    // leitura normaliza do mesmo jeito que a importação.
+    const { document } = validationResult
+    const contentHash = await sha256Hex(canonicalizeJson(document))
     const { data, error } = await supabase.rpc('import_workout_plan', {
-        p_name: validationResult.plan.nome,
-        p_schema_version: validationResult.plan.versao,
-        p_payload: validationResult.plan,
+        p_name: document.nome,
+        p_schema_version: document.versao,
+        p_payload: document,
         p_content_hash: contentHash,
     })
 
@@ -76,12 +90,39 @@ export async function getActivePlan(): Promise<ActivePlan | null> {
         throw new Error(planError?.message ?? 'Plano ativo não encontrado')
     }
 
-    return { planId: planRow.id, plan: planRow.payload as WorkoutPlan }
+    return { planId: planRow.id, plan: normalizeStoredWorkoutPlan(planRow.payload) }
+}
+
+function normalizeSessionRow(row: StoredWorkoutSessionRow): WorkoutSessionRow {
+    return { ...row, workout_snapshot: normalizeWorkoutSnapshot(row.workout_snapshot) }
+}
+
+export function normalizeSessionRows(rows: StoredWorkoutSessionRow[]): WorkoutSessionRow[] {
+    return rows.map(normalizeSessionRow)
+}
+
+export async function listSetDrops(setIds: string[]): Promise<WorkoutSetDropRow[]> {
+    if (setIds.length === 0) {
+        return []
+    }
+
+    const { data, error } = await supabase
+        .from('workout_set_drops')
+        .select('*')
+        .in('set_id', setIds)
+        .order('drop_index', { ascending: true })
+        .abortSignal(AbortSignal.timeout(CRITICAL_READ_TIMEOUT_MS))
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
 }
 
 export async function getSessionForDate(
     sessionDate: string,
-): Promise<{ session: WorkoutSessionRow; sets: WorkoutSetRow[] } | null> {
+): Promise<{ session: WorkoutSessionRow; sets: WorkoutSetRow[]; drops: WorkoutSetDropRow[] } | null> {
     const { data: session, error: sessionError } = await supabase
         .from('workout_sessions')
         .select('*')
@@ -106,7 +147,10 @@ export async function getSessionForDate(
         throw new Error(setsError.message)
     }
 
-    return { session, sets: sets ?? [] }
+    const setRows = sets ?? []
+    const drops = await listSetDrops(setRows.map((set) => set.id))
+
+    return { session: normalizeSessionRow(session), sets: setRows, drops }
 }
 
 export async function createSession(params: {
@@ -141,7 +185,7 @@ export async function createSession(params: {
         throw new Error('Não foi possível criar ou recuperar a sessão do dia')
     }
 
-    return session
+    return normalizeSessionRow(session)
 }
 
 export async function replaceSessionWorkout(params: {
@@ -160,7 +204,7 @@ export async function replaceSessionWorkout(params: {
     }
 
     const [updatedSession] = data
-    return updatedSession
+    return normalizeSessionRow(updatedSession)
 }
 
 export type SetInput = {
@@ -173,6 +217,10 @@ export type SetInput = {
     note: string | null
     completedAt: string | null
     skippedAt: string | null
+    metric?: SetMetric | null
+    durationSeconds?: number | null
+    distanceM?: number | null
+    drops?: OutboxDropValues[] | null
 }
 
 export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
@@ -189,6 +237,9 @@ export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
                 note: input.note,
                 completed_at: input.completedAt,
                 skipped_at: input.skippedAt,
+                metric: input.metric ?? null,
+                duration_seconds: input.durationSeconds ?? null,
+                distance_m: input.distanceM ?? null,
             },
             { onConflict: 'session_id,exercise_key,set_index' },
         )
@@ -199,7 +250,31 @@ export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
         throw new Error(error?.message ?? 'Falha ao salvar série')
     }
 
+    if (input.drops) {
+        await replaceSetDrops(data.id, input.drops)
+    }
+
     return data
+}
+
+// Substitui todas as quedas da série numa única transação no banco, para uma
+// edição que remove quedas nunca deixar sobra das antigas.
+export async function replaceSetDrops(setId: string, drops: OutboxDropValues[]): Promise<WorkoutSetDropRow[]> {
+    const { data, error } = await supabase.rpc('replace_workout_set_drops', {
+        p_set_id: setId,
+        p_drops: drops.map((drop) => ({
+            load_kg: drop.loadKg,
+            reps: drop.reps,
+            duration_seconds: drop.durationSeconds,
+            distance_m: drop.distanceM,
+        })),
+    })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
 }
 
 export async function finishSession(sessionId: string, finishedAt?: string): Promise<WorkoutSessionRow> {
@@ -214,7 +289,7 @@ export async function finishSession(sessionId: string, finishedAt?: string): Pro
         throw new Error(error?.message ?? 'Falha ao finalizar treino')
     }
 
-    return data
+    return normalizeSessionRow(data)
 }
 
 export async function updateSessionFeeling(
@@ -233,5 +308,5 @@ export async function updateSessionFeeling(
         throw new Error(error?.message ?? 'Falha ao salvar sentimento do treino')
     }
 
-    return data
+    return normalizeSessionRow(data)
 }

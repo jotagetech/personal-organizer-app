@@ -11,6 +11,7 @@ import {
 import type { FoodEntryRow } from '@/features/food/types'
 import type { RoutineDayEntryRow, RoutineItemRow } from '@/features/routine/types'
 import type { WorkoutSessionRow, WorkoutSetRow, WorkoutSnapshot } from '@/features/workout/types'
+import { EMPTY_SET_METRIC_COLUMNS, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
 
 const PERIOD = { start: '2026-09-28', end: '2026-09-30' } // segunda a quarta
 const META = {
@@ -20,24 +21,27 @@ const META = {
 }
 
 const SNAPSHOT: WorkoutSnapshot = {
+    versao: 2,
     workout_key: 'treino_a',
     nome: 'Treino A',
     exercicios: [
         {
+            ...SNAPSHOT_EXERCISE_DEFAULTS,
             exercise_key: 'supino',
             nome: 'Supino reto',
             forma_carga: 'total',
             series: [
-                { set_index: 1, repeticoes_min: 8, repeticoes_max: 10, carga_sugerida: 60 },
-                { set_index: 2, repeticoes_min: 8, repeticoes_max: 10, carga_sugerida: 60 },
-                { set_index: 3, repeticoes_min: 8, repeticoes_max: 10, carga_sugerida: null },
+                repsSnapshotSet(1, 8, 10, 60),
+                repsSnapshotSet(2, 8, 10, 60),
+                repsSnapshotSet(3, 8, 10, null),
             ],
         },
         {
+            ...SNAPSHOT_EXERCISE_DEFAULTS,
             exercise_key: 'remada',
             nome: 'Remada curvada',
             forma_carga: 'por_halter',
-            series: [{ set_index: 1, repeticoes_min: 10, repeticoes_max: 12, carga_sugerida: 20 }],
+            series: [repsSnapshotSet(1, 10, 12, 20)],
         },
     ],
 }
@@ -71,6 +75,7 @@ function buildSet(overrides: Partial<WorkoutSetRow>): WorkoutSetRow {
         note: null,
         completed_at: null,
         skipped_at: null,
+        ...EMPTY_SET_METRIC_COLUMNS,
         updated_at: '2026-09-28T10:00:00.000Z',
         ...overrides,
     }
@@ -241,7 +246,15 @@ describe('buildPeriodExport', () => {
         const [supino, remada] = workout.exercises
         expect(supino.name).toBe('Supino reto')
         expect(supino.load_convention).toBe('total')
-        expect(supino.planned[0]).toEqual({ set_index: 1, reps_min: 8, reps_max: 10, suggested_load_kg: 60 })
+        expect(supino.planned[0]).toEqual({
+            set_index: 1,
+            metric: 'repeticoes',
+            target_min: 8,
+            target_max: 10,
+            reps_min: 8,
+            reps_max: 10,
+            suggested_load_kg: 60,
+        })
         expect(supino.sets.map((set) => set.status)).toEqual(['completed', 'completed', 'skipped'])
         expect(supino.sets[0]).toEqual({
             set_index: 1,
@@ -250,11 +263,23 @@ describe('buildPeriodExport', () => {
             reps: 10,
             rir: 2,
             note: 'fácil',
+            duration_seconds: null,
+            distance_m: null,
             completed_at: '2026-09-28T10:00:00.000Z',
         })
         expect(supino.sets[2]).toMatchObject({ status: 'skipped', load_kg: null, note: 'ombro', completed_at: null })
         expect(remada.sets).toEqual([
-            { set_index: 1, status: 'pending', load_kg: null, reps: null, rir: null, note: null, completed_at: null },
+            {
+                set_index: 1,
+                status: 'pending',
+                load_kg: null,
+                reps: null,
+                rir: null,
+                note: null,
+                duration_seconds: null,
+                distance_m: null,
+                completed_at: null,
+            },
         ])
     })
 

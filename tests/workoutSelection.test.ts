@@ -7,7 +7,7 @@ function planWithWorkouts(
     workouts: { id: string; dias_semana?: string[] }[],
 ): WorkoutPlan {
     return {
-        versao: 1,
+        versao: 2,
         nome: 'Plano de teste',
         unidade_carga: 'kg',
         treinos: workouts.map((workout) => ({
@@ -18,8 +18,15 @@ function planWithWorkouts(
                 {
                     id: 'exercicio-1',
                     nome: 'Exercício 1',
+                    equipamento: null,
                     forma_carga: 'total',
-                    series: [{ repeticoes_min: 8, repeticoes_max: 12 }],
+                    por_lado: false,
+                    descanso_segundos_min: null,
+                    descanso_segundos_max: null,
+                    rir_alvo_min: null,
+                    rir_alvo_max: null,
+                    observacoes: null,
+                    series: [{ metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, quedas: [] }],
                 },
             ],
         })),

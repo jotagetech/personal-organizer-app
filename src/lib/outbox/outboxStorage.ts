@@ -6,7 +6,8 @@
 
 import { z } from 'zod'
 
-import { LOAD_CONVENTIONS } from '@/lib/workoutPlanSchema'
+import { SET_METRICS } from '@/lib/workoutPlanSchema'
+import { storedWorkoutSnapshotSchema } from '@/lib/workoutSnapshotSchema'
 import type { OutboxOperation } from '@/lib/outbox/outboxQueue'
 
 const OUTBOX_STORAGE_KEY = 'outbox_queue'
@@ -18,24 +19,11 @@ export type OutboxStorageAdapter = {
     removeItem(key: string): void
 }
 
-const outboxSnapshotSetSchema = z.object({
-    set_index: z.number().int(),
-    repeticoes_min: z.number().int(),
-    repeticoes_max: z.number().int(),
-    carga_sugerida: z.number().nullable(),
-})
-
-const outboxSnapshotExerciseSchema = z.object({
-    exercise_key: z.string(),
-    nome: z.string(),
-    forma_carga: z.enum(LOAD_CONVENTIONS),
-    series: z.array(outboxSnapshotSetSchema),
-})
-
-const outboxSnapshotSchema = z.object({
-    workout_key: z.string(),
-    nome: z.string(),
-    exercicios: z.array(outboxSnapshotExerciseSchema),
+const outboxDropValuesSchema = z.object({
+    loadKg: z.number().nullable(),
+    reps: z.number().nullable(),
+    durationSeconds: z.number().nullable(),
+    distanceM: z.number().nullable(),
 })
 
 const outboxSetValuesSchema = z.object({
@@ -47,6 +35,12 @@ const outboxSetValuesSchema = z.object({
     // Filas gravadas antes de existir o estado "pulada" não têm esse campo;
     // obrigatório, o envelope inteiro falharia na validação e seria descartado.
     skippedAt: z.string().nullable().default(null),
+    // Mesmo motivo: filas anteriores a séries de tempo, distância e drop set
+    // não trazem estes campos.
+    metric: z.enum(SET_METRICS).nullable().optional(),
+    durationSeconds: z.number().nullable().optional(),
+    distanceM: z.number().nullable().optional(),
+    drops: z.array(outboxDropValuesSchema).nullable().optional(),
 })
 
 const outboxOperationStatusSchema = z.enum(['pending', 'failed'])
@@ -55,7 +49,9 @@ const upsertSetOperationSchema = z.object({
     kind: z.literal('upsert_set'),
     sessionDate: z.string(),
     planId: z.string(),
-    snapshot: outboxSnapshotSchema,
+    // Snapshots enfileirados antes do formato atual são convertidos na leitura
+    // em vez de invalidar a fila inteira (e perder séries ainda não enviadas).
+    snapshot: storedWorkoutSnapshotSchema,
     exerciseKey: z.string(),
     setIndex: z.number().int(),
     values: outboxSetValuesSchema,

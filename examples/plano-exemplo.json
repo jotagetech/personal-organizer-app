@@ -1,17 +1,22 @@
 {
-  "versao": 1,
+  "versao": 2,
   "nome": "Meu plano",
   "unidade_carga": "kg",
   "treinos": [
     {
       "id": "treino-a",
-      "nome": "A - Peito e tríceps",
+      "nome": "A: peito e tríceps",
       "dias_semana": ["segunda", "quinta"],
       "exercicios": [
         {
           "id": "supino-reto",
           "nome": "Supino reto",
+          "equipamento": "barra",
           "forma_carga": "total",
+          "descanso_segundos_min": 120,
+          "descanso_segundos_max": 180,
+          "rir_alvo_min": 2,
+          "rir_alvo_max": 3,
           "series": [
             { "repeticoes_min": 8, "repeticoes_max": 12, "carga_sugerida": 60 },
             { "repeticoes_min": 8, "repeticoes_max": 12, "carga_sugerida": 60 },
@@ -21,10 +26,94 @@
         {
           "id": "supino-inclinado-halteres",
           "nome": "Supino inclinado com halteres",
+          "equipamento": "halteres",
           "forma_carga": "por_halter",
+          "descanso_segundos_min": 90,
+          "descanso_segundos_max": 90,
           "series": [
             { "repeticoes_min": 10, "repeticoes_max": 10 },
             { "repeticoes_min": 10, "repeticoes_max": 10 }
+          ]
+        },
+        {
+          "id": "triceps-corda",
+          "nome": "Tríceps na corda",
+          "equipamento": "cabo",
+          "forma_carga": "total",
+          "rir_alvo_min": 0,
+          "rir_alvo_max": 0,
+          "observacoes": "Última série em drop set: reduza a carga sem descanso entre as quedas.",
+          "series": [
+            { "repeticoes_min": 10, "repeticoes_max": 12, "carga_sugerida": 30 },
+            {
+              "repeticoes_min": 10,
+              "repeticoes_max": 12,
+              "carga_sugerida": 30,
+              "quedas": [
+                { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 22.5 },
+                { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 15 },
+                { "repeticoes_min": 6, "repeticoes_max": 10, "carga_sugerida": 10 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "treino-b",
+      "nome": "B: costas, pernas e core",
+      "dias_semana": ["terca", "sexta"],
+      "exercicios": [
+        {
+          "id": "barra-fixa-assistida",
+          "nome": "Barra fixa assistida",
+          "equipamento": "maquina",
+          "forma_carga": "assistencia",
+          "descanso_segundos_min": 120,
+          "descanso_segundos_max": 120,
+          "rir_alvo_min": 2,
+          "rir_alvo_max": 3,
+          "observacoes": "Descida controlada de 4 a 6 segundos. Menos assistência é progresso.",
+          "series": [
+            { "repeticoes_min": 6, "repeticoes_max": 8, "carga_sugerida": 40 },
+            { "repeticoes_min": 6, "repeticoes_max": 8, "carga_sugerida": 40 }
+          ]
+        },
+        {
+          "id": "afundo-bulgaro-halteres",
+          "nome": "Afundo búlgaro com halteres",
+          "equipamento": "halteres",
+          "forma_carga": "por_halter",
+          "por_lado": true,
+          "descanso_segundos_min": 90,
+          "descanso_segundos_max": 120,
+          "series": [
+            { "repeticoes_min": 8, "repeticoes_max": 8, "carga_sugerida": 12 },
+            { "repeticoes_min": 8, "repeticoes_max": 8, "carga_sugerida": 12 }
+          ]
+        },
+        {
+          "id": "prancha-lateral",
+          "nome": "Prancha lateral",
+          "equipamento": "peso_corporal",
+          "forma_carga": "peso_corporal",
+          "por_lado": true,
+          "descanso_segundos_min": 60,
+          "descanso_segundos_max": 60,
+          "series": [
+            { "segundos_min": 20, "segundos_max": 40 },
+            { "segundos_min": 20, "segundos_max": 40 }
+          ]
+        },
+        {
+          "id": "farmer-walk-halteres",
+          "nome": "Farmer walk",
+          "equipamento": "halteres",
+          "forma_carga": "por_halter",
+          "observacoes": "Tronco estável, passos curtos.",
+          "series": [
+            { "metros_min": 25, "metros_max": 40, "carga_sugerida": 24 },
+            { "metros_min": 25, "metros_max": 40, "carga_sugerida": 24 }
           ]
         }
       ]

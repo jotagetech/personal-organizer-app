@@ -16,26 +16,30 @@ import {
     totalSetCount,
 } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
+import { EMPTY_SET_METRIC_COLUMNS, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
 
 function snapshotWithTwoExercises(): WorkoutSnapshot {
     return {
+        versao: 2,
         workout_key: 'treino-a',
         nome: 'Treino A',
         exercicios: [
             {
+                ...SNAPSHOT_EXERCISE_DEFAULTS,
                 exercise_key: 'supino',
                 nome: 'Supino',
                 forma_carga: 'total',
                 series: [
-                    { set_index: 1, repeticoes_min: 8, repeticoes_max: 12, carga_sugerida: null },
-                    { set_index: 2, repeticoes_min: 8, repeticoes_max: 12, carga_sugerida: null },
+                    repsSnapshotSet(1, 8, 12, null),
+                    repsSnapshotSet(2, 8, 12, null),
                 ],
             },
             {
+                ...SNAPSHOT_EXERCISE_DEFAULTS,
                 exercise_key: 'triceps',
                 nome: 'Tríceps',
                 forma_carga: 'total',
-                series: [{ set_index: 1, repeticoes_min: 10, repeticoes_max: 15, carga_sugerida: null }],
+                series: [repsSnapshotSet(1, 10, 15, null)],
             },
         ],
     }
@@ -53,6 +57,7 @@ function completedSet(exerciseKey: string, setIndex: number): WorkoutSetRow {
         note: null,
         completed_at: '2026-09-27T12:00:00.000Z',
         skipped_at: null,
+        ...EMPTY_SET_METRIC_COLUMNS,
         updated_at: '2026-09-27T12:00:00.000Z',
     }
 }

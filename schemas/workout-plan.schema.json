@@ -6,7 +6,7 @@
       "properties": {
         "versao": {
           "type": "number",
-          "const": 1
+          "const": 2
         },
         "nome": {
           "type": "string",
@@ -57,14 +57,56 @@
                       "type": "string",
                       "minLength": 1
                     },
+                    "equipamento": {
+                      "type": "string",
+                      "enum": [
+                        "barra",
+                        "halteres",
+                        "maquina",
+                        "cabo",
+                        "kettlebell",
+                        "elastico",
+                        "peso_corporal",
+                        "outro"
+                      ]
+                    },
                     "forma_carga": {
                       "type": "string",
                       "enum": [
                         "total",
                         "por_lado",
                         "por_halter",
-                        "peso_corporal"
-                      ]
+                        "peso_corporal",
+                        "assistencia"
+                      ],
+                      "description": "Como a carga é registrada. por_halter: peso de um halter só. assistencia: carga que ajuda o movimento, menor é progresso."
+                    },
+                    "por_lado": {
+                      "type": "boolean",
+                      "description": "Repetições, tempo ou distância prescritos para cada lado (perna, braço). Não muda a forma de registrar a carga."
+                    },
+                    "descanso_segundos_min": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "descanso_segundos_max": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "rir_alvo_min": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "rir_alvo_max": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    "observacoes": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 2000
                     },
                     "series": {
                       "type": "array",
@@ -79,16 +121,69 @@
                             "type": "integer",
                             "exclusiveMinimum": 0
                           },
+                          "segundos_min": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "segundos_max": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0
+                          },
+                          "metros_min": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "metros_max": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
                           "carga_sugerida": {
                             "type": "number",
                             "minimum": 0
+                          },
+                          "quedas": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "repeticoes_min": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "repeticoes_max": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "segundos_min": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "segundos_max": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "metros_min": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0
+                                },
+                                "metros_max": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0
+                                },
+                                "carga_sugerida": {
+                                  "type": "number",
+                                  "minimum": 0
+                                }
+                              },
+                              "additionalProperties": false,
+                              "description": "Queda de um drop set, feita logo após a série, com a mesma métrica dela. Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois."
+                            },
+                            "minItems": 1,
+                            "maxItems": 10
                           }
                         },
-                        "required": [
-                          "repeticoes_min",
-                          "repeticoes_max"
-                        ],
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "description": "Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois."
                       },
                       "minItems": 1
                     }

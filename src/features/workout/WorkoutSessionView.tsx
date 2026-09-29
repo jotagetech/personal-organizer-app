@@ -465,8 +465,8 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                     snapshot={snapshot}
                     exerciseKey={currentExercicio.exercise_key}
                     setIndex={currentSet.set_index}
-                    repeticoesMin={currentSet.repeticoes_min}
-                    repeticoesMax={currentSet.repeticoes_max}
+                    repeticoesMin={currentSet.alvo_min}
+                    repeticoesMax={currentSet.alvo_max}
                     cargaSugerida={currentSet.carga_sugerida}
                     existingSet={effectiveSetsByKey.get(setKey(currentExercicio.exercise_key, currentSet.set_index))}
                     confirmLabel={isFinalUnresolvedSet ? 'Confirmar e finalizar treino' : 'Confirmar'}

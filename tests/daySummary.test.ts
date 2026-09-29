@@ -3,25 +3,29 @@ import { describe, expect, it } from 'vitest'
 import { summarizeWorkoutSets } from '@/features/results/daySummary'
 import type { WorkoutSetRow } from '@/features/workout/types'
 import type { WorkoutSnapshot } from '@/lib/databaseTypes'
+import { EMPTY_SET_METRIC_COLUMNS, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
 
 const SNAPSHOT: WorkoutSnapshot = {
+    versao: 2,
     workout_key: 'treino_a',
     nome: 'Treino A',
     exercicios: [
         {
+            ...SNAPSHOT_EXERCISE_DEFAULTS,
             exercise_key: 'supino',
             nome: 'Supino reto',
             forma_carga: 'total',
             series: [
-                { set_index: 0, repeticoes_min: 8, repeticoes_max: 10, carga_sugerida: 40 },
-                { set_index: 1, repeticoes_min: 8, repeticoes_max: 10, carga_sugerida: 40 },
+                repsSnapshotSet(0, 8, 10, 40),
+                repsSnapshotSet(1, 8, 10, 40),
             ],
         },
         {
+            ...SNAPSHOT_EXERCISE_DEFAULTS,
             exercise_key: 'remada',
             nome: 'Remada curvada',
             forma_carga: 'total',
-            series: [{ set_index: 0, repeticoes_min: 10, repeticoes_max: 12, carga_sugerida: 30 }],
+            series: [repsSnapshotSet(0, 10, 12, 30)],
         },
     ],
 }
@@ -38,6 +42,7 @@ function buildSetRow(overrides: Partial<WorkoutSetRow>): WorkoutSetRow {
         note: null,
         completed_at: '2026-09-28T12:00:00.000Z',
         skipped_at: null,
+        ...EMPTY_SET_METRIC_COLUMNS,
         updated_at: '2026-09-28T12:00:00.000Z',
     }
 

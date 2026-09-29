@@ -10,7 +10,7 @@ import { deriveSessionActiveWindow } from '@/features/workout/sessionDuration'
 import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSessionRow, type WorkoutSetRow } from '@/features/workout/types'
 import type { IsoDate } from '@/lib/dateUtils'
-import type { LoadConvention } from '@/lib/workoutPlanSchema'
+import type { LoadConvention, SetMetric } from '@/lib/workoutPlanSchema'
 
 export const EXPORT_FORMAT_VERSION = 1
 
@@ -39,14 +39,29 @@ export type ExportedSet = {
     reps: number | null
     rir: number | null
     note: string | null
+    duration_seconds: number | null
+    distance_m: number | null
     completed_at: string | null
+}
+
+// target_min/target_max estão na unidade de `metric` (repetições, segundos ou
+// metros); reps_min/reps_max repetem o alvo só quando a métrica é repetições,
+// para quem já lia o arquivo antes das séries de tempo e distância.
+export type ExportedPlannedSet = {
+    set_index: number
+    metric: SetMetric
+    target_min: number
+    target_max: number
+    reps_min: number | null
+    reps_max: number | null
+    suggested_load_kg: number | null
 }
 
 export type ExportedExercise = {
     exercise_key: string
     name: string
     load_convention: LoadConvention
-    planned: { set_index: number; reps_min: number; reps_max: number; suggested_load_kg: number | null }[]
+    planned: ExportedPlannedSet[]
     sets: ExportedSet[]
 }
 
@@ -164,12 +179,18 @@ function buildWorkout(session: WorkoutSessionRow, sets: WorkoutSetRow[]): Export
         exercise_key: exercicio.exercise_key,
         name: exercicio.nome,
         load_convention: exercicio.forma_carga,
-        planned: exercicio.series.map((serie) => ({
-            set_index: serie.set_index,
-            reps_min: serie.repeticoes_min,
-            reps_max: serie.repeticoes_max,
-            suggested_load_kg: serie.carga_sugerida,
-        })),
+        planned: exercicio.series.map((serie): ExportedPlannedSet => {
+            const isRepsSet = serie.metrica === 'repeticoes'
+            return {
+                set_index: serie.set_index,
+                metric: serie.metrica,
+                target_min: serie.alvo_min,
+                target_max: serie.alvo_max,
+                reps_min: isRepsSet ? serie.alvo_min : null,
+                reps_max: isRepsSet ? serie.alvo_max : null,
+                suggested_load_kg: serie.carga_sugerida,
+            }
+        }),
         sets: exercicio.series.map((serie) => {
             const row = setsByKey.get(setKey(exercicio.exercise_key, serie.set_index))
             return {
@@ -179,6 +200,8 @@ function buildWorkout(session: WorkoutSessionRow, sets: WorkoutSetRow[]): Export
                 reps: row?.reps ?? null,
                 rir: row?.rir ?? null,
                 note: row?.note ?? null,
+                duration_seconds: row?.duration_seconds ?? null,
+                distance_m: row?.distance_m ?? null,
                 completed_at: row?.completed_at ?? null,
             }
         }),
