@@ -48,6 +48,19 @@ export type UpsertSetOperation = {
     status: OutboxOperationStatus
 }
 
+// Início do treino: enqueuedAt é a hora em que o usuário começou, e é ela que
+// vai para started_at, por mais que o envio demore. Leva os dados da sessão
+// como a série, porque o treino pode começar antes de qualquer série existir.
+export type StartSessionOperation = {
+    kind: 'start_session'
+    sessionDate: string
+    planId: string
+    snapshot: WorkoutSnapshot
+    enqueuedAt: string
+    attempts: number
+    status: OutboxOperationStatus
+}
+
 export type FinishSessionOperation = {
     kind: 'finish_session'
     sessionDate: string
@@ -56,7 +69,11 @@ export type FinishSessionOperation = {
     status: OutboxOperationStatus
 }
 
-export type OutboxOperation = UpsertSetOperation | FinishSessionOperation
+export type OutboxOperation = UpsertSetOperation | StartSessionOperation | FinishSessionOperation
+
+// Operações que conseguem criar a sessão do dia sozinhas, sem depender de uma
+// sessão já confirmada no servidor.
+export type SessionCreatingOperation = UpsertSetOperation | StartSessionOperation
 
 export type OutboxErrorClassification = 'retry' | 'terminal'
 
@@ -66,15 +83,21 @@ export type SendStep =
 
 export const BACKOFF_SCHEDULE_MS = [5000, 15000, 30000, 60000] as const
 
-// Chave de agrupamento natural: uma nova operação para a mesma série ou para a
-// mesma finalização de sessão substitui a anterior, então autosaves repetidos
-// nunca acumulam mais de uma entrada pendente por série.
+// Chave de agrupamento natural: uma nova operação para a mesma série, para o
+// mesmo início ou para a mesma finalização de sessão substitui a anterior,
+// então autosaves repetidos nunca acumulam mais de uma entrada pendente.
 export function naturalKeyOf(operation: OutboxOperation): string {
     if (operation.kind === 'upsert_set') {
         return `upsert_set:${operation.sessionDate}:${operation.exerciseKey}:${operation.setIndex}`
     }
 
-    return `finish_session:${operation.sessionDate}`
+    return `${operation.kind}:${operation.sessionDate}`
+}
+
+export function isSessionCreatingOperation(operation: OutboxOperation): operation is SessionCreatingOperation {
+    const createsSession = operation.kind === 'upsert_set' || operation.kind === 'start_session'
+
+    return createsSession
 }
 
 // Uma escrita da série sem `drops` significa "não mexer nas quedas". Se ela
@@ -94,6 +117,24 @@ function carryOverPendingDrops(existing: OutboxOperation, replacement: OutboxOpe
     return { ...replacement, values: { ...replacement.values, drops: existingDrops } }
 }
 
+// O treino começa uma vez só: um novo início ainda pendente (troca do treino
+// escolhido antes de a sessão existir no servidor, por exemplo) atualiza os
+// dados da sessão, mas mantém a hora do primeiro.
+function keepEarliestStart(existing: OutboxOperation, replacement: OutboxOperation): OutboxOperation {
+    if (existing.kind !== 'start_session' || replacement.kind !== 'start_session') {
+        return replacement
+    }
+    const enqueuedAt = existing.enqueuedAt < replacement.enqueuedAt ? existing.enqueuedAt : replacement.enqueuedAt
+
+    return { ...replacement, enqueuedAt }
+}
+
+function mergeReplacement(existing: OutboxOperation, replacement: OutboxOperation): OutboxOperation {
+    const mergedOperation = keepEarliestStart(existing, carryOverPendingDrops(existing, replacement))
+
+    return mergedOperation
+}
+
 export function enqueueOperation(queue: OutboxOperation[], operation: OutboxOperation): OutboxOperation[] {
     const naturalKey = naturalKeyOf(operation)
     const existingIndex = queue.findIndex((existing) => naturalKeyOf(existing) === naturalKey)
@@ -103,7 +144,7 @@ export function enqueueOperation(queue: OutboxOperation[], operation: OutboxOper
     }
 
     const nextQueue = [...queue]
-    nextQueue[existingIndex] = carryOverPendingDrops(queue[existingIndex], operation)
+    nextQueue[existingIndex] = mergeReplacement(queue[existingIndex], operation)
     return nextQueue
 }
 
@@ -175,12 +216,16 @@ export function countByStatus(queue: OutboxOperation[]): { pending: number; fail
     return { pending, failed }
 }
 
-// Uma sessão sem id real ainda (nunca confirmada no servidor) não pode ser
-// referenciada por id em cada série da fila, então a série carrega os dados
-// pra recriar a sessão (idempotente via upsert) antes de ser enviada. Sessões
-// já garantidas na mesma passada de envio não precisam ser repetidas.
+// Dentro da mesma data, o início vai antes das séries e a finalização por
+// último, na ordem em que as coisas aconteceram no treino.
+const SEND_PRIORITY_BY_KIND: Record<OutboxOperation['kind'], number> = {
+    start_session: 0,
+    upsert_set: 1,
+    finish_session: 2,
+}
+
 function sendPriority(operation: OutboxOperation): number {
-    return operation.kind === 'upsert_set' ? 0 : 1
+    return SEND_PRIORITY_BY_KIND[operation.kind]
 }
 
 export function sortQueueForSending(queue: OutboxOperation[]): OutboxOperation[] {
@@ -193,6 +238,11 @@ export function sortQueueForSending(queue: OutboxOperation[]): OutboxOperation[]
     })
 }
 
+// Uma sessão sem id real ainda (nunca confirmada no servidor) não pode ser
+// referenciada por id em cada operação da fila, então o início e a série
+// carregam os dados pra recriar a sessão (idempotente via upsert) antes de
+// serem enviados. Sessões já garantidas na mesma passada de envio não
+// precisam ser repetidas.
 export function buildSendPlan(queue: OutboxOperation[]): SendStep[] {
     const pendingOperations = queue.filter((operation) => operation.status === 'pending')
     const sortedOperations = sortQueueForSending(pendingOperations)
@@ -200,7 +250,7 @@ export function buildSendPlan(queue: OutboxOperation[]): SendStep[] {
     const steps: SendStep[] = []
 
     for (const operation of sortedOperations) {
-        if (operation.kind === 'upsert_set' && !sessionsAlreadyEnsured.has(operation.sessionDate)) {
+        if (isSessionCreatingOperation(operation) && !sessionsAlreadyEnsured.has(operation.sessionDate)) {
             steps.push({
                 type: 'ensure_session',
                 sessionDate: operation.sessionDate,
@@ -282,6 +332,26 @@ function isNetworkFailure(error: unknown): boolean {
     }
 
     return error instanceof TypeError || /network|fetch/i.test(error.message)
+}
+
+// Enquanto o início não chega ao servidor, é a hora guardada na fila que a
+// tela usa para o contador do treino; o mesmo vale para a finalização.
+export function findPendingStartedAt(operations: OutboxOperation[], sessionDate: string): string | null {
+    const startOperation = operations.find(
+        (operation) => operation.kind === 'start_session' && operation.sessionDate === sessionDate,
+    )
+    const pendingStartedAt = startOperation?.enqueuedAt ?? null
+
+    return pendingStartedAt
+}
+
+export function findPendingFinishedAt(operations: OutboxOperation[], sessionDate: string): string | null {
+    const finishOperation = operations.find(
+        (operation) => operation.kind === 'finish_session' && operation.sessionDate === sessionDate,
+    )
+    const pendingFinishedAt = finishOperation?.enqueuedAt ?? null
+
+    return pendingFinishedAt
 }
 
 // Sobrepõe as séries ainda não confirmadas no servidor por cima das que já

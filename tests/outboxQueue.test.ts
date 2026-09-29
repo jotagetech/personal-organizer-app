@@ -7,6 +7,8 @@ import {
     classifyOutboxError,
     enqueueOperation,
     enqueueOperations,
+    findPendingFinishedAt,
+    findPendingStartedAt,
     naturalKeyOf,
     nextBackoffDelayMs,
     overlayPendingSets,
@@ -14,6 +16,7 @@ import {
     replaceSentOperation,
     type FinishSessionOperation,
     type OutboxOperation,
+    type StartSessionOperation,
     type UpsertSetOperation,
 } from '@/lib/outbox/outboxQueue'
 import { clearOutboxQueue, loadOutboxQueue, saveOutboxQueue, type OutboxStorageAdapter } from '@/lib/outbox/outboxStorage'
@@ -524,5 +527,110 @@ describe('resultado de um envio com a série reescrita durante ele', () => {
         const failedAttempt = { ...sentOperation, attempts: 1 }
 
         expect(replaceSentOperation([sentOperation], sentOperation, failedAttempt)).toEqual([failedAttempt])
+    })
+})
+
+function startSessionOperation(overrides: Partial<StartSessionOperation> = {}): StartSessionOperation {
+    return {
+        kind: 'start_session',
+        sessionDate: '2026-09-28',
+        planId: 'plan-1',
+        snapshot: snapshotWithOneExercise(),
+        enqueuedAt: '2026-09-28T11:50:00.000Z',
+        attempts: 0,
+        status: 'pending',
+        ...overrides,
+    }
+}
+
+describe('início do treino na fila (start_session)', () => {
+    it('agrupa por data, com chave própria que não se mistura com séries nem finalização', () => {
+        expect(naturalKeyOf(startSessionOperation())).toBe('start_session:2026-09-28')
+
+        const queue = enqueueOperations([], [startSessionOperation(), upsertSetOperation(), finishSessionOperation()])
+
+        expect(queue).toHaveLength(3)
+    })
+
+    it('um novo início pendente atualiza a sessão mas mantém a hora do primeiro', () => {
+        const otherSnapshot = { ...snapshotWithOneExercise(), workout_key: 'treino-b', nome: 'Treino B' }
+        const firstStart = startSessionOperation()
+        const laterStart = startSessionOperation({ snapshot: otherSnapshot, enqueuedAt: '2026-09-28T12:30:00.000Z' })
+
+        const queue = enqueueOperation(enqueueOperation([], firstStart), laterStart)
+
+        expect(queue).toHaveLength(1)
+        expect(queue[0]).toEqual({ ...laterStart, enqueuedAt: '2026-09-28T11:50:00.000Z' })
+    })
+
+    it('garante a sessão a partir do início quando ainda não há série nenhuma', () => {
+        const sendPlan = buildSendPlan([startSessionOperation()])
+
+        expect(sendPlan).toEqual([
+            { type: 'ensure_session', sessionDate: '2026-09-28', planId: 'plan-1', snapshot: snapshotWithOneExercise() },
+            { type: 'send_operation', operation: startSessionOperation() },
+        ])
+    })
+
+    it('envia o início antes das séries e da finalização da mesma data, garantindo a sessão uma vez', () => {
+        const queue: OutboxOperation[] = [
+            finishSessionOperation(),
+            upsertSetOperation({ setIndex: 1 }),
+            startSessionOperation(),
+            upsertSetOperation({ sessionDate: '2026-09-27', setIndex: 1 }),
+        ]
+
+        const stepTypes = buildSendPlan(queue).map((step) =>
+            step.type === 'ensure_session' ? `ensure:${step.sessionDate}` : `${step.operation.kind}:${step.operation.sessionDate}`,
+        )
+
+        expect(stepTypes).toEqual([
+            'ensure:2026-09-27',
+            'upsert_set:2026-09-27',
+            'ensure:2026-09-28',
+            'start_session:2026-09-28',
+            'upsert_set:2026-09-28',
+            'finish_session:2026-09-28',
+        ])
+    })
+
+    it('expõe a hora de início e de fim ainda pendentes da data pedida', () => {
+        const queue: OutboxOperation[] = [
+            upsertSetOperation(),
+            startSessionOperation({ sessionDate: '2026-09-27', enqueuedAt: '2026-09-27T10:00:00.000Z' }),
+            startSessionOperation(),
+            finishSessionOperation(),
+        ]
+
+        expect(findPendingStartedAt(queue, '2026-09-28')).toBe('2026-09-28T11:50:00.000Z')
+        expect(findPendingFinishedAt(queue, '2026-09-28')).toBe('2026-09-28T12:05:00.000Z')
+        expect(findPendingStartedAt([upsertSetOperation()], '2026-09-28')).toBeNull()
+        expect(findPendingFinishedAt(queue, '2026-09-27')).toBeNull()
+    })
+
+    it('sobrevive a salvar e recarregar a fila do localStorage', () => {
+        let storedValue: string | null = null
+        const storage: OutboxStorageAdapter = {
+            getItem: () => storedValue,
+            setItem: (_key: string, value: string) => {
+                storedValue = value
+            },
+            removeItem: () => {
+                storedValue = null
+            },
+        }
+        const queue: OutboxOperation[] = [startSessionOperation(), upsertSetOperation()]
+
+        saveOutboxQueue(storage, queue)
+
+        expect(loadOutboxQueue(storage)).toEqual(queue)
+    })
+
+    it('o resultado do envio do início vale só para a versão enviada', () => {
+        const sentStart = startSessionOperation()
+        const rewrittenStart = startSessionOperation({ snapshot: { ...snapshotWithOneExercise(), nome: 'Outro' } })
+        const queueDuringSend = enqueueOperation([sentStart], rewrittenStart)
+
+        expect(removeSentOperation(queueDuringSend, sentStart)).toHaveLength(1)
     })
 })

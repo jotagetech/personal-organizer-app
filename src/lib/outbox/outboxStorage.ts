@@ -61,6 +61,16 @@ const upsertSetOperationSchema = z.object({
     status: outboxOperationStatusSchema,
 })
 
+const startSessionOperationSchema = z.object({
+    kind: z.literal('start_session'),
+    sessionDate: z.string(),
+    planId: z.string(),
+    snapshot: storedWorkoutSnapshotSchema,
+    enqueuedAt: z.string(),
+    attempts: z.number().int().nonnegative(),
+    status: outboxOperationStatusSchema,
+})
+
 const finishSessionOperationSchema = z.object({
     kind: z.literal('finish_session'),
     sessionDate: z.string(),
@@ -71,6 +81,7 @@ const finishSessionOperationSchema = z.object({
 
 const outboxOperationSchema = z.discriminatedUnion('kind', [
     upsertSetOperationSchema,
+    startSessionOperationSchema,
     finishSessionOperationSchema,
 ])
 
