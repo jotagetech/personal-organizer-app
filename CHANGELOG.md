@@ -27,6 +27,19 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Ferramenta "Exportar período" no Menu: gera um JSON com todos os
+  registros de um intervalo de datas (treinos com cada série e seu status,
+  cardio, alimentos com totais por dia, rotina resolvida dia a dia, peso e
+  sono), desnormalizado e sem `user_id`, para analisar em outra ferramenta.
+  Atalhos "Esta semana", "Semana passada", "Este mês" e "Mês passado"
+  preenchem as datas de início e fim, que também podem ser editadas à mão
+  (máximo de 366 dias). Depois de "Gerar", uma linha resume as contagens e
+  o resultado pode ser copiado, compartilhado (quando o navegador suporta)
+  ou baixado como `organizer-export_AAAA-MM-DD_AAAA-MM-DD.json`. Se a cópia
+  automática falhar, o JSON aparece num campo de texto selecionável. A
+  rotina de cada dia usa a mesma resolução da aba Rotina, com os sinais de
+  treino, refeições, peso e sono derivados dos próprios dados do período.
+  As buscas são por intervalo e paginadas, sem uma consulta por dia.
 - Prazo opcional em tarefa avulsa da rotina (migração
   `20260928040000_routine_adhoc_due_date.sql`, colunas `due_date` e
   `completed_on` em `routine_day_entries`). O campo de nova tarefa ganha um

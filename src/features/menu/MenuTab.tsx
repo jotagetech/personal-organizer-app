@@ -3,11 +3,12 @@ import { useState } from 'react'
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { BodyWeightLog, SleepLog } from '@/features/bodyMetrics/BodyMetricLogs'
+import { PeriodExportPanel } from '@/features/export/PeriodExportPanel'
 import { FoodItemsCatalog } from '@/features/food/FoodItemsCatalog'
 import { formatDateLabel } from '@/features/shared/DateHeader'
 import { todayInTimezone } from '@/lib/dateUtils'
 
-type MenuToolKey = 'food_catalog'
+type MenuToolKey = 'food_catalog' | 'period_export'
 type MenuPanel = 'home' | MenuToolKey
 
 type MenuTool = {
@@ -25,6 +26,11 @@ const MENU_TOOLS: MenuTool[] = [
         label: 'Catálogo de alimentos',
         description: 'Editar a nutrição dos alimentos cadastrados e da TACO',
     },
+    {
+        key: 'period_export',
+        label: 'Exportar período',
+        description: 'Gerar um JSON com os registros de um período',
+    },
 ]
 
 export function MenuTab() {
@@ -41,6 +47,8 @@ function renderToolPanel(toolKey: MenuToolKey, onClose: () => void) {
     switch (toolKey) {
         case 'food_catalog':
             return <FoodItemsCatalog onClose={onClose} />
+        case 'period_export':
+            return <PeriodExportPanel onClose={onClose} />
     }
 }
 
