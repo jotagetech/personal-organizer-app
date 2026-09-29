@@ -3,16 +3,42 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useOutbox } from '@/contexts/OutboxContext'
 import { buildOverlaySetRow, type OutboxSetValues, type UpsertSetOperation } from '@/lib/outbox/outboxQueue'
-import type { WorkoutSetRow, WorkoutSnapshot } from '@/features/workout/types'
+import {
+    canConfirmEntry,
+    loadTextOf,
+    parseMeasuredValues,
+    resultTextOf,
+    withBodyweightDefault,
+} from '@/features/workout/setEntry'
+import {
+    formatDecimal,
+    formatRestPrescription,
+    formatRirTarget,
+    formatSetTarget,
+    loadFieldHint,
+    loadFieldLabel,
+    loadFieldPlaceholder,
+    resultFieldLabel,
+    resultFieldPlaceholder,
+} from '@/features/workout/setPresentation'
+import type {
+    WorkoutSetRow,
+    WorkoutSnapshot,
+    WorkoutSnapshotExercise,
+    WorkoutSnapshotExerciseSet,
+} from '@/features/workout/types'
+import type { SetMetric } from '@/lib/workoutPlanSchema'
 
 const SAVE_DEBOUNCE_MS = 600
 const ACTION_ICON_SIZE = 16
 const CONFIRM_ICON_SIZE = 22
 const CONFIRM_ICON_STROKE = 3
 
+// O campo de resultado muda de sentido com a métrica da série: repetições,
+// segundos ou metros.
 type SetFieldState = {
     loadKgText: string
-    repsText: string
+    resultText: string
     rirText: string
     noteText: string
     completedAt: string | null
@@ -23,11 +49,8 @@ type ExerciseSetRowProps = {
     sessionDate: string
     planId: string
     snapshot: WorkoutSnapshot
-    exerciseKey: string
-    setIndex: number
-    repeticoesMin: number
-    repeticoesMax: number
-    cargaSugerida: number | null
+    exercicio: WorkoutSnapshotExercise
+    serie: WorkoutSnapshotExerciseSet
     existingSet: WorkoutSetRow | undefined
     confirmLabel: string
     onConfirmed: (row: WorkoutSetRow) => void
@@ -40,11 +63,8 @@ export function ExerciseSetRow({
     sessionDate,
     planId,
     snapshot,
-    exerciseKey,
-    setIndex,
-    repeticoesMin,
-    repeticoesMax,
-    cargaSugerida,
+    exercicio,
+    serie,
     existingSet,
     confirmLabel,
     onConfirmed,
@@ -53,7 +73,12 @@ export function ExerciseSetRow({
     onLocalSave,
 }: ExerciseSetRowProps) {
     const { enqueueUpsertSet, getOperationsForDate } = useOutbox()
-    const [fields, setFields] = useState<SetFieldState>(() => toFieldState(existingSet))
+    const exerciseKey = exercicio.exercise_key
+    const setIndex = serie.set_index
+    const metric = serie.metrica
+    const formaCarga = exercicio.forma_carga
+    const hasPlannedDrops = serie.quedas.length > 0
+    const [fields, setFields] = useState<SetFieldState>(() => toFieldState(existingSet, metric))
     const [isNoteOpen, setIsNoteOpen] = useState(() => Boolean(existingSet?.note))
     const [hasEverSaved, setHasEverSaved] = useState(() => Boolean(existingSet))
     const fieldsRef = useRef(fields)
@@ -65,7 +90,7 @@ export function ExerciseSetRow({
     }
 
     useEffect(() => {
-        updateFields(toFieldState(existingSet))
+        updateFields(toFieldState(existingSet, metric))
         setIsNoteOpen(Boolean(existingSet?.note))
         setHasEverSaved(Boolean(existingSet))
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -93,10 +118,21 @@ export function ExerciseSetRow({
         }
     }
 
+    // A métrica vai sempre explícita: sem ela o banco trata a série como
+    // repetições e exige carga e repetições para aceitar a conclusão.
     function valuesFromFields(nextFields: SetFieldState): OutboxSetValues {
-        const parsedValues = parseFieldsForSave(nextFields)
+        const measuredValues = parseMeasuredValues(metric, nextFields.loadKgText, nextFields.resultText)
+        const isConfirmed = nextFields.completedAt !== null
+        const savedMeasures = isConfirmed ? withBodyweightDefault(measuredValues, formaCarga) : measuredValues
 
-        return { ...parsedValues, completedAt: nextFields.completedAt, skippedAt: nextFields.skippedAt }
+        return {
+            ...savedMeasures,
+            rir: parseOptionalInteger(nextFields.rirText),
+            note: normalizeNote(nextFields.noteText),
+            completedAt: nextFields.completedAt,
+            skippedAt: nextFields.skippedAt,
+            metric,
+        }
     }
 
     function buildLocalRow(values: OutboxSetValues): WorkoutSetRow {
@@ -117,8 +153,8 @@ export function ExerciseSetRow({
         )
     }
 
-    function saveToOutbox(nextFields: SetFieldState): WorkoutSetRow {
-        const values = valuesFromFields(nextFields)
+    function saveToOutbox(nextFields: SetFieldState, extraValues: Partial<OutboxSetValues> = {}): WorkoutSetRow {
+        const values = { ...valuesFromFields(nextFields), ...extraValues }
 
         enqueueUpsertSet({ sessionDate, planId, snapshot, exerciseKey, setIndex, values })
         setHasEverSaved(true)
@@ -146,8 +182,8 @@ export function ExerciseSetRow({
         scheduleAutosave(nextFields)
     }
 
-    function handleRepsChange(rawValue: string) {
-        const nextFields = { ...fields, repsText: rawValue }
+    function handleResultChange(rawValue: string) {
+        const nextFields = { ...fields, resultText: rawValue }
         updateFields(nextFields)
         scheduleAutosave(nextFields)
     }
@@ -169,7 +205,7 @@ export function ExerciseSetRow({
         saveToOutbox(fields)
     }
 
-    const canConfirm = isValidNonNegativeNumber(fields.loadKgText) && isValidNonNegativeInteger(fields.repsText)
+    const canConfirm = canConfirmEntry(metric, formaCarga, fields.loadKgText, fields.resultText)
 
     function handleConfirmClick() {
         if (!canConfirm) {
@@ -194,7 +230,7 @@ export function ExerciseSetRow({
         clearPendingAutosave()
         const skippedFields: SetFieldState = {
             loadKgText: '',
-            repsText: '',
+            resultText: '',
             rirText: '',
             noteText: fields.noteText,
             completedAt: null,
@@ -202,7 +238,9 @@ export function ExerciseSetRow({
         }
 
         updateFields(skippedFields)
-        onSkipped(saveToOutbox(skippedFields))
+        // Série pulada não tem quedas; a lista vazia apaga as já lançadas.
+        const skipExtraValues: Partial<OutboxSetValues> = hasPlannedDrops ? { drops: [] } : {}
+        onSkipped(saveToOutbox(skippedFields, skipExtraValues))
     }
 
     function handleUndoSkipClick() {
@@ -234,17 +272,27 @@ export function ExerciseSetRow({
             operation.setIndex === setIndex,
     )
 
+    const target = formatSetTarget(metric, serie.alvo_min, serie.alvo_max, exercicio.por_lado)
+    const restPrescription = formatRestPrescription(exercicio.descanso_segundos_min, exercicio.descanso_segundos_max)
+    const rirTarget = formatRirTarget(exercicio.rir_alvo_min, exercicio.rir_alvo_max)
+    const loadHint = loadFieldHint(formaCarga, exercicio.por_lado, fields.loadKgText)
+
     return (
         <div className="set-card__body">
             <div className="set-card__targets">
                 <span>
-                    Meta{' '}
-                    <strong className="set-card__target-value">{formatRepRange(repeticoesMin, repeticoesMax)}</strong>{' '}
-                    reps
+                    Meta <strong className="set-card__target-value">{target.value}</strong> {target.unit}
                 </span>
-                {cargaSugerida !== null && (
+                {serie.carga_sugerida !== null && (
                     <span>
-                        Sugestão <strong className="set-card__target-value">{cargaSugerida}</strong> kg
+                        Sugestão{' '}
+                        <strong className="set-card__target-value">{formatDecimal(serie.carga_sugerida)}</strong> kg
+                    </span>
+                )}
+                {restPrescription && <span>{restPrescription}</span>}
+                {hasPlannedDrops && (
+                    <span className="set-card__drop-note">
+                        Drop set: {serie.quedas.length} {serie.quedas.length === 1 ? 'queda' : 'quedas'} depois
                     </span>
                 )}
             </div>
@@ -252,26 +300,23 @@ export function ExerciseSetRow({
                 <p className="set-skipped-badge">Série pulada</p>
             ) : (
                 <div className="set-fields">
+                    <LoadField
+                        label={loadFieldLabel(formaCarga, exercicio.equipamento)}
+                        hint={loadHint}
+                        placeholder={loadFieldPlaceholder(formaCarga, serie.carga_sugerida)}
+                        value={fields.loadKgText}
+                        onChange={handleLoadChange}
+                        onBlur={handleFieldBlur}
+                    />
                     <div className="field set-fields__field">
-                        <label>Carga (kg)</label>
+                        <label>{resultFieldLabel(metric)}</label>
                         <input
                             type="text"
-                            inputMode="decimal"
-                            value={fields.loadKgText}
-                            onChange={(event) => handleLoadChange(event.target.value)}
+                            inputMode={metric === 'distancia' ? 'decimal' : 'numeric'}
+                            value={fields.resultText}
+                            onChange={(event) => handleResultChange(event.target.value)}
                             onBlur={handleFieldBlur}
-                            placeholder="ex: 60"
-                        />
-                    </div>
-                    <div className="field set-fields__field">
-                        <label>Realizadas</label>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={fields.repsText}
-                            onChange={(event) => handleRepsChange(event.target.value)}
-                            onBlur={handleFieldBlur}
-                            placeholder="ex: 10"
+                            placeholder={resultFieldPlaceholder(metric)}
                         />
                     </div>
                     <div className="field set-fields__field">
@@ -284,6 +329,7 @@ export function ExerciseSetRow({
                             onBlur={handleFieldBlur}
                             placeholder="0-10"
                         />
+                        {rirTarget && <span className="set-fields__hint">{rirTarget}</span>}
                     </div>
                 </div>
             )}
@@ -341,7 +387,35 @@ export function ExerciseSetRow({
     )
 }
 
-function SaveStatusLabel({
+type LoadFieldProps = {
+    label: string
+    hint: string | null
+    placeholder: string
+    value: string
+    onChange: (rawValue: string) => void
+    onBlur: () => void
+}
+
+// Ocupa a linha inteira: o rótulo diz o que o número significa (um halter,
+// cada lado, total com a barra), e é essa leitura que evita o registro errado.
+export function LoadField({ label, hint, placeholder, value, onChange, onBlur }: LoadFieldProps) {
+    return (
+        <div className="field set-fields__field set-fields__field--load">
+            <label>{label} (kg)</label>
+            <input
+                type="text"
+                inputMode="decimal"
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                onBlur={onBlur}
+                placeholder={placeholder}
+            />
+            {hint && <span className="set-fields__hint">{hint}</span>}
+        </div>
+    )
+}
+
+export function SaveStatusLabel({
     hasEverSaved,
     pendingOperation,
 }: {
@@ -367,10 +441,10 @@ function SaveStatusLabel({
     return <p className="save-status">Salvo</p>
 }
 
-function toFieldState(existingSet: WorkoutSetRow | undefined): SetFieldState {
+function toFieldState(existingSet: WorkoutSetRow | undefined, metric: SetMetric): SetFieldState {
     const fieldState: SetFieldState = {
-        loadKgText: existingSet?.load_kg != null ? String(existingSet.load_kg) : '',
-        repsText: existingSet?.reps != null ? String(existingSet.reps) : '',
+        loadKgText: loadTextOf(existingSet),
+        resultText: resultTextOf(metric, existingSet),
         rirText: existingSet?.rir != null ? String(existingSet.rir) : '',
         noteText: existingSet?.note ?? '',
         completedAt: existingSet?.completed_at ?? null,
@@ -380,50 +454,14 @@ function toFieldState(existingSet: WorkoutSetRow | undefined): SetFieldState {
     return fieldState
 }
 
-function parseFieldsForSave(fields: SetFieldState): {
-    loadKg: number | null
-    reps: number | null
-    rir: number | null
-    note: string | null
-} {
-    const normalizedLoadText = fields.loadKgText.trim().replace(',', '.')
-    const normalizedRepsText = fields.repsText.trim()
-    const normalizedRirText = fields.rirText.trim()
-    const normalizedNoteText = fields.noteText.trim()
-
-    const loadKg = normalizedLoadText === '' ? null : Number(normalizedLoadText)
-    const reps = normalizedRepsText === '' ? null : Number(normalizedRepsText)
-    const rir = normalizedRirText === '' ? null : Number(normalizedRirText)
-    const note = normalizedNoteText === '' ? null : normalizedNoteText
-
-    return { loadKg, reps, rir, note }
-}
-
-function isValidNonNegativeNumber(text: string): boolean {
-    const normalizedText = text.trim().replace(',', '.')
-    if (normalizedText === '') {
-        return false
-    }
-    const parsedValue = Number(normalizedText)
-
-    return Number.isFinite(parsedValue) && parsedValue >= 0
-}
-
-function isValidNonNegativeInteger(text: string): boolean {
+function parseOptionalInteger(text: string): number | null {
     const normalizedText = text.trim()
-    if (normalizedText === '') {
-        return false
-    }
-    const parsedValue = Number(normalizedText)
 
-    return Number.isInteger(parsedValue) && parsedValue >= 0
+    return normalizedText === '' ? null : Number(normalizedText)
 }
 
-function formatRepRange(min: number, max: number): string {
-    if (min === max) {
-        return `${min}`
-    }
-    const range = `${min} a ${max}`
+function normalizeNote(text: string): string | null {
+    const normalizedText = text.trim()
 
-    return range
+    return normalizedText === '' ? null : normalizedText
 }

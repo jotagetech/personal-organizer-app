@@ -127,14 +127,20 @@ export function buildSkipValuesForRemainingSets(
             continue
         }
 
-        skipValues.push({ setIndex: serie.set_index, values: buildSkippedSetValues(existingRow?.note ?? null, nowIso) })
+        const values = buildSkippedSetValues(existingRow?.note ?? null, nowIso, serie.quedas.length > 0)
+        skipValues.push({ setIndex: serie.set_index, values })
     }
 
     return skipValues
 }
 
-export function buildSkippedSetValues(note: string | null, nowIso: string): OutboxSetValues {
-    return { loadKg: null, reps: null, rir: null, note, completedAt: null, skippedAt: nowIso }
+// Série pulada não tem quedas: numa série com drop set, a lista vazia apaga o
+// que tiver sido lançado antes do pulo. Nas demais, `drops` fica de fora para
+// não gerar uma escrita de quedas à toa.
+export function buildSkippedSetValues(note: string | null, nowIso: string, hasPlannedDrops = false): OutboxSetValues {
+    const values: OutboxSetValues = { loadKg: null, reps: null, rir: null, note, completedAt: null, skippedAt: nowIso }
+
+    return hasPlannedDrops ? { ...values, drops: [] } : values
 }
 
 export type SetStatusCounts = { completed: number; skipped: number; pending: number; total: number }
@@ -223,4 +229,55 @@ export function isLastPosition(snapshot: WorkoutSnapshot, position: StepPosition
     const isLastSetInExercise = position.setIndexInExercise === currentExercicio.series.length - 1
 
     return isLastExercise && isLastSetInExercise
+}
+
+// Passo do assistente: a série principal (dropPosition null) ou uma das quedas
+// do drop set dela. O progresso e a retomada continuam contados por série; as
+// quedas são passos extras logo depois de uma série concluída.
+export type WizardStep = { position: StepPosition; dropPosition: number | null }
+
+export function mainStepOf(position: StepPosition): WizardStep {
+    return { position, dropPosition: null }
+}
+
+function serieAt(snapshot: WorkoutSnapshot, position: StepPosition) {
+    return snapshot.exercicios[position.exerciseIndex].series[position.setIndexInExercise]
+}
+
+// Próximo passo dentro da mesma série depois de confirmar o passo atual, ou
+// null quando a série não tem mais nada (sem quedas ou na última delas).
+export function nextStepWithinSet(snapshot: WorkoutSnapshot, step: WizardStep): WizardStep | null {
+    const dropCount = serieAt(snapshot, step.position).quedas.length
+    const nextDropPosition = step.dropPosition === null ? 0 : step.dropPosition + 1
+    if (nextDropPosition >= dropCount) {
+        return null
+    }
+
+    return { position: step.position, dropPosition: nextDropPosition }
+}
+
+// Voltar da série principal cai na última queda da série anterior só se ela
+// foi concluída: quedas de uma série pulada ou pendente não existem.
+export function retreatStep(
+    snapshot: WorkoutSnapshot,
+    setsByKey: Map<string, WorkoutSetRow>,
+    step: WizardStep,
+): WizardStep {
+    if (step.dropPosition !== null) {
+        const previousDropPosition = step.dropPosition - 1
+        return { position: step.position, dropPosition: previousDropPosition >= 0 ? previousDropPosition : null }
+    }
+
+    const previousPosition = retreatPosition(snapshot, step.position)
+    const previousDropCount = serieAt(snapshot, previousPosition).quedas.length
+    const isPreviousCompleted = setStatusOf(rowAtPosition(snapshot, setsByKey, previousPosition)) === 'completed'
+    if (previousDropCount > 0 && isPreviousCompleted) {
+        return { position: previousPosition, dropPosition: previousDropCount - 1 }
+    }
+
+    return mainStepOf(previousPosition)
+}
+
+export function isFirstStep(step: WizardStep): boolean {
+    return step.position.exerciseIndex === 0 && step.position.setIndexInExercise === 0 && step.dropPosition === null
 }

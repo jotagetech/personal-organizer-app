@@ -74,6 +74,23 @@ export function naturalKeyOf(operation: OutboxOperation): string {
     return `finish_session:${operation.sessionDate}`
 }
 
+// Uma escrita da série sem `drops` significa "não mexer nas quedas". Se ela
+// substituísse por inteiro uma escrita ainda pendente que levava quedas (a
+// carga da série corrigida logo depois de lançar as quedas, sem sinal), essas
+// quedas nunca chegariam ao banco; por isso elas passam para a nova escrita.
+function carryOverPendingDrops(existing: OutboxOperation, replacement: OutboxOperation): OutboxOperation {
+    if (existing.kind !== 'upsert_set' || replacement.kind !== 'upsert_set') {
+        return replacement
+    }
+    const replacementTouchesDrops = replacement.values.drops != null
+    const existingDrops = existing.values.drops
+    if (replacementTouchesDrops || existingDrops == null) {
+        return replacement
+    }
+
+    return { ...replacement, values: { ...replacement.values, drops: existingDrops } }
+}
+
 export function enqueueOperation(queue: OutboxOperation[], operation: OutboxOperation): OutboxOperation[] {
     const naturalKey = naturalKeyOf(operation)
     const existingIndex = queue.findIndex((existing) => naturalKeyOf(existing) === naturalKey)
@@ -83,7 +100,7 @@ export function enqueueOperation(queue: OutboxOperation[], operation: OutboxOper
     }
 
     const nextQueue = [...queue]
-    nextQueue[existingIndex] = operation
+    nextQueue[existingIndex] = carryOverPendingDrops(queue[existingIndex], operation)
     return nextQueue
 }
 
@@ -293,5 +310,45 @@ export function buildOverlaySetRow(
         duration_seconds: operation.values.durationSeconds ?? null,
         distance_m: operation.values.distanceM ?? null,
         updated_at: operation.enqueuedAt,
+    }
+}
+
+// Mesma ideia de overlayPendingSets para as quedas de drop set: a lista que
+// ainda está na fila vence a que veio do servidor. Escrita sem `drops` não
+// diz nada sobre as quedas e mantém o que já havia.
+export function overlayPendingDrops(
+    dropsBySetKey: Map<string, OutboxDropValues[]>,
+    pendingOperations: OutboxOperation[],
+    sessionDate: string,
+): Map<string, OutboxDropValues[]> {
+    const overlaidDropsBySetKey = new Map(dropsBySetKey)
+
+    for (const operation of pendingOperations) {
+        if (operation.kind !== 'upsert_set' || operation.sessionDate !== sessionDate) {
+            continue
+        }
+        if (operation.values.drops == null) {
+            continue
+        }
+
+        overlaidDropsBySetKey.set(setKey(operation.exerciseKey, operation.setIndex), operation.values.drops)
+    }
+
+    return overlaidDropsBySetKey
+}
+
+// Inverso de buildOverlaySetRow: regrava a série exatamente como está, para
+// quem só quer mudar as quedas dela sem tocar no resto.
+export function setValuesFromRow(row: WorkoutSetRow): OutboxSetValues {
+    return {
+        loadKg: row.load_kg,
+        reps: row.reps,
+        rir: row.rir,
+        note: row.note,
+        completedAt: row.completed_at,
+        skippedAt: row.skipped_at,
+        metric: row.metric,
+        durationSeconds: row.duration_seconds,
+        distanceM: row.distance_m,
     }
 }

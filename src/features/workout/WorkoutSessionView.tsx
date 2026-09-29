@@ -2,13 +2,18 @@ import { ArrowLeftRight, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronU
 import { useEffect, useState } from 'react'
 
 import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/features/workout/api'
+import { DropSetStepRow } from '@/features/workout/DropSetStepRow'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
+import { groupDropsBySetKey } from '@/features/workout/setDrops'
+import { exerciseTags } from '@/features/workout/setPresentation'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
 import {
     setKey,
     type WorkoutSessionRow,
+    type WorkoutSetDropRow,
     type WorkoutSetRow,
     type WorkoutSnapshot,
+    type WorkoutSnapshotExercise,
 } from '@/features/workout/types'
 import { deriveSessionActiveWindow } from '@/features/workout/sessionDuration'
 import {
@@ -16,12 +21,16 @@ import {
     findFirstIncompletePosition,
     findNextUnresolvedPosition,
     firstUnresolvedSetInExercise,
+    isFirstStep,
     isOnlyUnresolvedSet,
-    retreatPosition,
+    mainStepOf,
+    nextStepWithinSet,
+    retreatStep,
     setStatusOf,
     summarizeExerciseProgress,
     type ExerciseProgress,
     type StepPosition,
+    type WizardStep,
 } from '@/features/workout/sessionProgress'
 import { WorkoutFinishPanel } from '@/features/workout/WorkoutFinishPanel'
 import { suggestWorkoutForWeekday } from '@/features/workout/workoutSelection'
@@ -29,7 +38,9 @@ import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useOutbox } from '@/contexts/OutboxContext'
 import {
     buildOverlaySetRow,
+    overlayPendingDrops,
     overlayPendingSets,
+    type OutboxDropValues,
     type OutboxOperation,
     type UpsertSetOperation,
 } from '@/lib/outbox/outboxQueue'
@@ -55,6 +66,10 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     const [setsByKey, setSetsByKey] = useState<Map<string, WorkoutSetRow>>(new Map())
     const [workoutChoices, setWorkoutChoices] = useState<Workout[] | null>(null)
     const [position, setPosition] = useState<StepPosition | null>(null)
+    // Com a série concluída, o assistente pode estar numa das quedas dela;
+    // null é a própria série.
+    const [dropPosition, setDropPosition] = useState<number | null>(null)
+    const [dropsBySetKey, setDropsBySetKey] = useState<Map<string, OutboxDropValues[]>>(new Map())
     const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
     const [reloadToken, setReloadToken] = useState(0)
     const [isSwitchingWorkout, setIsSwitchingWorkout] = useState(false)
@@ -74,7 +89,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                 }
 
                 if (existing) {
-                    await applyExistingSession(existing.session, existing.sets)
+                    await applyExistingSession(existing.session, existing.sets, existing.drops)
                     return
                 }
 
@@ -95,11 +110,13 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                     setSnapshot(null)
                     setSession(null)
                     setSetsByKey(new Map())
+                    setDropsBySetKey(new Map())
                 } else {
                     setWorkoutChoices(suggestion.availableWorkouts)
                     setSnapshot(null)
                     setSession(null)
                     setSetsByKey(new Map())
+                    setDropsBySetKey(new Map())
                 }
             } catch (loadError) {
                 if (isCancelled) {
@@ -131,6 +148,11 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         return upsertOperation?.snapshot ?? null
     }
 
+    function goToSet(nextPosition: StepPosition | null) {
+        setPosition(nextPosition)
+        setDropPosition(null)
+    }
+
     function resumeFromPendingOperations(pendingSnapshot: WorkoutSnapshot, operations: OutboxOperation[]) {
         const overlaidSetsByKey = overlayPendingSets(new Map(), operations, sessionDate)
         const isFinishPending = operations.some((operation) => operation.kind === 'finish_session')
@@ -138,11 +160,16 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         setSnapshot(pendingSnapshot)
         setSession(null)
         setSetsByKey(overlaidSetsByKey)
+        setDropsBySetKey(new Map())
         setWorkoutChoices(null)
-        setPosition(isFinishPending ? null : findFirstIncompletePosition(pendingSnapshot, overlaidSetsByKey))
+        goToSet(isFinishPending ? null : findFirstIncompletePosition(pendingSnapshot, overlaidSetsByKey))
     }
 
-    async function applyExistingSession(existingSession: WorkoutSessionRow, sets: WorkoutSetRow[]) {
+    async function applyExistingSession(
+        existingSession: WorkoutSessionRow,
+        sets: WorkoutSetRow[],
+        dropRows: WorkoutSetDropRow[],
+    ) {
         const nextSetsByKey = new Map<string, WorkoutSetRow>()
         for (const set of sets) {
             nextSetsByKey.set(setKey(set.exercise_key, set.set_index), set)
@@ -157,10 +184,11 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         setSession(existingSession)
         setSnapshot(existingSession.workout_snapshot)
         setSetsByKey(overlaidSetsByKey)
+        setDropsBySetKey(groupDropsBySetKey(sets, dropRows))
         setWorkoutChoices(null)
 
         const resumePosition = findFirstIncompletePosition(existingSession.workout_snapshot, overlaidSetsByKey)
-        setPosition(resumePosition)
+        goToSet(resumePosition)
 
         const allSetsAlreadyResolved = resumePosition === null
         if (allSetsAlreadyResolved && !existingSession.finished_at) {
@@ -178,8 +206,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         setSnapshot(nextSnapshot)
         setSession(null)
         setSetsByKey(new Map())
+        setDropsBySetKey(new Map())
         setWorkoutChoices(null)
-        setPosition({ exerciseIndex: 0, setIndexInExercise: 0 })
+        goToSet({ exerciseIndex: 0, setIndexInExercise: 0 })
     }
 
     async function handleChooseWorkout(workout: Workout) {
@@ -208,8 +237,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             setSnapshot(nextSnapshot)
             setSession(updatedSession)
             setSetsByKey(new Map())
+            setDropsBySetKey(new Map())
             setWorkoutChoices(null)
-            setPosition({ exerciseIndex: 0, setIndexInExercise: 0 })
+            goToSet({ exerciseIndex: 0, setIndexInExercise: 0 })
         } catch (switchError) {
             const message =
                 switchError instanceof Error ? switchError.message : 'Falha ao trocar o treino'
@@ -224,9 +254,28 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     }
 
     function handleLocalSetSaved(row: WorkoutSetRow) {
+        const key = setKey(row.exercise_key, row.set_index)
         setSetsByKey((previous) => {
             const next = new Map(previous)
-            next.set(setKey(row.exercise_key, row.set_index), row)
+            next.set(key, row)
+            return next
+        })
+        if (row.skipped_at) {
+            forgetLocalDrops([key])
+        }
+    }
+
+    // Como as séries, as quedas confirmadas no aparelho ficam guardadas aqui
+    // além da fila: depois que o envio termina e sai da fila, é daqui que a
+    // tela continua mostrando o que foi digitado.
+    function handleLocalDropsSaved(key: string, drops: OutboxDropValues[]) {
+        setDropsBySetKey((previous) => new Map(previous).set(key, drops))
+    }
+
+    function forgetLocalDrops(keys: string[]) {
+        setDropsBySetKey((previous) => {
+            const next = new Map(previous)
+            keys.forEach((key) => next.delete(key))
             return next
         })
     }
@@ -241,7 +290,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         }
 
         const nextPosition = findNextUnresolvedPosition(snapshot, resolvedSetsByKey, position)
-        setPosition(nextPosition)
+        goToSet(nextPosition)
         setIsExercisePickerOpen(false)
 
         if (nextPosition === null) {
@@ -259,6 +308,42 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
 
     function handleSetResolved(row: WorkoutSetRow) {
         moveToNextUnresolved(mergeSavedRow(row))
+    }
+
+    // Série com drop set segue para a primeira queda antes de sair dela; a
+    // série já fica concluída aqui, então fechar o app no meio das quedas não
+    // perde a série principal.
+    function handleSetConfirmed(row: WorkoutSetRow) {
+        if (!snapshot || !position) {
+            return
+        }
+
+        const nextStep = nextStepWithinSet(snapshot, mainStepOf(position))
+        if (nextStep) {
+            setDropPosition(nextStep.dropPosition)
+            setIsExercisePickerOpen(false)
+            return
+        }
+
+        handleSetResolved(row)
+    }
+
+    function handleDropConfirmed() {
+        if (!snapshot || !position) {
+            return
+        }
+
+        const nextStep = nextStepWithinSet(snapshot, { position, dropPosition })
+        if (nextStep) {
+            setDropPosition(nextStep.dropPosition)
+            return
+        }
+
+        moveToNextUnresolved(currentEffectiveSetsByKey())
+    }
+
+    function handleSkipRemainingDrops() {
+        moveToNextUnresolved(currentEffectiveSetsByKey())
     }
 
     function handleSkipExercise(row: WorkoutSetRow) {
@@ -311,6 +396,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             }
             return next
         })
+        forgetLocalDrops(skippedRows.map((skippedRow) => setKey(skippedRow.exercise_key, skippedRow.set_index)))
         moveToNextUnresolved(mergedSetsByKey)
     }
 
@@ -318,7 +404,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         if (!snapshot) {
             return
         }
-        setPosition(firstUnresolvedSetInExercise(snapshot, currentEffectiveSetsByKey(), exerciseIndex))
+        goToSet(firstUnresolvedSetInExercise(snapshot, currentEffectiveSetsByKey(), exerciseIndex))
         setIsExercisePickerOpen(false)
     }
 
@@ -326,7 +412,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         if (!snapshot || !position) {
             return
         }
-        setPosition(retreatPosition(snapshot, position))
+        const previousStep = retreatStep(snapshot, currentEffectiveSetsByKey(), { position, dropPosition })
+        setPosition(previousStep.position)
+        setDropPosition(previousStep.dropPosition)
     }
 
     // Treino terminado antes de a sessão ter sido criada no servidor (o dia
@@ -403,7 +491,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         return <p className="text-muted">Nenhum treino disponível no plano ativo.</p>
     }
 
-    const effectiveSetsByKey = overlayPendingSets(setsByKey, outbox.getOperationsForDate(sessionDate), sessionDate)
+    const pendingOperationsForDate = outbox.getOperationsForDate(sessionDate)
+    const effectiveSetsByKey = overlayPendingSets(setsByKey, pendingOperationsForDate, sessionDate)
+    const effectiveDropsByKey = overlayPendingDrops(dropsBySetKey, pendingOperationsForDate, sessionDate)
 
     if (session?.finished_at || !position) {
         return (
@@ -425,8 +515,13 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
 
     const currentExercicio = snapshot.exercicios[position.exerciseIndex]
     const currentSet = currentExercicio.series[position.setIndexInExercise]
+    const currentSetKey = setKey(currentExercicio.exercise_key, currentSet.set_index)
+    const currentSetRow = effectiveSetsByKey.get(currentSetKey)
+    // Quedas só existem depois da série concluída; se ela deixou de estar
+    // (pulo desfeito em outra aba, por exemplo), o passo volta para a série.
+    const isOnDropStep = dropPosition !== null && setStatusOf(currentSetRow) === 'completed'
+    const currentStep: WizardStep = { position, dropPosition: isOnDropStep ? dropPosition : null }
     const isFinalUnresolvedSet = isOnlyUnresolvedSet(snapshot, effectiveSetsByKey, position)
-    const isVeryFirstSet = position.exerciseIndex === 0 && position.setIndexInExercise === 0
     const segmentStatuses = snapshot.exercicios.flatMap((exercicio) =>
         exercicio.series.map((serie) =>
             setStatusOf(effectiveSetsByKey.get(setKey(exercicio.exercise_key, serie.set_index))),
@@ -448,40 +543,97 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                     <span>
                         Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length}
                     </span>
-                    <span className="set-card__set-count">
-                        Série {position.setIndexInExercise + 1} de {currentExercicio.series.length}
+                    <span className={isOnDropStep ? 'set-card__set-count set-card__set-count--drop' : 'set-card__set-count'}>
+                        {isOnDropStep && currentStep.dropPosition !== null
+                            ? `Série ${position.setIndexInExercise + 1} · Queda ${currentStep.dropPosition + 1} de ${currentSet.quedas.length}`
+                            : `Série ${position.setIndexInExercise + 1} de ${currentExercicio.series.length}`}
                     </span>
                 </div>
                 <h3 className="set-card__exercise-name">{currentExercicio.nome}</h3>
+                <ExerciseDetails exercicio={currentExercicio} />
                 <div className="progress-track">
                     {segmentStatuses.map((status, segmentIndex) => (
                         <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
                     ))}
                 </div>
-                <ExerciseSetRow
-                    key={setKey(currentExercicio.exercise_key, currentSet.set_index)}
-                    sessionDate={sessionDate}
-                    planId={planId}
-                    snapshot={snapshot}
-                    exerciseKey={currentExercicio.exercise_key}
-                    setIndex={currentSet.set_index}
-                    repeticoesMin={currentSet.alvo_min}
-                    repeticoesMax={currentSet.alvo_max}
-                    cargaSugerida={currentSet.carga_sugerida}
-                    existingSet={effectiveSetsByKey.get(setKey(currentExercicio.exercise_key, currentSet.set_index))}
-                    confirmLabel={isFinalUnresolvedSet ? 'Confirmar e finalizar treino' : 'Confirmar'}
-                    onConfirmed={handleSetResolved}
-                    onSkipped={handleSetResolved}
-                    onSkipExercise={handleSkipExercise}
-                    onLocalSave={handleLocalSetSaved}
-                />
+                {isOnDropStep && currentSetRow && currentStep.dropPosition !== null ? (
+                    <DropSetStepRow
+                        key={`${currentSetKey}:queda:${currentStep.dropPosition}`}
+                        sessionDate={sessionDate}
+                        planId={planId}
+                        snapshot={snapshot}
+                        exercicio={currentExercicio}
+                        serie={currentSet}
+                        dropPosition={currentStep.dropPosition}
+                        parentSet={currentSetRow}
+                        drops={effectiveDropsByKey.get(currentSetKey) ?? []}
+                        confirmLabel={dropConfirmLabel(
+                            currentStep.dropPosition === currentSet.quedas.length - 1,
+                            findNextUnresolvedPosition(snapshot, effectiveSetsByKey, position) === null,
+                        )}
+                        onConfirmed={handleDropConfirmed}
+                        onSkipRemainingDrops={handleSkipRemainingDrops}
+                        onLocalDropsSave={(drops) => handleLocalDropsSaved(currentSetKey, drops)}
+                    />
+                ) : (
+                    <ExerciseSetRow
+                        key={currentSetKey}
+                        sessionDate={sessionDate}
+                        planId={planId}
+                        snapshot={snapshot}
+                        exercicio={currentExercicio}
+                        serie={currentSet}
+                        existingSet={currentSetRow}
+                        confirmLabel={
+                            isFinalUnresolvedSet && currentSet.quedas.length === 0
+                                ? 'Confirmar e finalizar treino'
+                                : 'Confirmar'
+                        }
+                        onConfirmed={handleSetConfirmed}
+                        onSkipped={handleSetResolved}
+                        onSkipExercise={handleSkipExercise}
+                        onLocalSave={handleLocalSetSaved}
+                    />
+                )}
             </section>
-            {!isVeryFirstSet && (
+            {!isFirstStep(currentStep) && (
                 <button type="button" className="ghost-button" onClick={handleGoBack}>
                     <ChevronLeft size={BUTTON_ICON_SIZE} aria-hidden="true" />
                     Voltar
                 </button>
             )}
+        </div>
+    )
+}
+
+function dropConfirmLabel(isLastDrop: boolean, isWorkoutOtherwiseDone: boolean): string {
+    if (!isLastDrop) {
+        return 'Confirmar queda'
+    }
+
+    return isWorkoutOtherwiseDone ? 'Confirmar e finalizar treino' : 'Confirmar'
+}
+
+// Etiquetas e observações do plano ficam no card, acima dos campos, e valem
+// para a série e para as quedas do mesmo jeito.
+function ExerciseDetails({ exercicio }: { exercicio: WorkoutSnapshotExercise }) {
+    const tags = exerciseTags(exercicio.equipamento, exercicio.por_lado)
+    if (tags.length === 0 && !exercicio.observacoes) {
+        return null
+    }
+
+    return (
+        <div className="set-card__details">
+            {tags.length > 0 && (
+                <div className="set-card__tags">
+                    {tags.map((tag) => (
+                        <span key={tag} className="set-card__tag">
+                            {tag}
+                        </span>
+                    ))}
+                </div>
+            )}
+            {exercicio.observacoes && <p className="set-card__observations">{exercicio.observacoes}</p>}
         </div>
     )
 }
