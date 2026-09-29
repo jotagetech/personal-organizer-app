@@ -7,6 +7,14 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Corrigido
 
+- Consumo de um alimento novo continuava sem dado nutricional mesmo depois
+  de o item ser preenchido no catálogo: o item nasce vazio quando é lançado
+  pela primeira vez, e a nutrição do consumo só era calculada no registro.
+  Agora, ao editar a nutrição de um item, os consumos dele que ainda não têm
+  nenhum dado são recalculados (migração
+  `20260928050000_food_entries_recalc_on_item_update.sql`, que também corrige
+  os consumos que já estavam nessa situação). Consumos que já tinham
+  nutrição não mudam.
 - A grade semanal de Resultados podia ficar enorme no celular: com um ciclo
   longo ou uma data selecionada distante ela crescia sem teto (dezenas de
   semanas), e em paisagem ou tablet cada célula acompanhava a largura da

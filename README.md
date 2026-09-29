@@ -53,6 +53,9 @@ npm run dev
    9. `20260928040000_routine_adhoc_due_date.sql` (prazo opcional em tarefa
       avulsa da rotina e coluna `completed_on` com o dia da conclusão, ver
       `CHANGELOG.md`)
+   10. `20260928050000_food_entries_recalc_on_item_update.sql` (recalcula a
+      nutrição dos consumos sem dado quando o item do catálogo é editado, ver
+      `CHANGELOG.md`)
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
