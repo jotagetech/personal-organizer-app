@@ -17,6 +17,24 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Série pulada como estado próprio, distinto de concluída e de não
+  registrada (migração `20260928030000_workout_sets_skipped.sql`, coluna
+  `skipped_at` em `workout_sets`). Cada série ganha "Pular série" e "Pular
+  exercício"; pular zera carga, repetições e RIR mas mantém o comentário, e
+  uma série pulada mostra o selo "Série pulada" com "Desfazer pulo". "Pular
+  exercício" pede confirmação e marca como puladas só as séries ainda
+  pendentes daquele exercício. Série pulada conta como resolvida: o treino
+  finaliza quando tudo está concluído ou pulado, a barra de progresso mostra
+  as puladas em cinza, e Resultados exibe "pulada" na série e "(N puladas)"
+  no destaque do treino. Filas de envio gravadas antes da mudança continuam
+  válidas (o campo novo entra como vazio).
+- Navegação livre entre exercícios no treino: um seletor recolhível no topo
+  ("Exercícios · 3 de 6") lista os exercícios da ficha com o andamento de
+  cada um ("2/4", "✓", "pulado"). Tocar num exercício leva à primeira série
+  ainda não resolvida dele (ou à série 1, se já estiver todo resolvido).
+  Depois de confirmar ou pular, o treino segue para a próxima série não
+  resolvida, dando a volta até o início se algo ficou para trás, e o botão
+  "Confirmar e finalizar treino" aparece só na última série que falta.
 - Aba Alimentação reorganizada: um card de total do dia (kcal, proteína,
   carboidrato e gordura) agora fica sempre visível no topo, mesmo com o dia
   vazio, no lugar do badge que só aparecia depois do primeiro registro. O
@@ -115,6 +133,15 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- Duração do treino agora é medida pelas próprias séries, da primeira à
+  última concluída, em vez de ir da abertura da sessão até a finalização
+  (que podia incluir horas antes de começar ou o tempo até a fila
+  sincronizar). Com menos de duas séries concluídas a duração não é exibida.
+  Vale no painel de fim de treino (que agora também mostra concluídas e
+  puladas), no detalhe do dia e no destaque de Resultados.
+- `finished_at` da sessão passa a registrar a hora em que o treino terminou
+  no aparelho, e não a hora em que a fila conseguiu enviar. Quando o treino é
+  fechado só ao reabrir a data, vale a hora da última série concluída.
 - Peso corporal e sono subiram pro topo da aba Resultados, num agrupamento
   "Dia selecionado" acima da grade, e passam a gravar na data selecionada em
   vez de sempre em "hoje". Abrir um dia que já tem registro mostra o valor

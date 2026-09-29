@@ -9,20 +9,29 @@ import {
     type WorkoutSetRow,
     type WorkoutSnapshot,
 } from '@/features/workout/types'
+import { deriveSessionActiveWindow } from '@/features/workout/sessionDuration'
 import {
-    advancePosition,
+    buildSkipValuesForRemainingSets,
     findFirstIncompletePosition,
-    isLastPosition,
-    positionToGlobalIndex,
+    findNextUnresolvedPosition,
+    firstUnresolvedSetInExercise,
+    isOnlyUnresolvedSet,
     retreatPosition,
-    totalSetCount,
+    setStatusOf,
+    summarizeExerciseProgress,
+    type ExerciseProgress,
     type StepPosition,
 } from '@/features/workout/sessionProgress'
 import { WorkoutFinishPanel } from '@/features/workout/WorkoutFinishPanel'
 import { suggestWorkoutForWeekday } from '@/features/workout/workoutSelection'
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useOutbox } from '@/contexts/OutboxContext'
-import { overlayPendingSets, type OutboxOperation, type UpsertSetOperation } from '@/lib/outbox/outboxQueue'
+import {
+    buildOverlaySetRow,
+    overlayPendingSets,
+    type OutboxOperation,
+    type UpsertSetOperation,
+} from '@/lib/outbox/outboxQueue'
 import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
 import type { Workout, WorkoutPlan } from '@/lib/workoutPlanSchema'
 
@@ -45,6 +54,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     const [reloadToken, setReloadToken] = useState(0)
     const [isSwitchingWorkout, setIsSwitchingWorkout] = useState(false)
     const [switchWorkoutErrorMessage, setSwitchWorkoutErrorMessage] = useState<string | null>(null)
+    const [isExercisePickerOpen, setIsExercisePickerOpen] = useState(false)
 
     useEffect(() => {
         let isCancelled = false
@@ -147,9 +157,12 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         const resumePosition = findFirstIncompletePosition(existingSession.workout_snapshot, overlaidSetsByKey)
         setPosition(resumePosition)
 
-        const allSetsAlreadyCompleted = resumePosition === null
-        if (allSetsAlreadyCompleted && !existingSession.finished_at) {
-            const finishedSession = await finishSession(existingSession.id)
+        const allSetsAlreadyResolved = resumePosition === null
+        if (allSetsAlreadyResolved && !existingSession.finished_at) {
+            // Fechar o treino só ao reabrir a data não pode carimbar a hora da
+            // reabertura: o fim real é a última série concluída, quando existe.
+            const activeWindow = deriveSessionActiveWindow(Array.from(overlaidSetsByKey.values()))
+            const finishedSession = await finishSession(existingSession.id, activeWindow?.endIso)
             setSession(finishedSession)
             refreshDayStatus()
         }
@@ -213,18 +226,95 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         })
     }
 
-    function handleConfirmed() {
+    function currentEffectiveSetsByKey(): Map<string, WorkoutSetRow> {
+        return overlayPendingSets(setsByKey, outbox.getOperationsForDate(sessionDate), sessionDate)
+    }
+
+    function moveToNextUnresolved(resolvedSetsByKey: Map<string, WorkoutSetRow>) {
         if (!snapshot || !position) {
             return
         }
 
-        const nextPosition = advancePosition(snapshot, position)
+        const nextPosition = findNextUnresolvedPosition(snapshot, resolvedSetsByKey, position)
         setPosition(nextPosition)
+        setIsExercisePickerOpen(false)
 
         if (nextPosition === null) {
             outbox.enqueueFinishSession(sessionDate)
             refreshDayStatus()
         }
+    }
+
+    // O estado (setsByKey e a fila) ainda não reflete a série recém-salva
+    // neste mesmo tick, então a próxima posição é calculada sobre um mapa que
+    // já inclui a linha devolvida pela série.
+    function mergeSavedRow(row: WorkoutSetRow): Map<string, WorkoutSetRow> {
+        return new Map(currentEffectiveSetsByKey()).set(setKey(row.exercise_key, row.set_index), row)
+    }
+
+    function handleSetResolved(row: WorkoutSetRow) {
+        moveToNextUnresolved(mergeSavedRow(row))
+    }
+
+    function handleSkipExercise(row: WorkoutSetRow) {
+        if (!snapshot || !position) {
+            return
+        }
+
+        const exercicio = snapshot.exercicios.find((candidate) => candidate.exercise_key === row.exercise_key)
+        if (!exercicio) {
+            return
+        }
+
+        const mergedSetsByKey = mergeSavedRow(row)
+        const skipValues = buildSkipValuesForRemainingSets(exercicio, mergedSetsByKey, new Date().toISOString())
+        if (skipValues.length === 0) {
+            moveToNextUnresolved(mergedSetsByKey)
+            return
+        }
+
+        const confirmedSkip = window.confirm(`Pular as ${skipValues.length} séries restantes de ${exercicio.nome}?`)
+        if (!confirmedSkip) {
+            return
+        }
+
+        const upsertInputs = skipValues.map(({ setIndex, values }) => ({
+            sessionDate,
+            planId,
+            snapshot,
+            exerciseKey: exercicio.exercise_key,
+            setIndex,
+            values,
+        }))
+        outbox.enqueueUpsertSets(upsertInputs)
+
+        const enqueuedAt = new Date().toISOString()
+        const skippedRows = upsertInputs.map((input) => {
+            const key = setKey(input.exerciseKey, input.setIndex)
+            const skippedRow = buildOverlaySetRow(
+                { kind: 'upsert_set', ...input, enqueuedAt, attempts: 0, status: 'pending' },
+                mergedSetsByKey.get(key),
+            )
+            mergedSetsByKey.set(key, skippedRow)
+            return skippedRow
+        })
+
+        setSetsByKey((previous) => {
+            const next = new Map(previous)
+            for (const skippedRow of skippedRows) {
+                next.set(setKey(skippedRow.exercise_key, skippedRow.set_index), skippedRow)
+            }
+            return next
+        })
+        moveToNextUnresolved(mergedSetsByKey)
+    }
+
+    function handleSelectExercise(exerciseIndex: number) {
+        if (!snapshot) {
+            return
+        }
+        setPosition(firstUnresolvedSetInExercise(snapshot, currentEffectiveSetsByKey(), exerciseIndex))
+        setIsExercisePickerOpen(false)
     }
 
     function handleGoBack() {
@@ -318,7 +408,12 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             <div>
                 <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
                 {session ? (
-                    <WorkoutFinishPanel session={session} sessionDate={sessionDate} onSessionUpdated={setSession} />
+                    <WorkoutFinishPanel
+                        session={session}
+                        sessionDate={sessionDate}
+                        sets={Array.from(effectiveSetsByKey.values())}
+                        onSessionUpdated={setSession}
+                    />
                 ) : (
                     <p className="save-status">Treino concluído no aparelho, sincronizando com o servidor...</p>
                 )}
@@ -328,24 +423,27 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
 
     const currentExercicio = snapshot.exercicios[position.exerciseIndex]
     const currentSet = currentExercicio.series[position.setIndexInExercise]
-    const isVeryLastSet = isLastPosition(snapshot, position)
+    const isFinalUnresolvedSet = isOnlyUnresolvedSet(snapshot, effectiveSetsByKey, position)
     const isVeryFirstSet = position.exerciseIndex === 0 && position.setIndexInExercise === 0
-    const completedSetCount = positionToGlobalIndex(snapshot, position)
-    const totalSets = totalSetCount(snapshot)
+    const segmentStatuses = snapshot.exercicios.flatMap((exercicio) =>
+        exercicio.series.map((serie) =>
+            setStatusOf(effectiveSetsByKey.get(setKey(exercicio.exercise_key, serie.set_index))),
+        ),
+    )
 
     return (
         <div>
             <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
+            <ExercisePicker
+                progress={summarizeExerciseProgress(snapshot, effectiveSetsByKey)}
+                currentExerciseIndex={position.exerciseIndex}
+                isOpen={isExercisePickerOpen}
+                onToggle={() => setIsExercisePickerOpen((isOpen) => !isOpen)}
+                onSelect={handleSelectExercise}
+            />
             <div className="progress-track">
-                {Array.from({ length: totalSets }, (_, segmentIndex) => (
-                    <span
-                        key={segmentIndex}
-                        className={
-                            segmentIndex < completedSetCount
-                                ? 'progress-track__segment progress-track__segment--done'
-                                : 'progress-track__segment'
-                        }
-                    />
+                {segmentStatuses.map((status, segmentIndex) => (
+                    <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
                 ))}
             </div>
             <p style={{ fontSize: 13, color: '#52525b', marginBottom: 4 }}>
@@ -364,8 +462,10 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                 repeticoesMax={currentSet.repeticoes_max}
                 cargaSugerida={currentSet.carga_sugerida}
                 existingSet={effectiveSetsByKey.get(setKey(currentExercicio.exercise_key, currentSet.set_index))}
-                confirmLabel={isVeryLastSet ? 'Confirmar e finalizar treino' : 'Confirmar'}
-                onConfirmed={handleConfirmed}
+                confirmLabel={isFinalUnresolvedSet ? 'Confirmar e finalizar treino' : 'Confirmar'}
+                onConfirmed={handleSetResolved}
+                onSkipped={handleSetResolved}
+                onSkipExercise={handleSkipExercise}
                 onLocalSave={handleLocalSetSaved}
             />
             {!isVeryFirstSet && (
@@ -375,6 +475,72 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             )}
         </div>
     )
+}
+
+const PROGRESS_SEGMENT_CLASS_BY_STATUS = {
+    completed: 'progress-track__segment progress-track__segment--done',
+    skipped: 'progress-track__segment progress-track__segment--skipped',
+    pending: 'progress-track__segment',
+} as const
+
+type ExercisePickerProps = {
+    progress: ExerciseProgress[]
+    currentExerciseIndex: number
+    isOpen: boolean
+    onToggle: () => void
+    onSelect: (exerciseIndex: number) => void
+}
+
+function ExercisePicker({ progress, currentExerciseIndex, isOpen, onToggle, onSelect }: ExercisePickerProps) {
+    return (
+        <div className="exercise-picker">
+            <button type="button" className="exercise-picker__toggle" aria-expanded={isOpen} onClick={onToggle}>
+                Exercícios · {currentExerciseIndex + 1} de {progress.length} {isOpen ? '▴' : '▾'}
+            </button>
+            {isOpen && (
+                <div className="exercise-picker__list">
+                    {progress.map((exercise) => (
+                        <button
+                            key={exercise.exerciseIndex}
+                            type="button"
+                            className={exercisePickerItemClass(exercise, currentExerciseIndex)}
+                            aria-current={exercise.exerciseIndex === currentExerciseIndex ? 'step' : undefined}
+                            onClick={() => onSelect(exercise.exerciseIndex)}
+                        >
+                            <span>{exercise.nome}</span>
+                            <span className="exercise-picker__status">{formatExerciseStatus(exercise)}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function exercisePickerItemClass(exercise: ExerciseProgress, currentExerciseIndex: number): string {
+    const classNames = ['exercise-picker__item']
+    if (exercise.exerciseIndex === currentExerciseIndex) {
+        classNames.push('exercise-picker__item--current')
+    }
+    if (exercise.skipped === exercise.total) {
+        classNames.push('exercise-picker__item--skipped')
+    } else if (exercise.completed + exercise.skipped === exercise.total) {
+        classNames.push('exercise-picker__item--done')
+    }
+
+    return classNames.join(' ')
+}
+
+function formatExerciseStatus(exercise: ExerciseProgress): string {
+    if (exercise.skipped === exercise.total) {
+        return 'pulado'
+    }
+    if (exercise.completed === exercise.total) {
+        return '✓'
+    }
+    const skippedSuffix = exercise.skipped > 0 ? ` · ${exercise.skipped} pulada(s)` : ''
+
+    return `${exercise.completed}/${exercise.total}${skippedSuffix}`
 }
 
 function WorkoutSnapshotHeader({

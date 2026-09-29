@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { useOutbox } from '@/contexts/OutboxContext'
-import { buildOverlaySetRow, type UpsertSetOperation } from '@/lib/outbox/outboxQueue'
+import { buildOverlaySetRow, type OutboxSetValues, type UpsertSetOperation } from '@/lib/outbox/outboxQueue'
 import type { WorkoutSetRow, WorkoutSnapshot } from '@/features/workout/types'
 
 const SAVE_DEBOUNCE_MS = 600
@@ -12,6 +12,7 @@ type SetFieldState = {
     rirText: string
     noteText: string
     completedAt: string | null
+    skippedAt: string | null
 }
 
 type ExerciseSetRowProps = {
@@ -25,7 +26,9 @@ type ExerciseSetRowProps = {
     cargaSugerida: number | null
     existingSet: WorkoutSetRow | undefined
     confirmLabel: string
-    onConfirmed: () => void
+    onConfirmed: (row: WorkoutSetRow) => void
+    onSkipped: (row: WorkoutSetRow) => void
+    onSkipExercise: (row: WorkoutSetRow) => void
     onLocalSave: (row: WorkoutSetRow) => void
 }
 
@@ -41,6 +44,8 @@ export function ExerciseSetRow({
     existingSet,
     confirmLabel,
     onConfirmed,
+    onSkipped,
+    onSkipExercise,
     onLocalSave,
 }: ExerciseSetRowProps) {
     const { enqueueUpsertSet, getOperationsForDate } = useOutbox()
@@ -84,9 +89,32 @@ export function ExerciseSetRow({
         }
     }
 
-    function saveToOutbox(nextFields: SetFieldState) {
+    function valuesFromFields(nextFields: SetFieldState): OutboxSetValues {
         const parsedValues = parseFieldsForSave(nextFields)
-        const values = { ...parsedValues, completedAt: nextFields.completedAt }
+
+        return { ...parsedValues, completedAt: nextFields.completedAt, skippedAt: nextFields.skippedAt }
+    }
+
+    function buildLocalRow(values: OutboxSetValues): WorkoutSetRow {
+        return buildOverlaySetRow(
+            {
+                kind: 'upsert_set',
+                sessionDate,
+                planId,
+                snapshot,
+                exerciseKey,
+                setIndex,
+                values,
+                enqueuedAt: new Date().toISOString(),
+                attempts: 0,
+                status: 'pending',
+            },
+            existingSet,
+        )
+    }
+
+    function saveToOutbox(nextFields: SetFieldState): WorkoutSetRow {
+        const values = valuesFromFields(nextFields)
 
         enqueueUpsertSet({ sessionDate, planId, snapshot, exerciseKey, setIndex, values })
         setHasEverSaved(true)
@@ -95,23 +123,10 @@ export function ExerciseSetRow({
         // de o usuário navegar de volta pra essa série): o valor confirmado
         // localmente precisa ficar visível de qualquer forma, não só enquanto
         // a operação segue pendente na fila de envio.
-        onLocalSave(
-            buildOverlaySetRow(
-                {
-                    kind: 'upsert_set',
-                    sessionDate,
-                    planId,
-                    snapshot,
-                    exerciseKey,
-                    setIndex,
-                    values,
-                    enqueuedAt: new Date().toISOString(),
-                    attempts: 0,
-                    status: 'pending',
-                },
-                existingSet,
-            ),
-        )
+        const savedRow = buildLocalRow(values)
+        onLocalSave(savedRow)
+
+        return savedRow
     }
 
     function scheduleAutosave(nextFields: SetFieldState) {
@@ -161,12 +176,52 @@ export function ExerciseSetRow({
         const confirmedFields: SetFieldState = {
             ...fields,
             completedAt: fields.completedAt ?? new Date().toISOString(),
+            skippedAt: null,
         }
 
         updateFields(confirmedFields)
-        saveToOutbox(confirmedFields)
-        onConfirmed()
+        onConfirmed(saveToOutbox(confirmedFields))
     }
+
+    // Pular é gravado daqui de dentro, e não pelo pai, porque o autosave
+    // pendente precisa ser cancelado antes: senão o envio feito ao desmontar a
+    // série mandaria os campos antigos, sem o pulo, por cima dele.
+    function handleSkipSetClick() {
+        clearPendingAutosave()
+        const skippedFields: SetFieldState = {
+            loadKgText: '',
+            repsText: '',
+            rirText: '',
+            noteText: fields.noteText,
+            completedAt: null,
+            skippedAt: new Date().toISOString(),
+        }
+
+        updateFields(skippedFields)
+        onSkipped(saveToOutbox(skippedFields))
+    }
+
+    function handleUndoSkipClick() {
+        clearPendingAutosave()
+        const restoredFields: SetFieldState = { ...fields, skippedAt: null }
+
+        updateFields(restoredFields)
+        saveToOutbox(restoredFields)
+    }
+
+    // A digitação ainda não salva desta série (um comentário, por exemplo)
+    // precisa chegar ao pai antes de ele montar o pulo das séries restantes;
+    // sem nada pendente, a linha atual basta e nada novo vai pra fila.
+    function handleSkipExerciseClick() {
+        const hasUnsavedTyping = debounceTimerRef.current !== null
+        clearPendingAutosave()
+        const currentRow = hasUnsavedTyping
+            ? saveToOutbox(fieldsRef.current)
+            : (existingSet ?? buildLocalRow(valuesFromFields(fieldsRef.current)))
+        onSkipExercise(currentRow)
+    }
+
+    const isSkipped = fields.skippedAt !== null
 
     const pendingOperation = getOperationsForDate(sessionDate).find(
         (operation): operation is UpsertSetOperation =>
@@ -184,41 +239,45 @@ export function ExerciseSetRow({
                     {cargaSugerida !== null ? ` · Sugestão: ${cargaSugerida} kg` : ''}
                 </span>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-                    <label>Carga (kg)</label>
-                    <input
-                        type="text"
-                        inputMode="decimal"
-                        value={fields.loadKgText}
-                        onChange={(event) => handleLoadChange(event.target.value)}
-                        onBlur={handleFieldBlur}
-                        placeholder="ex: 60"
-                    />
+            {isSkipped ? (
+                <p className="set-skipped-badge">Série pulada</p>
+            ) : (
+                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                    <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                        <label>Carga (kg)</label>
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            value={fields.loadKgText}
+                            onChange={(event) => handleLoadChange(event.target.value)}
+                            onBlur={handleFieldBlur}
+                            placeholder="ex: 60"
+                        />
+                    </div>
+                    <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                        <label>Realizadas</label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={fields.repsText}
+                            onChange={(event) => handleRepsChange(event.target.value)}
+                            onBlur={handleFieldBlur}
+                            placeholder="ex: 10"
+                        />
+                    </div>
+                    <div className="field" style={{ width: 64, flexShrink: 0, marginBottom: 0 }}>
+                        <label>RIR</label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={fields.rirText}
+                            onChange={(event) => handleRirChange(event.target.value)}
+                            onBlur={handleFieldBlur}
+                            placeholder="0-10"
+                        />
+                    </div>
                 </div>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-                    <label>Realizadas</label>
-                    <input
-                        type="text"
-                        inputMode="numeric"
-                        value={fields.repsText}
-                        onChange={(event) => handleRepsChange(event.target.value)}
-                        onBlur={handleFieldBlur}
-                        placeholder="ex: 10"
-                    />
-                </div>
-                <div className="field" style={{ width: 64, flexShrink: 0, marginBottom: 0 }}>
-                    <label>RIR</label>
-                    <input
-                        type="text"
-                        inputMode="numeric"
-                        value={fields.rirText}
-                        onChange={(event) => handleRirChange(event.target.value)}
-                        onBlur={handleFieldBlur}
-                        placeholder="0-10"
-                    />
-                </div>
-            </div>
+            )}
             {isNoteOpen ? (
                 <div className="field" style={{ marginTop: 8, marginBottom: 0 }}>
                     <label>Comentário (dor, desconforto, observação)</label>
@@ -240,15 +299,36 @@ export function ExerciseSetRow({
                     💬 Comentário
                 </button>
             )}
-            <button
-                type="button"
-                className="primary-button"
-                style={{ width: '100%', marginTop: 10 }}
-                disabled={!canConfirm}
-                onClick={handleConfirmClick}
-            >
-                {confirmLabel}
-            </button>
+            {isSkipped ? (
+                <button
+                    type="button"
+                    className="secondary-button"
+                    style={{ width: '100%', marginTop: 10 }}
+                    onClick={handleUndoSkipClick}
+                >
+                    Desfazer pulo
+                </button>
+            ) : (
+                <>
+                    <button
+                        type="button"
+                        className="primary-button"
+                        style={{ width: '100%', marginTop: 10 }}
+                        disabled={!canConfirm}
+                        onClick={handleConfirmClick}
+                    >
+                        {confirmLabel}
+                    </button>
+                    <div className="set-skip-actions">
+                        <button type="button" className="secondary-button" onClick={handleSkipSetClick}>
+                            Pular série
+                        </button>
+                        <button type="button" className="secondary-button" onClick={handleSkipExerciseClick}>
+                            Pular exercício
+                        </button>
+                    </div>
+                </>
+            )}
             <SaveStatusLabel hasEverSaved={hasEverSaved} pendingOperation={pendingOperation} />
         </div>
     )
@@ -287,6 +367,7 @@ function toFieldState(existingSet: WorkoutSetRow | undefined): SetFieldState {
         rirText: existingSet?.rir != null ? String(existingSet.rir) : '',
         noteText: existingSet?.note ?? '',
         completedAt: existingSet?.completed_at ?? null,
+        skippedAt: existingSet?.skipped_at ?? null,
     }
 
     return fieldState

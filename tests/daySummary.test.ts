@@ -37,6 +37,7 @@ function buildSetRow(overrides: Partial<WorkoutSetRow>): WorkoutSetRow {
         rir: 2,
         note: null,
         completed_at: '2026-09-28T12:00:00.000Z',
+        skipped_at: null,
         updated_at: '2026-09-28T12:00:00.000Z',
     }
 
@@ -86,7 +87,33 @@ describe('summarizeWorkoutSets', () => {
 
         const supinoFirstSet = summary.exercises[0].sets[0]
         expect(supinoFirstSet.isCompleted).toBe(false)
+        expect(supinoFirstSet.status).toBe('pending')
         expect(supinoFirstSet.loadKg).toBeNull()
         expect(summary.orphanSets).toHaveLength(0)
+    })
+
+    it('marca série pulada com status skipped, sem contar como concluída, mantendo o comentário', () => {
+        const sets = [
+            buildSetRow({ exercise_key: 'supino', set_index: 0 }),
+            buildSetRow({
+                exercise_key: 'supino',
+                set_index: 1,
+                load_kg: null,
+                reps: null,
+                rir: null,
+                note: 'cotovelo',
+                completed_at: null,
+                skipped_at: '2026-09-28T12:10:00.000Z',
+            }),
+        ]
+
+        const summary = summarizeWorkoutSets(SNAPSHOT, sets)
+
+        const [firstSet, skippedSet] = summary.exercises[0].sets
+        expect(firstSet.status).toBe('completed')
+        expect(firstSet.isCompleted).toBe(true)
+        expect(skippedSet.status).toBe('skipped')
+        expect(skippedSet.isCompleted).toBe(false)
+        expect(skippedSet.note).toBe('cotovelo')
     })
 })

@@ -60,6 +60,7 @@ type WorkoutSetRow = {
     rir: number | null
     note: string | null
     completed_at: string | null
+    skipped_at: string | null
     updated_at: string
 }
 
@@ -198,7 +199,13 @@ export type Database = {
             >
             workout_sets: TableDefinition<
                 WorkoutSetRow,
-                { id?: string; updated_at?: string; rir?: number | null; note?: string | null },
+                {
+                    id?: string
+                    updated_at?: string
+                    rir?: number | null
+                    note?: string | null
+                    skipped_at?: string | null
+                },
                 Record<never, never>
             >
             food_entries: TableDefinition<

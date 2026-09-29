@@ -1,3 +1,4 @@
+import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
 
 export type WorkoutSetSummary = {
@@ -7,6 +8,7 @@ export type WorkoutSetSummary = {
     rir: number | null
     note: string | null
     isCompleted: boolean
+    status: SetStatus
 }
 
 export type WorkoutExerciseSummary = {
@@ -32,7 +34,8 @@ export function summarizeWorkoutSets(snapshot: WorkoutSnapshot, sets: WorkoutSet
         const exerciseSets: WorkoutSetSummary[] = exercicio.series.map((serie) => {
             const key = setKey(exercicio.exercise_key, serie.set_index)
             knownKeys.add(key)
-            const matchingSet = setsByKey.get(key) ?? null
+            const matchingSet = setsByKey.get(key)
+            const status = setStatusOf(matchingSet)
 
             const setSummary: WorkoutSetSummary = {
                 setIndex: serie.set_index,
@@ -40,7 +43,8 @@ export function summarizeWorkoutSets(snapshot: WorkoutSnapshot, sets: WorkoutSet
                 reps: matchingSet?.reps ?? null,
                 rir: matchingSet?.rir ?? null,
                 note: matchingSet?.note ?? null,
-                isCompleted: matchingSet?.completed_at != null,
+                isCompleted: status === 'completed',
+                status,
             }
             return setSummary
         })

@@ -3,7 +3,9 @@ import { useState } from 'react'
 import { CardioSection } from '@/features/cardio/CardioSection'
 import { FeelingScaleInput } from '@/features/cardio/FeelingScaleInput'
 import { updateSessionFeeling } from '@/features/workout/api'
-import type { WorkoutSessionRow } from '@/features/workout/types'
+import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
+import { countSetsByStatus } from '@/features/workout/sessionProgress'
+import { setKey, type WorkoutSessionRow, type WorkoutSetRow } from '@/features/workout/types'
 import type { IsoDate } from '@/lib/dateUtils'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -11,10 +13,11 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type WorkoutFinishPanelProps = {
     session: WorkoutSessionRow
     sessionDate: IsoDate
+    sets: WorkoutSetRow[]
     onSessionUpdated: (session: WorkoutSessionRow) => void
 }
 
-export function WorkoutFinishPanel({ session, sessionDate, onSessionUpdated }: WorkoutFinishPanelProps) {
+export function WorkoutFinishPanel({ session, sessionDate, sets, onSessionUpdated }: WorkoutFinishPanelProps) {
     const [feelingNote, setFeelingNote] = useState(session.feeling_note ?? '')
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
 
@@ -47,15 +50,20 @@ export function WorkoutFinishPanel({ session, sessionDate, onSessionUpdated }: W
         }
     }
 
+    const activeWindow = deriveSessionActiveWindow(sets)
+    const setsByKey = new Map(sets.map((set) => [setKey(set.exercise_key, set.set_index), set]))
+    const statusCounts = countSetsByStatus(session.workout_snapshot, setsByKey)
+
     return (
         <div>
             <div className="card">
                 <p style={{ marginTop: 0, marginBottom: 4, fontWeight: 600 }}>Treino concluído</p>
-                {session.finished_at && (
-                    <p style={{ marginTop: 0, fontSize: 13, color: '#52525b' }}>
-                        Duração: {formatSessionDuration(session.created_at, session.finished_at)}
-                    </p>
-                )}
+                <p style={{ marginTop: 0, fontSize: 13, color: '#52525b' }}>
+                    {statusCounts.completed} {statusCounts.completed === 1 ? 'concluída' : 'concluídas'} ·{' '}
+                    {statusCounts.skipped} {statusCounts.skipped === 1 ? 'pulada' : 'puladas'}
+                    {activeWindow &&
+                        ` · Duração: ${formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}`}
+                </p>
                 <div className="field">
                     <label>Como foi o treino?</label>
                     <FeelingScaleInput value={session.feeling_scale} onChange={handleFeelingScaleChange} />
@@ -91,15 +99,4 @@ function SaveStatusLabel({ status }: { status: SaveStatus }) {
     }
 
     return <p className="save-status">Salvo</p>
-}
-
-export function formatSessionDuration(startIso: string, endIso: string): string {
-    const totalMinutes = Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000))
-    const hours = Math.floor(totalMinutes / 60)
-    const minutes = totalMinutes % 60
-
-    if (hours === 0) {
-        return `${minutes} min`
-    }
-    return `${hours}h ${minutes}min`
 }

@@ -291,6 +291,87 @@ button, input, select {
     background: #18181b;
 }
 
+.progress-track__segment--skipped {
+    background: #a1a1aa;
+}
+
+.exercise-picker {
+    margin-bottom: 10px;
+}
+
+.exercise-picker__toggle {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d4d4d8;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #18181b;
+    font-size: 14px;
+    text-align: left;
+}
+
+.exercise-picker__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.exercise-picker__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 12px;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #18181b;
+    font-size: 14px;
+    text-align: left;
+}
+
+.exercise-picker__item--current {
+    border-color: #18181b;
+    font-weight: 600;
+}
+
+.exercise-picker__item--done {
+    color: #16a34a;
+}
+
+.exercise-picker__item--skipped {
+    color: #71717a;
+}
+
+.exercise-picker__status {
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.set-skip-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.set-skip-actions .secondary-button {
+    flex: 1;
+}
+
+.set-skipped-badge {
+    display: inline-block;
+    margin: 8px 0 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f4f4f5;
+    color: #52525b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
 .results-grid {
     display: flex;
     flex-direction: column;

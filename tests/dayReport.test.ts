@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { DaySummary } from '@/features/results/api'
 import { buildDayReport } from '@/features/results/dayReport'
 import type { RoutineRow } from '@/features/routine/types'
+import type { WorkoutSetRow } from '@/features/workout/types'
 import type { WorkoutSnapshot } from '@/lib/databaseTypes'
 
 const TODAY = '2026-09-28'
@@ -22,6 +23,36 @@ const SNAPSHOT: WorkoutSnapshot = {
             ],
         },
     ],
+}
+
+const SNAPSHOT_WITH_THREE_SETS: WorkoutSnapshot = {
+    ...SNAPSHOT,
+    exercicios: [
+        {
+            ...SNAPSHOT.exercicios[0],
+            series: [
+                ...SNAPSHOT.exercicios[0].series,
+                { set_index: 2, repeticoes_min: 8, repeticoes_max: 10, carga_sugerida: 40 },
+            ],
+        },
+    ],
+}
+
+function buildWorkoutSet(overrides: Partial<WorkoutSetRow>): WorkoutSetRow {
+    const baseSet: WorkoutSetRow = {
+        id: `set-${overrides.set_index ?? 0}`,
+        session_id: 'session-1',
+        exercise_key: 'supino',
+        set_index: 0,
+        load_kg: 40,
+        reps: 10,
+        rir: null,
+        note: null,
+        completed_at: null,
+        skipped_at: null,
+        updated_at: '2026-09-28T12:00:00.000Z',
+    }
+    return { ...baseSet, ...overrides }
 }
 
 function buildSummary(overrides: Partial<DaySummary> = {}): DaySummary {
@@ -143,6 +174,7 @@ describe('buildDayReport', () => {
                     rir: 2,
                     note: null,
                     completed_at: '2026-09-28T12:10:00.000Z',
+                    skipped_at: null,
                     updated_at: '2026-09-28T12:10:00.000Z',
                 },
             ],
@@ -224,6 +256,62 @@ describe('buildDayReport', () => {
         const report = buildDayReport(summary, [], TODAY, TODAY)
 
         expect(report.highlights).toEqual([])
+    })
+
+    it('conta séries puladas no destaque e tira a duração das séries, não da sessão', () => {
+        const summary = buildSummary({
+            workoutSession: {
+                id: 'session-1',
+                user_id: 'user-1',
+                session_date: TODAY,
+                plan_id: 'plan-1',
+                workout_key: 'treino_a',
+                workout_snapshot: SNAPSHOT_WITH_THREE_SETS,
+                finished_at: '2026-09-28T18:00:00.000Z',
+                feeling_scale: null,
+                feeling_note: null,
+                created_at: '2026-09-28T08:00:00.000Z',
+                updated_at: '2026-09-28T18:00:00.000Z',
+            },
+            workoutSets: [
+                buildWorkoutSet({ set_index: 0, completed_at: '2026-09-28T12:00:00.000Z' }),
+                buildWorkoutSet({ set_index: 1, completed_at: '2026-09-28T12:45:00.000Z' }),
+                buildWorkoutSet({
+                    set_index: 2,
+                    load_kg: null,
+                    reps: null,
+                    completed_at: null,
+                    skipped_at: '2026-09-28T12:50:00.000Z',
+                }),
+            ],
+        })
+
+        const report = buildDayReport(summary, [], TODAY, TODAY)
+
+        expect(report.highlights[0]).toBe('Treino: 2 de 3 séries (1 pulada), 45 min')
+    })
+
+    it('omite a duração do destaque quando não há duas séries concluídas', () => {
+        const summary = buildSummary({
+            workoutSession: {
+                id: 'session-1',
+                user_id: 'user-1',
+                session_date: TODAY,
+                plan_id: 'plan-1',
+                workout_key: 'treino_a',
+                workout_snapshot: SNAPSHOT,
+                finished_at: '2026-09-28T13:00:00.000Z',
+                feeling_scale: null,
+                feeling_note: null,
+                created_at: '2026-09-28T12:00:00.000Z',
+                updated_at: '2026-09-28T13:00:00.000Z',
+            },
+            workoutSets: [buildWorkoutSet({ set_index: 0, completed_at: '2026-09-28T12:10:00.000Z' })],
+        })
+
+        const report = buildDayReport(summary, [], TODAY, TODAY)
+
+        expect(report.highlights[0]).toBe('Treino: 1 de 2 séries')
     })
 
     it('trata dia passado com "não foi feito" em vez de "ainda falta"', () => {

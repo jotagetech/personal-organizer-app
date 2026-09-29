@@ -16,6 +16,7 @@ import {
     classifyOutboxError,
     countByStatus,
     enqueueOperation,
+    enqueueOperations,
     markOperationAttempt,
     naturalKeyOf,
     nextBackoffDelayMs,
@@ -24,6 +25,8 @@ import {
     removeOperation,
     replaceOperationInQueue,
     type OutboxOperation,
+    type OutboxSetValues,
+    type UpsertSetOperation,
 } from '@/lib/outbox/outboxQueue'
 import { loadOutboxQueue, saveOutboxQueue } from '@/lib/outbox/outboxStorage'
 
@@ -33,13 +36,7 @@ type EnqueueUpsertSetInput = {
     snapshot: WorkoutSnapshot
     exerciseKey: string
     setIndex: number
-    values: {
-        loadKg: number | null
-        reps: number | null
-        rir: number | null
-        note: string | null
-        completedAt: string | null
-    }
+    values: OutboxSetValues
 }
 
 type OutboxContextValue = {
@@ -48,12 +45,28 @@ type OutboxContextValue = {
     isOnline: boolean
     getOperationsForDate: (sessionDate: string) => OutboxOperation[]
     enqueueUpsertSet: (input: EnqueueUpsertSetInput) => void
+    enqueueUpsertSets: (inputs: EnqueueUpsertSetInput[]) => void
     enqueueFinishSession: (sessionDate: string) => void
     discardOperation: (naturalKey: string) => void
     listFailedOperations: () => OutboxOperation[]
 }
 
 const OutboxContext = createContext<OutboxContextValue | null>(null)
+
+function buildUpsertSetOperation(input: EnqueueUpsertSetInput, enqueuedAt: string): UpsertSetOperation {
+    return {
+        kind: 'upsert_set',
+        sessionDate: input.sessionDate,
+        planId: input.planId,
+        snapshot: input.snapshot,
+        exerciseKey: input.exerciseKey,
+        setIndex: input.setIndex,
+        values: input.values,
+        enqueuedAt,
+        attempts: 0,
+        status: 'pending',
+    }
+}
 
 // Nem toda finalização de sessão está acompanhada de uma série pendente na
 // mesma leva de envio (a última série pode ter sido confirmada numa leva
@@ -144,9 +157,12 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                             rir: operation.values.rir,
                             note: operation.values.note,
                             completedAt: operation.values.completedAt,
+                            skippedAt: operation.values.skippedAt,
                         })
                     } else {
-                        await finishSession(sessionId)
+                        // A fila pode ficar horas sem sinal: a hora de fim é a do
+                        // momento em que o treino terminou, não a do envio.
+                        await finishSession(sessionId, operation.enqueuedAt)
                     }
 
                     madeProgress = true
@@ -237,19 +253,20 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
             isOnline,
             getOperationsForDate: (sessionDate: string) => operationsForDate(queue, sessionDate),
             enqueueUpsertSet: (input: EnqueueUpsertSetInput) => {
-                const operation: OutboxOperation = {
-                    kind: 'upsert_set',
-                    sessionDate: input.sessionDate,
-                    planId: input.planId,
-                    snapshot: input.snapshot,
-                    exerciseKey: input.exerciseKey,
-                    setIndex: input.setIndex,
-                    values: input.values,
-                    enqueuedAt: new Date().toISOString(),
-                    attempts: 0,
-                    status: 'pending',
-                }
+                const operation = buildUpsertSetOperation(input, new Date().toISOString())
                 updateQueue(enqueueOperation(queueRef.current, operation))
+                void runFlushCycle()
+            },
+            // Várias séries de uma vez (pular exercício) entram numa única
+            // gravação da fila e num único ciclo de envio, em vez de disparar
+            // um flush por série.
+            enqueueUpsertSets: (inputs: EnqueueUpsertSetInput[]) => {
+                if (inputs.length === 0) {
+                    return
+                }
+                const enqueuedAt = new Date().toISOString()
+                const operations = inputs.map((input) => buildUpsertSetOperation(input, enqueuedAt))
+                updateQueue(enqueueOperations(queueRef.current, operations))
                 void runFlushCycle()
             },
             enqueueFinishSession: (sessionDate: string) => {

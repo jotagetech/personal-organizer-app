@@ -10,7 +10,8 @@ import type { FoodEntryRow, FoodUnit } from '@/features/food/types'
 import { getDaySummary, type DaySummary } from '@/features/results/api'
 import { buildDayReport, type DayReport } from '@/features/results/dayReport'
 import { summarizeWorkoutSets, type WorkoutExerciseSummary, type WorkoutSetSummary } from '@/features/results/daySummary'
-import { formatSessionDuration } from '@/features/workout/WorkoutFinishPanel'
+import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
+import type { SetStatus } from '@/features/workout/sessionProgress'
 import type { WorkoutSessionRow, WorkoutSetRow } from '@/features/workout/types'
 import { todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 
@@ -141,15 +142,17 @@ function WorkoutDaySection({ session, sets, onOpenWorkout }: WorkoutDaySectionPr
 
 function WorkoutSessionDetail({ session, sets }: { session: WorkoutSessionRow; sets: WorkoutSetRow[] }) {
     const workoutSummary = summarizeWorkoutSets(session.workout_snapshot, sets)
+    const activeWindow = deriveSessionActiveWindow(sets)
+    const sessionDetailParts = [
+        activeWindow ? `Duração: ${formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}` : null,
+        session.feeling_scale !== null ? feelingEmoji(session.feeling_scale) : null,
+    ].filter((part): part is string => part !== null)
 
     return (
         <div>
             <p style={{ fontWeight: 600, margin: '0 0 4px' }}>{session.workout_snapshot.nome}</p>
-            {session.finished_at && (
-                <p style={{ fontSize: 13, color: '#52525b', margin: '0 0 8px' }}>
-                    Duração: {formatSessionDuration(session.created_at, session.finished_at)}
-                    {session.feeling_scale !== null ? ` · ${feelingEmoji(session.feeling_scale)}` : ''}
-                </p>
+            {session.finished_at && sessionDetailParts.length > 0 && (
+                <p style={{ fontSize: 13, color: '#52525b', margin: '0 0 8px' }}>{sessionDetailParts.join(' · ')}</p>
             )}
             {session.feeling_note && <p style={{ fontSize: 13, margin: '0 0 8px' }}>{session.feeling_note}</p>}
             {workoutSummary.exercises.map((exercise) => (
@@ -172,7 +175,7 @@ function WorkoutExerciseDetail({ exercise }: { exercise: WorkoutExerciseSummary 
             {exercise.sets.map((set) => (
                 <p
                     key={set.setIndex}
-                    style={{ fontSize: 13, margin: '0 0 2px', color: set.isCompleted ? '#18181b' : '#a1a1aa' }}
+                    style={{ fontSize: 13, margin: '0 0 2px', color: SET_STATUS_COLORS[set.status] }}
                 >
                     Série {set.setIndex}: {formatSetSummary(set)}
                 </p>
@@ -181,8 +184,17 @@ function WorkoutExerciseDetail({ exercise }: { exercise: WorkoutExerciseSummary 
     )
 }
 
+const SET_STATUS_COLORS: Record<SetStatus, string> = {
+    completed: '#18181b',
+    skipped: '#71717a',
+    pending: '#a1a1aa',
+}
+
 function formatSetSummary(set: WorkoutSetSummary): string {
-    if (!set.isCompleted) {
+    if (set.status === 'skipped') {
+        return set.note ? `pulada · ${set.note}` : 'pulada'
+    }
+    if (set.status === 'pending') {
         return 'não registrada'
     }
 

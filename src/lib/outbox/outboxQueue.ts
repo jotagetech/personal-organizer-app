@@ -12,6 +12,7 @@ export type OutboxSetValues = {
     rir: number | null
     note: string | null
     completedAt: string | null
+    skippedAt: string | null
 }
 
 export type UpsertSetOperation = {
@@ -67,6 +68,10 @@ export function enqueueOperation(queue: OutboxOperation[], operation: OutboxOper
     const nextQueue = [...queue]
     nextQueue[existingIndex] = operation
     return nextQueue
+}
+
+export function enqueueOperations(queue: OutboxOperation[], operations: OutboxOperation[]): OutboxOperation[] {
+    return operations.reduce(enqueueOperation, queue)
 }
 
 export function removeOperation(queue: OutboxOperation[], naturalKey: string): OutboxOperation[] {
@@ -266,6 +271,7 @@ export function buildOverlaySetRow(
         rir: operation.values.rir,
         note: operation.values.note,
         completed_at: operation.values.completedAt,
+        skipped_at: operation.values.skippedAt,
         updated_at: operation.enqueuedAt,
     }
 }

@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import {
     BACKOFF_SCHEDULE_MS,
+    buildOverlaySetRow,
     buildSendPlan,
     classifyOutboxError,
     enqueueOperation,
+    enqueueOperations,
     naturalKeyOf,
     nextBackoffDelayMs,
     overlayPendingSets,
@@ -42,7 +44,7 @@ function upsertSetOperation(overrides: Partial<UpsertSetOperation> = {}): Upsert
         snapshot: snapshotWithOneExercise(),
         exerciseKey: 'supino',
         setIndex: 1,
-        values: { loadKg: 60, reps: 10, rir: null, note: null, completedAt: '2026-09-28T12:00:00.000Z' },
+        values: { loadKg: 60, reps: 10, rir: null, note: null, completedAt: '2026-09-28T12:00:00.000Z', skippedAt: null },
         enqueuedAt: '2026-09-28T12:00:00.000Z',
         attempts: 0,
         status: 'pending',
@@ -63,9 +65,9 @@ function finishSessionOperation(overrides: Partial<FinishSessionOperation> = {})
 
 describe('enqueueOperation', () => {
     it('agrupa por chave natural: a segunda escrita da mesma série substitui a primeira', () => {
-        const firstWrite = upsertSetOperation({ values: { loadKg: 40, reps: 8, rir: null, note: null, completedAt: null } })
+        const firstWrite = upsertSetOperation({ values: { loadKg: 40, reps: 8, rir: null, note: null, completedAt: null, skippedAt: null } })
         const secondWrite = upsertSetOperation({
-            values: { loadKg: 45, reps: 10, rir: 2, note: null, completedAt: '2026-09-28T12:01:00.000Z' },
+            values: { loadKg: 45, reps: 10, rir: 2, note: null, completedAt: '2026-09-28T12:01:00.000Z', skippedAt: null },
         })
 
         const queue = enqueueOperation(enqueueOperation([], firstWrite), secondWrite)
@@ -185,7 +187,7 @@ describe('overlayPendingSets', () => {
     it('sobrepõe uma série pendente numa data sem nenhuma sessão no servidor ainda', () => {
         const pendingOperation = upsertSetOperation({
             setIndex: 1,
-            values: { loadKg: 50, reps: 10, rir: null, note: null, completedAt: '2026-09-28T12:00:00.000Z' },
+            values: { loadKg: 50, reps: 10, rir: null, note: null, completedAt: '2026-09-28T12:00:00.000Z', skippedAt: null },
         })
 
         const overlaid = overlayPendingSets(new Map(), [pendingOperation], '2026-09-28')
@@ -207,12 +209,13 @@ describe('overlayPendingSets', () => {
             rir: null,
             note: null,
             completed_at: null,
+            skipped_at: null,
             updated_at: '2026-09-28T11:00:00.000Z',
         }
         const serverSetsByKey = new Map([[setKey('supino', 1), serverSet]])
         const pendingOperation = upsertSetOperation({
             setIndex: 1,
-            values: { loadKg: 45, reps: 10, rir: 1, note: 'ombro ok', completedAt: '2026-09-28T12:00:00.000Z' },
+            values: { loadKg: 45, reps: 10, rir: 1, note: 'ombro ok', completedAt: '2026-09-28T12:00:00.000Z', skippedAt: null },
         })
 
         const overlaid = overlayPendingSets(serverSetsByKey, [pendingOperation], '2026-09-28')
@@ -238,7 +241,7 @@ describe('findFirstIncompletePosition com séries sobrepostas pela fila', () => 
         const snapshot = snapshotWithOneExercise()
         const pendingOperation = upsertSetOperation({
             setIndex: 1,
-            values: { loadKg: 50, reps: 10, rir: null, note: null, completedAt: '2026-09-28T12:00:00.000Z' },
+            values: { loadKg: 50, reps: 10, rir: null, note: null, completedAt: '2026-09-28T12:00:00.000Z', skippedAt: null },
         })
 
         const overlaid = overlayPendingSets(new Map(), [pendingOperation], '2026-09-28')
@@ -250,8 +253,8 @@ describe('findFirstIncompletePosition com séries sobrepostas pela fila', () => 
     it('resolve null quando a última série pendente completa o treino', () => {
         const snapshot = snapshotWithOneExercise()
         const pendingOperations = [
-            upsertSetOperation({ setIndex: 1, values: { loadKg: 50, reps: 10, rir: null, note: null, completedAt: '2026-09-28T12:00:00.000Z' } }),
-            upsertSetOperation({ setIndex: 2, values: { loadKg: 50, reps: 9, rir: null, note: null, completedAt: '2026-09-28T12:01:00.000Z' } }),
+            upsertSetOperation({ setIndex: 1, values: { loadKg: 50, reps: 10, rir: null, note: null, completedAt: '2026-09-28T12:00:00.000Z', skippedAt: null } }),
+            upsertSetOperation({ setIndex: 2, values: { loadKg: 50, reps: 9, rir: null, note: null, completedAt: '2026-09-28T12:01:00.000Z', skippedAt: null } }),
         ]
 
         const overlaid = overlayPendingSets(new Map(), pendingOperations, '2026-09-28')
@@ -324,5 +327,85 @@ describe('naturalKeyOf', () => {
         expect(naturalKeyOf(upsertSetOperation({ setIndex: 1 }))).not.toBe(
             naturalKeyOf(upsertSetOperation({ setIndex: 2 })),
         )
+    })
+})
+
+describe('enqueueOperations', () => {
+    it('agrupa pela chave natural como uma sequência de enqueueOperation', () => {
+        const existingWrite = upsertSetOperation({ setIndex: 1 })
+        const skipSetOne = upsertSetOperation({
+            setIndex: 1,
+            values: { loadKg: null, reps: null, rir: null, note: null, completedAt: null, skippedAt: '2026-09-28T12:10:00.000Z' },
+        })
+        const skipSetTwo = upsertSetOperation({
+            setIndex: 2,
+            values: { loadKg: null, reps: null, rir: null, note: null, completedAt: null, skippedAt: '2026-09-28T12:10:00.000Z' },
+        })
+
+        const queue = enqueueOperations([existingWrite, finishSessionOperation()], [skipSetOne, skipSetTwo])
+
+        expect(queue).toHaveLength(3)
+        expect(queue[0]).toEqual(skipSetOne)
+        expect(queue[2]).toEqual(skipSetTwo)
+    })
+
+    it('devolve a fila intacta quando não há nada para enfileirar', () => {
+        const queue = [upsertSetOperation()]
+
+        expect(enqueueOperations(queue, [])).toEqual(queue)
+    })
+})
+
+describe('buildOverlaySetRow', () => {
+    it('mapeia skipped_at a partir dos valores da operação', () => {
+        const operation = upsertSetOperation({
+            values: { loadKg: null, reps: null, rir: null, note: 'joelho', completedAt: null, skippedAt: '2026-09-28T12:10:00.000Z' },
+        })
+
+        const row = buildOverlaySetRow(operation, undefined)
+
+        expect(row.skipped_at).toBe('2026-09-28T12:10:00.000Z')
+        expect(row.completed_at).toBeNull()
+        expect(row.note).toBe('joelho')
+    })
+})
+
+describe('persistência da fila com séries puladas', () => {
+    function createFakeStorage(initialValue?: string): OutboxStorageAdapter {
+        let storedValue = initialValue ?? null
+
+        return {
+            getItem: () => storedValue,
+            setItem: (_key: string, value: string) => {
+                storedValue = value
+            },
+            removeItem: () => {
+                storedValue = null
+            },
+        }
+    }
+
+    it('carrega envelope gravado antes do estado pulada, com skippedAt null, sem descartar a fila', () => {
+        const legacyOperation = {
+            ...upsertSetOperation(),
+            values: { loadKg: 60, reps: 10, rir: null, note: null, completedAt: '2026-09-28T12:00:00.000Z' },
+        }
+        const storage = createFakeStorage(JSON.stringify({ formatVersion: 1, operations: [legacyOperation] }))
+
+        const loadedQueue = loadOutboxQueue(storage)
+
+        expect(loadedQueue).toHaveLength(1)
+        expect(loadedQueue[0]).toEqual({ ...legacyOperation, values: { ...legacyOperation.values, skippedAt: null } })
+    })
+
+    it('preserva skippedAt na ida e volta pelo armazenamento', () => {
+        const storage = createFakeStorage()
+        const skippedOperation = upsertSetOperation({
+            values: { loadKg: null, reps: null, rir: null, note: null, completedAt: null, skippedAt: '2026-09-28T12:10:00.000Z' },
+        })
+
+        saveOutboxQueue(storage, [skippedOperation])
+
+        expect(loadOutboxQueue(storage)).toEqual([skippedOperation])
     })
 })

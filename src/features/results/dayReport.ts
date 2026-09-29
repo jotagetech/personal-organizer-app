@@ -2,6 +2,7 @@ import { computeDailyTotals } from '@/features/food/dailyTotals'
 import type { DaySummary } from '@/features/results/api'
 import { summarizeWorkoutSets } from '@/features/results/daySummary'
 import type { RoutineRow } from '@/features/routine/types'
+import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
 import type { IsoDate } from '@/lib/dateUtils'
 
 export type DayReportBand = 'no_routine' | 'complete' | 'mostly' | 'partial' | 'none'
@@ -57,12 +58,15 @@ function buildHighlights(summary: DaySummary): string[] {
     if (summary.workoutSession?.finished_at) {
         const workoutSummary = summarizeWorkoutSets(summary.workoutSession.workout_snapshot, summary.workoutSets)
         const totalSets = workoutSummary.exercises.reduce((count, exercise) => count + exercise.sets.length, 0)
-        const completedSets = workoutSummary.exercises.reduce(
-            (count, exercise) => count + exercise.sets.filter((set) => set.isCompleted).length,
-            0,
-        )
-        const duration = formatDurationMinutes(summary.workoutSession.created_at, summary.workoutSession.finished_at)
-        highlights.push(`Treino: ${completedSets} de ${totalSets} séries, ${duration}`)
+        const allSets = workoutSummary.exercises.flatMap((exercise) => exercise.sets)
+        const completedSets = allSets.filter((set) => set.status === 'completed').length
+        const skippedSets = allSets.filter((set) => set.status === 'skipped').length
+        const skippedText = skippedSets > 0 ? ` (${skippedSets} ${skippedSets === 1 ? 'pulada' : 'puladas'})` : ''
+        const activeWindow = deriveSessionActiveWindow(summary.workoutSets)
+        const durationText = activeWindow
+            ? `, ${formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}`
+            : ''
+        highlights.push(`Treino: ${completedSets} de ${totalSets} séries${skippedText}${durationText}`)
     }
 
     if (summary.foodEntries.length > 0) {
@@ -84,17 +88,6 @@ function buildHighlights(summary: DaySummary): string[] {
     }
 
     return highlights.slice(0, MAX_HIGHLIGHTS)
-}
-
-function formatDurationMinutes(startIso: string, endIso: string): string {
-    const totalMinutes = Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000))
-    const hours = Math.floor(totalMinutes / 60)
-    const minutes = totalMinutes % 60
-
-    if (hours === 0) {
-        return `${minutes} min`
-    }
-    return `${hours}h ${minutes}min`
 }
 
 type HeadlineContext = {

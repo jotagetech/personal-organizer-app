@@ -172,6 +172,7 @@ export type SetInput = {
     rir: number | null
     note: string | null
     completedAt: string | null
+    skippedAt: string | null
 }
 
 export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
@@ -187,6 +188,7 @@ export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
                 rir: input.rir,
                 note: input.note,
                 completed_at: input.completedAt,
+                skipped_at: input.skippedAt,
             },
             { onConflict: 'session_id,exercise_key,set_index' },
         )
@@ -200,10 +202,10 @@ export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
     return data
 }
 
-export async function finishSession(sessionId: string): Promise<WorkoutSessionRow> {
+export async function finishSession(sessionId: string, finishedAt?: string): Promise<WorkoutSessionRow> {
     const { data, error } = await supabase
         .from('workout_sessions')
-        .update({ finished_at: new Date().toISOString() })
+        .update({ finished_at: finishedAt ?? new Date().toISOString() })
         .eq('id', sessionId)
         .select('*')
         .single()

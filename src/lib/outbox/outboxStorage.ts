@@ -44,6 +44,9 @@ const outboxSetValuesSchema = z.object({
     rir: z.number().nullable(),
     note: z.string().nullable(),
     completedAt: z.string().nullable(),
+    // Filas gravadas antes de existir o estado "pulada" não têm esse campo;
+    // obrigatório, o envelope inteiro falharia na validação e seria descartado.
+    skippedAt: z.string().nullable().default(null),
 })
 
 const outboxOperationStatusSchema = z.enum(['pending', 'failed'])

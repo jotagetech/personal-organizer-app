@@ -47,6 +47,9 @@ npm run dev
       `CHANGELOG.md`)
    7. `20260928020000_daily_routine.sql` (checklist diário de hábitos:
       templates recorrentes e registros por dia, ver `CHANGELOG.md`)
+   8. `20260928030000_workout_sets_skipped.sql` (coluna `skipped_at` em
+      `workout_sets` para série pulada, com check impedindo série concluída e
+      pulada ao mesmo tempo, ver `CHANGELOG.md`)
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
