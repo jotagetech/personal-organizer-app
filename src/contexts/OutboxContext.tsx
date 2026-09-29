@@ -10,6 +10,7 @@ import {
 } from 'react'
 
 import {
+    appendSessionExercise,
     clearSessionStart,
     createSession,
     finishSession,
@@ -18,7 +19,7 @@ import {
     recordSessionStart,
     upsertSet,
 } from '@/features/workout/api'
-import type { WorkoutSnapshot } from '@/features/workout/types'
+import type { WorkoutSnapshot, WorkoutSnapshotExercise } from '@/features/workout/types'
 import {
     buildSendPlan,
     cancelSessionStart,
@@ -33,8 +34,10 @@ import {
     operationsForDate,
     operationsWithStatus,
     removeOperation,
+    removePendingExtraExercises,
     removeSentOperation,
     replaceSentOperation,
+    type AddExtraExerciseOperation,
     type OutboxOperation,
     type OutboxSetValues,
     type SessionPauseValues,
@@ -59,6 +62,13 @@ type EnqueueStartSessionInput = {
     startedAt: string
 }
 
+type EnqueueAddExtraExerciseInput = {
+    sessionDate: string
+    planId: string
+    snapshot: WorkoutSnapshot
+    exercise: WorkoutSnapshotExercise
+}
+
 type OutboxContextValue = {
     pendingCount: number
     failedCount: number
@@ -76,6 +86,10 @@ type OutboxContextValue = {
     // exatamente o mesmo horário que vai para o servidor.
     enqueueStartSession: (input: EnqueueStartSessionInput) => void
     enqueueFinishSession: (sessionDate: string, finishedAt: string) => void
+    // O snapshot é o do treino já com o extra, para a operação criar a sessão
+    // sozinha quando ela ainda não existe no servidor.
+    enqueueAddExtraExercise: (input: EnqueueAddExtraExerciseInput) => void
+    discardPendingExtraExercises: (sessionDate: string) => void
     // O estado da pausa já vem calculado por quem chama, com a hora do toque.
     enqueuePauseSession: (sessionDate: string, pause: SessionPauseValues, pausedAt: string) => void
     enqueueResumeSession: (sessionDate: string, pause: SessionPauseValues, resumedAt: string) => void
@@ -108,6 +122,19 @@ function buildStartSessionOperation(input: EnqueueStartSessionInput): StartSessi
         planId: input.planId,
         snapshot: input.snapshot,
         enqueuedAt: input.startedAt,
+        attempts: 0,
+        status: 'pending',
+    }
+}
+
+function buildAddExtraExerciseOperation(input: EnqueueAddExtraExerciseInput): AddExtraExerciseOperation {
+    return {
+        kind: 'add_extra_exercise',
+        sessionDate: input.sessionDate,
+        planId: input.planId,
+        snapshot: input.snapshot,
+        exercise: input.exercise,
+        enqueuedAt: new Date().toISOString(),
         attempts: 0,
         status: 'pending',
     }
@@ -251,6 +278,8 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                         })
                     } else if (operation.kind === 'start_session') {
                         await recordSessionStart(sessionId, operation.enqueuedAt)
+                    } else if (operation.kind === 'add_extra_exercise') {
+                        await appendSessionExercise(sessionId, operation.exercise)
                     } else if (operation.kind === 'pause_session' || operation.kind === 'resume_session') {
                         await recordSessionPause(sessionId, operation.pause)
                     } else {
@@ -385,6 +414,13 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                 }
                 updateQueue(enqueueOperation(queueRef.current, operation))
                 void runFlushCycle()
+            },
+            enqueueAddExtraExercise: (input: EnqueueAddExtraExerciseInput) => {
+                updateQueue(enqueueOperation(queueRef.current, buildAddExtraExerciseOperation(input)))
+                void runFlushCycle()
+            },
+            discardPendingExtraExercises: (sessionDate: string) => {
+                updateQueue(removePendingExtraExercises(queueRef.current, sessionDate))
             },
             enqueuePauseSession: (sessionDate: string, pause: SessionPauseValues, pausedAt: string) => {
                 const operation: OutboxOperation = {

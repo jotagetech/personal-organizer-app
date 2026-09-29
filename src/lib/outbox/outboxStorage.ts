@@ -7,7 +7,7 @@
 import { z } from 'zod'
 
 import { SET_METRICS } from '@/lib/workoutPlanSchema'
-import { storedWorkoutSnapshotSchema } from '@/lib/workoutSnapshotSchema'
+import { snapshotExerciseSchema, storedWorkoutSnapshotSchema } from '@/lib/workoutSnapshotSchema'
 import type { OutboxOperation } from '@/lib/outbox/outboxQueue'
 
 const OUTBOX_STORAGE_KEY = 'outbox_queue'
@@ -71,6 +71,17 @@ const startSessionOperationSchema = z.object({
     status: outboxOperationStatusSchema,
 })
 
+const addExtraExerciseOperationSchema = z.object({
+    kind: z.literal('add_extra_exercise'),
+    sessionDate: z.string(),
+    planId: z.string(),
+    snapshot: storedWorkoutSnapshotSchema,
+    exercise: snapshotExerciseSchema,
+    enqueuedAt: z.string(),
+    attempts: z.number().int().nonnegative(),
+    status: outboxOperationStatusSchema,
+})
+
 const finishSessionOperationSchema = z.object({
     kind: z.literal('finish_session'),
     sessionDate: z.string(),
@@ -108,6 +119,7 @@ const cancelSessionStartOperationSchema = z.object({
 const outboxOperationSchema = z.discriminatedUnion('kind', [
     upsertSetOperationSchema,
     startSessionOperationSchema,
+    addExtraExerciseOperationSchema,
     sessionPauseOperationSchema('pause_session'),
     sessionPauseOperationSchema('resume_session'),
     cancelSessionStartOperationSchema,

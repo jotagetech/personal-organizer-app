@@ -1,3 +1,4 @@
+import { appendExtraExercise, type PastSessionSnapshot } from '@/features/workout/extraExercises'
 import { canonicalizeJson, sha256Hex } from '@/lib/canonicalJson'
 import { supabase } from '@/lib/supabaseClient'
 import type { OutboxDropValues } from '@/lib/outbox/outboxQueue'
@@ -8,13 +9,14 @@ import {
     type WorkoutPlan,
     type WorkoutPlanValidationResult,
 } from '@/lib/workoutPlanSchema'
-import { normalizeWorkoutSnapshot } from '@/lib/workoutSnapshotSchema'
+import { normalizeWorkoutSnapshot, storedWorkoutSnapshotSchema } from '@/lib/workoutSnapshotSchema'
 import type {
     StoredWorkoutSessionRow,
     WorkoutSessionRow,
     WorkoutSetDropRow,
     WorkoutSetRow,
     WorkoutSnapshot,
+    WorkoutSnapshotExercise,
 } from '@/features/workout/types'
 
 export type ImportPlanResult =
@@ -205,6 +207,64 @@ export async function replaceSessionWorkout(params: {
 
     const [updatedSession] = data
     return normalizeSessionRow(updatedSession)
+}
+
+// Lê o snapshot gravado e acrescenta o exercício só quando a chave ainda não
+// está lá: reenviar depois de uma resposta perdida não duplica, e dois extras
+// enviados em sequência somam em vez de um sobrescrever o outro.
+export async function appendSessionExercise(sessionId: string, exercise: WorkoutSnapshotExercise): Promise<void> {
+    const { data, error } = await supabase
+        .from('workout_sessions')
+        .select('workout_snapshot')
+        .eq('id', sessionId)
+        .single()
+
+    if (error || !data) {
+        throw new Error(error?.message ?? 'Sessão não encontrada para acrescentar o exercício')
+    }
+
+    const currentSnapshot = normalizeWorkoutSnapshot(data.workout_snapshot)
+    const nextSnapshot = appendExtraExercise(currentSnapshot, exercise)
+    if (nextSnapshot === currentSnapshot) {
+        return
+    }
+
+    const { error: updateError } = await supabase
+        .from('workout_sessions')
+        .update({ workout_snapshot: nextSnapshot })
+        .eq('id', sessionId)
+
+    if (updateError) {
+        throw new Error(updateError.message)
+    }
+}
+
+const PAST_EXTRA_SESSIONS_LIMIT = 60
+
+// Só as sessões que têm algum extra no snapshot, filtradas no banco pela
+// contenção do jsonb, para a sugestão não baixar o histórico inteiro. Um
+// snapshot que não lê no formato atual fica de fora em vez de derrubar a
+// lista.
+export async function listPastSessionsWithExtras(excludedDate: string): Promise<PastSessionSnapshot[]> {
+    const { data, error } = await supabase
+        .from('workout_sessions')
+        .select('session_date, workout_snapshot')
+        .neq('session_date', excludedDate)
+        .contains('workout_snapshot', { exercicios: [{ extra: true }] })
+        .order('session_date', { ascending: false })
+        .limit(PAST_EXTRA_SESSIONS_LIMIT)
+        .abortSignal(AbortSignal.timeout(CRITICAL_READ_TIMEOUT_MS))
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const pastSessions = (data ?? []).flatMap((row) => {
+        const parsed = storedWorkoutSnapshotSchema.safeParse(row.workout_snapshot)
+        return parsed.success ? [{ sessionDate: row.session_date, snapshot: parsed.data }] : []
+    })
+
+    return pastSessions
 }
 
 export type SetInput = {

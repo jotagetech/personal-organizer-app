@@ -2,7 +2,13 @@
 // só as regras de agrupamento, ordenação de envio, backoff e classificação de
 // erro, pra poder testar sem mock de I/O.
 
-import { setKey, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
+import { appendExtraExercises } from '@/features/workout/extraExercises'
+import {
+    setKey,
+    type WorkoutSetRow,
+    type WorkoutSnapshot,
+    type WorkoutSnapshotExercise,
+} from '@/features/workout/types'
 import type { SetMetric } from '@/lib/workoutPlanSchema'
 
 export type OutboxOperationStatus = 'pending' | 'failed'
@@ -61,6 +67,23 @@ export type StartSessionOperation = {
     status: OutboxOperationStatus
 }
 
+// Exercício extra acrescentado ao treino do dia. Leva o exercício inteiro, e
+// não só o snapshot resultante, para o envio acrescentar ao que o servidor já
+// tem em vez de sobrescrever: dois extras feitos sem sinal viram duas
+// operações (a chave de agrupamento inclui o exercício), e cada uma soma o seu.
+// O snapshot vai junto para a operação conseguir criar a sessão sozinha,
+// antes de qualquer início ou série.
+export type AddExtraExerciseOperation = {
+    kind: 'add_extra_exercise'
+    sessionDate: string
+    planId: string
+    snapshot: WorkoutSnapshot
+    exercise: WorkoutSnapshotExercise
+    enqueuedAt: string
+    attempts: number
+    status: OutboxOperationStatus
+}
+
 export type FinishSessionOperation = {
     kind: 'finish_session'
     sessionDate: string
@@ -106,6 +129,7 @@ export type CancelSessionStartOperation = {
 export type OutboxOperation =
     | UpsertSetOperation
     | StartSessionOperation
+    | AddExtraExerciseOperation
     | PauseSessionOperation
     | ResumeSessionOperation
     | CancelSessionStartOperation
@@ -113,7 +137,7 @@ export type OutboxOperation =
 
 // Operações que conseguem criar a sessão do dia sozinhas, sem depender de uma
 // sessão já confirmada no servidor.
-export type SessionCreatingOperation = UpsertSetOperation | StartSessionOperation
+export type SessionCreatingOperation = UpsertSetOperation | StartSessionOperation | AddExtraExerciseOperation
 
 export type OutboxErrorClassification = 'retry' | 'terminal'
 
@@ -133,12 +157,16 @@ export function naturalKeyOf(operation: OutboxOperation): string {
     if (operation.kind === 'pause_session' || operation.kind === 'resume_session') {
         return `session_pause:${operation.sessionDate}`
     }
+    if (operation.kind === 'add_extra_exercise') {
+        return `add_extra_exercise:${operation.sessionDate}:${operation.exercise.exercise_key}`
+    }
 
     return `${operation.kind}:${operation.sessionDate}`
 }
 
 export function isSessionCreatingOperation(operation: OutboxOperation): operation is SessionCreatingOperation {
-    const createsSession = operation.kind === 'upsert_set' || operation.kind === 'start_session'
+    const createsSession =
+        operation.kind === 'upsert_set' || operation.kind === 'start_session' || operation.kind === 'add_extra_exercise'
 
     return createsSession
 }
@@ -262,14 +290,18 @@ export function countByStatus(queue: OutboxOperation[]): { pending: number; fail
 // Dentro da mesma data, o início vai antes da pausa, das séries e da
 // finalização, na ordem em que as coisas aconteceram no treino. O
 // cancelamento de um início anterior vem antes de tudo: com ele ainda na
-// fila, um início novo só vale depois de o antigo ter sido desfeito.
+// fila, um início novo só vale depois de o antigo ter sido desfeito. O
+// exercício extra entra no snapshot do servidor antes de qualquer série,
+// inclusive as dele; extras entre si mantêm a ordem da fila (a ordenação é
+// estável), que é a ordem em que foram acrescentados.
 const SEND_PRIORITY_BY_KIND: Record<OutboxOperation['kind'], number> = {
     cancel_session_start: 0,
     start_session: 1,
-    pause_session: 2,
-    resume_session: 2,
-    upsert_set: 3,
-    finish_session: 4,
+    add_extra_exercise: 2,
+    pause_session: 3,
+    resume_session: 3,
+    upsert_set: 4,
+    finish_session: 5,
 }
 
 function sendPriority(operation: OutboxOperation): number {
@@ -290,7 +322,9 @@ export function sortQueueForSending(queue: OutboxOperation[]): OutboxOperation[]
 // referenciada por id em cada operação da fila, então o início e a série
 // carregam os dados pra recriar a sessão (idempotente via upsert) antes de
 // serem enviados. Sessões já garantidas na mesma passada de envio não
-// precisam ser repetidas.
+// precisam ser repetidas. O snapshot da criação já leva os extras pendentes
+// da data, porque o início ou a série que cria a sessão podem ter sido
+// enfileirados antes deles.
 export function buildSendPlan(queue: OutboxOperation[]): SendStep[] {
     const pendingOperations = queue.filter((operation) => operation.status === 'pending')
     const sortedOperations = sortQueueForSending(pendingOperations)
@@ -303,7 +337,7 @@ export function buildSendPlan(queue: OutboxOperation[]): SendStep[] {
                 type: 'ensure_session',
                 sessionDate: operation.sessionDate,
                 planId: operation.planId,
-                snapshot: operation.snapshot,
+                snapshot: applyPendingExtraExercises(operation.snapshot, pendingOperations, operation.sessionDate),
             })
             sessionsAlreadyEnsured.add(operation.sessionDate)
         }
@@ -488,6 +522,53 @@ export function cancelSessionStart(
         status: 'pending',
     }
     return enqueueOperation(queueWithoutStart, cancelOperation)
+}
+
+export function pendingExtraExercises(operations: OutboxOperation[], sessionDate: string): WorkoutSnapshotExercise[] {
+    const exercises = operations
+        .filter(
+            (operation): operation is AddExtraExerciseOperation =>
+                operation.kind === 'add_extra_exercise' && operation.sessionDate === sessionDate,
+        )
+        .map((operation) => operation.exercise)
+
+    return exercises
+}
+
+// Extras ainda não confirmados no servidor entram por cima do snapshot que
+// veio de lá (ou do que a fila guarda), como as séries pendentes.
+export function applyPendingExtraExercises(
+    snapshot: WorkoutSnapshot,
+    operations: OutboxOperation[],
+    sessionDate: string,
+): WorkoutSnapshot {
+    const snapshotWithExtras = appendExtraExercises(snapshot, pendingExtraExercises(operations, sessionDate))
+
+    return snapshotWithExtras
+}
+
+// Sessão que só existe na fila: o treino vem da primeira operação que cria a
+// sessão, com os extras pendentes por cima.
+export function resolvePendingSnapshot(operations: OutboxOperation[], sessionDate: string): WorkoutSnapshot | null {
+    const sessionCreatingOperation = operations.find(
+        (operation): operation is SessionCreatingOperation =>
+            isSessionCreatingOperation(operation) && operation.sessionDate === sessionDate,
+    )
+    if (!sessionCreatingOperation) {
+        return null
+    }
+
+    return applyPendingExtraExercises(sessionCreatingOperation.snapshot, operations, sessionDate)
+}
+
+// Trocar o treino do dia descarta os extras que ainda não saíram do aparelho:
+// eles foram acrescentados ao treino anterior.
+export function removePendingExtraExercises(queue: OutboxOperation[], sessionDate: string): OutboxOperation[] {
+    const remainingQueue = queue.filter(
+        (operation) => !(operation.kind === 'add_extra_exercise' && operation.sessionDate === sessionDate),
+    )
+
+    return remainingQueue
 }
 
 export function findPendingFinishedAt(operations: OutboxOperation[], sessionDate: string): string | null {
