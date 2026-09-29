@@ -1,5 +1,5 @@
 import { ArrowLeftRight, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Minus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/features/workout/api'
 import { DropSetStepRow } from '@/features/workout/DropSetStepRow'
@@ -37,6 +37,14 @@ import {
 } from '@/features/workout/types'
 import { deriveSessionActiveWindow } from '@/features/workout/sessionDuration'
 import {
+    canCancelStart,
+    pauseAt,
+    pauseStateFromSession,
+    resumeAt as resumePauseAt,
+    RUNNING_PAUSE_STATE,
+    type SessionPauseState,
+} from '@/features/workout/sessionPause'
+import {
     buildSkipValuesForRemainingSets,
     findFirstIncompletePosition,
     findNextUnresolvedPosition,
@@ -61,10 +69,13 @@ import { useOutbox } from '@/contexts/OutboxContext'
 import {
     buildOverlaySetRow,
     findPendingFinishedAt,
+    findPendingPauseState,
     findPendingStartedAt,
     isSessionCreatingOperation,
     overlayPendingDrops,
     overlayPendingSets,
+    resolveEffectivePauseState,
+    resolveEffectiveStartedAt,
     type OutboxDropValues,
     type OutboxOperation,
 } from '@/lib/outbox/outboxQueue'
@@ -107,10 +118,20 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // porque a sessão carregada não é recarregada depois de cada envio.
     const [startedAt, setStartedAt] = useState<string | null>(null)
     const [finishedAt, setFinishedAt] = useState<string | null>(null)
+    // A pausa também fica numa ref: confirmar a última série retoma e
+    // finaliza no mesmo toque, e a finalização precisa ver a pausa já
+    // encerrada, não o estado da renderização anterior.
+    const [pauseState, setPauseState] = useState<SessionPauseState>(RUNNING_PAUSE_STATE)
+    const pauseStateRef = useRef<SessionPauseState>(RUNNING_PAUSE_STATE)
 
     function updateRestTimer(nextTimer: RestTimer | null) {
         saveRestTimer(nextTimer)
         setRestTimer(nextTimer)
+    }
+
+    function updatePauseState(nextPauseState: SessionPauseState) {
+        pauseStateRef.current = nextPauseState
+        setPauseState(nextPauseState)
     }
 
     useEffect(() => {
@@ -232,6 +253,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         setDropsBySetKey(new Map())
         setWorkoutChoices(null)
         setStartedAt(findPendingStartedAt(operations, sessionDate))
+        updatePauseState(findPendingPauseState(operations, sessionDate) ?? RUNNING_PAUSE_STATE)
         setFinishedAt(findPendingFinishedAt(operations, sessionDate))
         if (isFinishPending || firstIncompletePosition === null) {
             goToSet(null)
@@ -255,7 +277,10 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         const overlaidSetsByKey = overlayPendingSets(nextSetsByKey, pendingOperationsForDate, sessionDate)
 
         setSession(existingSession)
-        setStartedAt(existingSession.started_at ?? findPendingStartedAt(pendingOperationsForDate, sessionDate))
+        setStartedAt(resolveEffectiveStartedAt(existingSession.started_at ?? null, pendingOperationsForDate, sessionDate))
+        updatePauseState(
+            resolveEffectivePauseState(pauseStateFromSession(existingSession), pendingOperationsForDate, sessionDate),
+        )
         setFinishedAt(existingSession.finished_at ?? findPendingFinishedAt(pendingOperationsForDate, sessionDate))
         setSnapshot(existingSession.workout_snapshot)
         setSetsByKey(overlaidSetsByKey)
@@ -277,6 +302,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             const finishedSession = await finishSession(existingSession.id, activeWindow?.endIso)
             setSession(finishedSession)
             setFinishedAt(finishedSession.finished_at)
+            resumeWorkoutAt(finishedSession.finished_at ?? new Date().toISOString())
             refreshDayStatus()
         }
     }
@@ -424,6 +450,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
 
         if (nextPosition === null) {
             const nowIso = new Date().toISOString()
+            // Treino finalizado nunca fica pausado, por qualquer caminho que
+            // tenha chegado à última série.
+            resumeWorkoutAt(nowIso)
             updateRestTimer(null)
             setFinishedAt(nowIso)
             outbox.enqueueFinishSession(sessionDate, nowIso)
@@ -443,13 +472,61 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         startWorkoutAt(new Date().toISOString())
     }
 
-    // Resolver uma série sem ter tocado em "Iniciar treino" começa o treino
-    // naquele momento, para a duração nunca ficar sem início.
-    function ensureWorkoutStarted() {
-        if (startedAt) {
+    function handlePauseWorkout() {
+        if (!startedAt || finishedAt) {
             return
         }
-        startWorkoutAt(new Date().toISOString())
+        const pausedAtIso = new Date().toISOString()
+        const nextPauseState = pauseAt(pauseStateRef.current, pausedAtIso)
+        if (nextPauseState === pauseStateRef.current) {
+            return
+        }
+        updatePauseState(nextPauseState)
+        outbox.enqueuePauseSession(sessionDate, nextPauseState, pausedAtIso)
+    }
+
+    function resumeWorkoutAt(resumedAtIso: string) {
+        const nextPauseState = resumePauseAt(pauseStateRef.current, resumedAtIso)
+        if (nextPauseState === pauseStateRef.current) {
+            return
+        }
+        updatePauseState(nextPauseState)
+        outbox.enqueueResumeSession(sessionDate, nextPauseState, resumedAtIso)
+    }
+
+    function handleResumeWorkout() {
+        resumeWorkoutAt(new Date().toISOString())
+    }
+
+    // Volta para antes de "Iniciar treino". Só existe enquanto nenhuma série
+    // foi resolvida: depois disso o treino já aconteceu e só pode ser pausado.
+    function handleCancelStart() {
+        if (!startedAt || !canCancelStart(currentEffectiveSetsByKey().values())) {
+            return
+        }
+        const confirmedCancel = window.confirm('Cancelar o início do treino? O relógio volta para antes de iniciar.')
+        if (!confirmedCancel) {
+            return
+        }
+
+        setStartedAt(null)
+        updatePauseState(RUNNING_PAUSE_STATE)
+        setSession((previous) =>
+            previous ? { ...previous, started_at: null, paused_at: null, paused_seconds: 0 } : previous,
+        )
+        outbox.cancelSessionStart(sessionDate, new Date().toISOString())
+    }
+
+    // Resolver uma série sem ter tocado em "Iniciar treino" começa o treino
+    // naquele momento, para a duração nunca ficar sem início; com o treino
+    // pausado, retoma nele, porque houve treino a partir dali.
+    function ensureWorkoutRunning() {
+        const nowIso = new Date().toISOString()
+        if (!startedAt) {
+            startWorkoutAt(nowIso)
+            return
+        }
+        resumeWorkoutAt(nowIso)
     }
 
     // O estado (setsByKey e a fila) ainda não reflete a série recém-salva
@@ -464,7 +541,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     }
 
     function handleSetSkipped(row: WorkoutSetRow) {
-        ensureWorkoutStarted()
+        ensureWorkoutRunning()
         handleSetResolved(row)
     }
 
@@ -475,7 +552,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         if (!snapshot || !position) {
             return
         }
-        ensureWorkoutStarted()
+        ensureWorkoutRunning()
 
         const nextStep = nextStepWithinSet(snapshot, mainStepOf(position))
         if (nextStep) {
@@ -513,6 +590,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         if (!snapshot || !position) {
             return
         }
+        ensureWorkoutRunning()
 
         const nextStep = nextStepWithinSet(snapshot, { position, dropPosition })
         if (nextStep) {
@@ -525,6 +603,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     }
 
     function handleSkipRemainingDrops() {
+        ensureWorkoutRunning()
         if (position) {
             startRestAfterSet(currentEffectiveSetsByKey(), position)
         }
@@ -577,7 +656,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             setIndex,
             values,
         }))
-        ensureWorkoutStarted()
+        ensureWorkoutRunning()
         outbox.enqueueUpsertSets(upsertInputs)
 
         const enqueuedAt = new Date().toISOString()
@@ -609,7 +688,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // Todas as rodadas chegam juntas da conferência; o bloco não tem descanso
     // próprio depois dele, então o assistente segue direto.
     function handleIntervalConfirmed(rows: WorkoutSetRow[]) {
-        ensureWorkoutStarted()
+        ensureWorkoutRunning()
         const mergedSetsByKey = new Map(currentEffectiveSetsByKey())
         for (const row of rows) {
             mergedSetsByKey.set(setKey(row.exercise_key, row.set_index), row)
@@ -734,11 +813,20 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             <div>
                 <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
                 {startedAt && effectiveFinishedAt && (
-                    <SessionClock startedAt={startedAt} finishedAt={effectiveFinishedAt} onStart={handleStartWorkout} />
+                    <SessionClock
+                        startedAt={startedAt}
+                        finishedAt={effectiveFinishedAt}
+                        pauseState={pauseState}
+                        canCancelStart={false}
+                        onStart={handleStartWorkout}
+                        onPause={handlePauseWorkout}
+                        onResume={handleResumeWorkout}
+                        onCancelStart={handleCancelStart}
+                    />
                 )}
                 {session ? (
                     <WorkoutFinishPanel
-                        session={withLocalSessionTimes(session, startedAt, effectiveFinishedAt)}
+                        session={withLocalSessionTimes(session, startedAt, effectiveFinishedAt, pauseState)}
                         sessionDate={sessionDate}
                         sets={Array.from(effectiveSetsByKey.values())}
                         onSessionUpdated={setSession}
@@ -769,7 +857,16 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     return (
         <div>
             <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
-            <SessionClock startedAt={startedAt} finishedAt={null} onStart={handleStartWorkout} />
+            <SessionClock
+                startedAt={startedAt}
+                finishedAt={null}
+                pauseState={pauseState}
+                canCancelStart={canCancelStart(effectiveSetsByKey.values())}
+                onStart={handleStartWorkout}
+                onPause={handlePauseWorkout}
+                onResume={handleResumeWorkout}
+                onCancelStart={handleCancelStart}
+            />
             <ExercisePicker
                 progress={summarizeExerciseProgress(snapshot, effectiveSetsByKey)}
                 currentExerciseIndex={position.exerciseIndex}
@@ -869,14 +966,18 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
 
 // O painel de finalização mede a duração pela sessão; enquanto início e fim
 // ainda estão só no aparelho, eles entram por cima do que veio do servidor.
+// A pausa da tela já junta o servidor e a fila, então vale sempre ela.
 function withLocalSessionTimes(
     session: WorkoutSessionRow,
     startedAt: string | null,
     finishedAt: string | null,
+    pauseState: SessionPauseState,
 ): WorkoutSessionRow {
     const sessionWithTimes: WorkoutSessionRow = {
         ...session,
         started_at: session.started_at ?? startedAt,
+        paused_at: pauseState.pausedAt,
+        paused_seconds: pauseState.pausedSeconds,
         finished_at: session.finished_at ?? finishedAt,
     }
 

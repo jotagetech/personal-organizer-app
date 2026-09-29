@@ -2558,7 +2558,7 @@ h1, h2, h3, h4 {
     gap: 8px;
     min-height: 48px;
     margin-bottom: 12px;
-    padding: 6px 14px;
+    padding: 4px 4px 4px 14px;
     border: 2px solid var(--color-accent);
     border-radius: var(--radius-md);
     background: var(--color-accent-soft);
@@ -2588,7 +2588,48 @@ h1, h2, h3, h4 {
     color: var(--color-text);
 }
 
+.session-clock__button {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 96px;
+    min-height: var(--touch-target);
+    margin-left: 4px;
+    padding: 0 12px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.session-clock__button:active {
+    background: var(--color-surface-pressed);
+}
+
+/* Pausado, a faixa troca para o tom de atenção: o tempo parado precisa ser
+   notado de relance, para não esquecer de retomar. */
+.session-clock--paused {
+    border-color: var(--color-pending);
+    background: var(--color-pending-surface);
+}
+
+.session-clock--paused .session-clock__icon,
+.session-clock--paused .session-clock__label {
+    color: var(--color-pending-text);
+}
+
+.session-clock__cancel {
+    width: 100%;
+    margin-top: -4px;
+    margin-bottom: 12px;
+    color: var(--color-text-secondary);
+}
+
 .session-clock--finished {
+    padding-right: 14px;
     border-color: var(--color-border-strong);
     background: var(--color-surface-muted);
 }
