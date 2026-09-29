@@ -3,6 +3,40 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
+## 2026-09-29
+
+### Alterado
+
+- Repaginação visual do app inteiro, sem mudar regra de negócio nem dados.
+  Todas as cores, raios, sombras e fontes saem de variáveis CSS, com tema
+  claro e escuro automático pelo sistema. Cards brancos sem borda com sombra
+  leve, listas dentro de um card com divisórias finas e índigo como única
+  cor de destaque. As convenções de cor continuam: âmbar para pendente,
+  vermelho para atrasado, verde para concluído, cinza para série pulada e
+  azul para item de comida sem dado nutricional.
+- Modo treino na aba Treino: a tela inteira fica escura, com lima como
+  destaque e como concluído, e nomes de exercício e números (carga, reps,
+  RIR, tempo) em fonte condensada grande.
+- Ícones de verdade (`lucide-react`) no lugar de emojis e caracteres usados
+  como ícone, com `aria-label` nos botões só de ícone.
+- Fontes embutidas no app (Inter no corpo e Barlow Condensed no modo
+  treino, via fontsource), servidas junto com o app, sem CDN externo.
+- Cabeçalho com o dia por extenso (tocar na data abre o calendário), barra
+  inferior com ícones e pílula na aba ativa e status de sincronização
+  compacto.
+- Alvos de toque de no mínimo 44px em botões e campos, e campos com fonte
+  de 16px para o iOS não dar zoom ao focar.
+- O relatório do dia em Resultados passa a expor as pendências de forma
+  estruturada (título e se está atrasada). O chip da pendência atrasada
+  mostra só o título, em vermelho, em vez de depender do sufixo
+  "(atrasada)" no texto. A lista de títulos com o sufixo continua igual.
+
+### Adicionado
+
+- Instalação na tela de início: `manifest.webmanifest`, ícones do app
+  (inclusive `apple-touch-icon`) e metatags de web app, com o nome
+  "Organizer" embaixo do ícone. A cor da barra do sistema acompanha o tema.
+
 ## 2026-09-28
 
 ### Corrigido

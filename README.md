@@ -13,6 +13,10 @@ especificação original da v0; muita coisa evoluiu desde então (ver
 - Validação de contrato com Zod (`src/lib/workoutPlanSchema.ts`), com JSON Schema
   gerado a partir dela (`npm run schema:generate`)
 - Testes com Vitest
+- Sem biblioteca de UI: CSS próprio em `src/index.css`, todo sobre variáveis
+  (tema claro/escuro automático e modo treino escuro na aba Treino), ícones
+  com `lucide-react` e fontes embutidas via fontsource (Inter e Barlow
+  Condensed)
 
 ## Rodando localmente
 
@@ -82,15 +86,15 @@ npm run dev
   ganha "Editar" (atalho direto pro item na tela de gerenciamento) e/ou
   "Remover" (desfaz a marcação), no lugar de desmarcar tocando de novo. A
   tela aceita tarefas avulsas para uma data escolhida (não só o dia
-  selecionado no momento). O menu "⋮" abre o gerenciamento dos itens
+  selecionado no momento). O menu de três pontos abre o gerenciamento dos itens
   recorrentes (criar, editar dias da semana e vínculo, arquivar).
 - **Treino**: importa plano de treino via JSON, sugere o treino do dia,
   registra um exercício/uma série por vez (carga, repetições, RIR opcional,
   comentário livre por série), com barra de progresso e opção de voltar.
   Finalizar o treino registra duração, sentimento (escala 1-5) e abre o
   registro de cardio do dia.
-- **Ciclo**: marca a data de início de um ciclo de treino (menu "⋮" na aba
-  Treino) e mostra "Dia N do ciclo", independente de trocas no plano.
+- **Ciclo**: marca a data de início de um ciclo de treino (menu de três pontos
+  na aba Treino) e mostra "Dia N do ciclo", independente de trocas no plano.
 - **Cardio**: catálogo de atividades cadastrado na hora, registro por dia
   (duração, distância opcional, sentimento, observação).
 - **Alimentação**: catálogo de alimentos com nutrição opcional (kcal/
@@ -138,6 +142,9 @@ Em uso real pelo autor, testado no celular. Ver `CHANGELOG.md` para o
 histórico de features e correções. Pendência conhecida: integração com
 Google Fit (sono/passos do Amazfit/Zepp), adiada por ser um projeto à parte
 (exige OAuth e uma Edge Function), ainda não implementada.
+
+Instalável na tela de início (manifest e ícones em `public/`, nome
+"Organizer"), abrindo em tela cheia como app.
 
 Sem service worker: a aba precisa estar aberta antes de o sinal cair. Uma
 série de treino confirmada com a aba já aberta entra na fila de envio e

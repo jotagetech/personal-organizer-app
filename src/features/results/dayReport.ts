@@ -7,11 +7,17 @@ import type { IsoDate } from '@/lib/dateUtils'
 
 export type DayReportBand = 'no_routine' | 'complete' | 'mostly' | 'partial' | 'none'
 
+export type DayReportPendingItem = {
+    title: string
+    isOverdue: boolean
+}
+
 export type DayReport = {
     band: DayReportBand
     routineDoneCount: number
     routineTotalCount: number
     pendingTitles: string[]
+    pendingItems: DayReportPendingItem[]
     highlights: string[]
     headline: string
 }
@@ -31,14 +37,15 @@ export function buildDayReport(
     const routineDoneCount = routineRows.filter(
         (row) => row.state === 'done' || row.state === 'done_manual_override',
     ).length
-    const pendingTitles = routineRows
+    const pendingItems = routineRows
         .filter((row) => row.state === 'pending')
-        .map((row) => (row.deadline === 'overdue' ? `${row.title} (atrasada)` : row.title))
+        .map((row) => ({ title: row.title, isOverdue: row.deadline === 'overdue' }))
+    const pendingTitles = pendingItems.map((item) => (item.isOverdue ? `${item.title} (atrasada)` : item.title))
     const band = deriveBand(routineDoneCount, routineTotalCount)
     const highlights = buildHighlights(summary)
     const headline = buildHeadline(band, { isToday, doneCount: routineDoneCount, totalCount: routineTotalCount }, date)
 
-    return { band, routineDoneCount, routineTotalCount, pendingTitles, highlights, headline }
+    return { band, routineDoneCount, routineTotalCount, pendingTitles, pendingItems, highlights, headline }
 }
 
 function deriveBand(doneCount: number, totalCount: number): DayReportBand {

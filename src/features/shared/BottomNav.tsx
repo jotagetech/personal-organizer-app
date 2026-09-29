@@ -16,6 +16,8 @@ const TABS: { key: AppTab; label: string; icon: LucideIcon }[] = [
 const TAB_ICON_SIZE = 22
 const ACTIVE_TAB_ICON_STROKE = 2.4
 const INACTIVE_TAB_ICON_STROKE = 2
+const INDICATOR_CHECK_SIZE = 9
+const INDICATOR_CHECK_STROKE = 4
 
 type BottomNavProps = {
     activeTab: AppTab
@@ -86,7 +88,7 @@ function TabIndicatorDot({ kind }: { kind: TabIndicatorKind }) {
     if (kind === 'done') {
         return (
             <span className="bottom-nav__indicator bottom-nav__indicator--done" aria-hidden="true">
-                <Check size={9} strokeWidth={4} />
+                <Check size={INDICATOR_CHECK_SIZE} strokeWidth={INDICATOR_CHECK_STROKE} />
             </span>
         )
     }

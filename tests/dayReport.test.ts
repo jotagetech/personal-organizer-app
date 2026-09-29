@@ -97,6 +97,21 @@ describe('buildDayReport', () => {
         expect(report.pendingTitles).toEqual(['Pagar boleto (atrasada)', 'Ligar pro dentista'])
     })
 
+    it('expõe as pendências estruturadas, com o título limpo e o atraso como flag', () => {
+        const rows = [
+            buildRoutineRow({ id: 'a', title: 'Pagar boleto', source: 'adhoc', deadline: 'overdue' }),
+            buildRoutineRow({ id: 'b', title: 'Ligar pro dentista', source: 'adhoc', deadline: 'due_today' }),
+            buildRoutineRow({ id: 'c', title: 'Academia', state: 'done' }),
+        ]
+
+        const report = buildDayReport(buildSummary(), rows, TODAY, TODAY)
+
+        expect(report.pendingItems).toEqual([
+            { title: 'Pagar boleto', isOverdue: true },
+            { title: 'Ligar pro dentista', isOverdue: false },
+        ])
+    })
+
     it('classifica como no_routine quando não há nenhum item de rotina no dia', () => {
         const report = buildDayReport(buildSummary(), [], TODAY, TODAY)
 

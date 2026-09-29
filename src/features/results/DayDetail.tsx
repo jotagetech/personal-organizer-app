@@ -9,7 +9,7 @@ import { computeDailyTotals, lacksNutrition } from '@/features/food/dailyTotals'
 import { FOOD_UNIT_LABELS, MEAL_CATEGORIES, MEAL_CATEGORY_LABELS } from '@/features/food/types'
 import type { FoodEntryRow, FoodUnit } from '@/features/food/types'
 import { getDaySummary, type DaySummary } from '@/features/results/api'
-import { buildDayReport, type DayReport } from '@/features/results/dayReport'
+import { buildDayReport, type DayReport, type DayReportPendingItem } from '@/features/results/dayReport'
 import { summarizeWorkoutSets, type WorkoutExerciseSummary, type WorkoutSetSummary } from '@/features/results/daySummary'
 import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
 import type { SetStatus } from '@/features/workout/sessionProgress'
@@ -19,10 +19,6 @@ import { todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 const SECTION_ICON_SIZE = 18
 const LINK_ICON_SIZE = 16
 const PERCENT = 100
-
-// O relatório marca a pendência atrasada só no texto do título; o sufixo é o
-// único sinal disponível aqui pra pintar essa pendência de vermelho.
-const OVERDUE_TITLE_SUFFIX = ' (atrasada)'
 
 type DayDetailProps = {
     selectedDate: IsoDate
@@ -138,13 +134,13 @@ function DayReportSection({ report, isToday }: DayReportSectionProps) {
                     </div>
                 </div>
             )}
-            {report.pendingTitles.length > 0 && (
+            {report.pendingItems.length > 0 && (
                 <div className="day-report__pending">
                     <p className="day-report__pending-label">{isToday ? 'Ainda falta: ' : 'Não foi feito: '}</p>
                     <ul className="day-report__chips">
-                        {report.pendingTitles.map((title) => (
-                            <li key={title} className={pendingChipClassName(title)}>
-                                {title}
+                        {report.pendingItems.map((item) => (
+                            <li key={item.title} className={pendingChipClassName(item)}>
+                                {item.title}
                             </li>
                         ))}
                     </ul>
@@ -161,9 +157,8 @@ function DayReportSection({ report, isToday }: DayReportSectionProps) {
     )
 }
 
-function pendingChipClassName(title: string): string {
-    const isOverdue = title.endsWith(OVERDUE_TITLE_SUFFIX)
-    const className = isOverdue ? 'day-report__chip day-report__chip--overdue' : 'day-report__chip'
+function pendingChipClassName(item: DayReportPendingItem): string {
+    const className = item.isOverdue ? 'day-report__chip day-report__chip--overdue' : 'day-report__chip'
 
     return className
 }
