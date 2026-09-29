@@ -1682,6 +1682,24 @@ h1, h2, h3, h4 {
     color: var(--color-text-muted);
 }
 
+/* Estado das notificações e o botão de ativar ou desativar, empilhados. */
+.push-settings {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.push-settings__status {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+}
+
+.push-settings .save-status {
+    margin: 0;
+}
+
 .export-panel__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

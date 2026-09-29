@@ -6,6 +6,7 @@ import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { BodyWeightLog, SleepLog } from '@/features/bodyMetrics/BodyMetricLogs'
 import { PeriodExportPanel } from '@/features/export/PeriodExportPanel'
 import { FoodItemsCatalog } from '@/features/food/FoodItemsCatalog'
+import { PushNotificationsSection } from '@/features/notifications/PushNotificationsSection'
 import { formatDateLabel } from '@/features/shared/DateHeader'
 import { todayInTimezone } from '@/lib/dateUtils'
 
@@ -104,6 +105,7 @@ function MenuHome({ onOpenTool }: { onOpenTool: (toolKey: MenuToolKey) => void }
                     ))}
                 </div>
             </section>
+            <PushNotificationsSection />
         </div>
     )
 }

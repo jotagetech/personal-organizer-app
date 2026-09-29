@@ -6,6 +6,7 @@ import '@fontsource/barlow-condensed/600.css'
 import '@fontsource/barlow-condensed/700.css'
 
 import { App } from '@/App'
+import { registerServiceWorker } from '@/features/notifications/pushApi'
 import '@/index.css'
 
 const rootElement = document.getElementById('root')
@@ -18,3 +19,5 @@ createRoot(rootElement).render(
         <App />
     </StrictMode>,
 )
+
+registerServiceWorker()

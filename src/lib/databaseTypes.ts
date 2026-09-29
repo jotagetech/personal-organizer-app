@@ -184,6 +184,28 @@ type RoutineDayEntryRow = {
     updated_at: string
 }
 
+type PushSubscriptionRow = {
+    id: string
+    user_id: string
+    endpoint: string
+    p256dh: string
+    auth: string
+    user_agent: string | null
+    created_at: string
+    updated_at: string
+}
+
+type ScheduledPushRow = {
+    user_id: string
+    kind: 'descanso'
+    fire_at: string
+    title: string
+    body: string
+    sent_at: string | null
+    created_at: string
+    updated_at: string
+}
+
 type TableDefinition<Row, InsertOverrides extends object, UpdateOverrides extends object> = {
     Row: Row
     Insert: Omit<Row, keyof InsertOverrides> & InsertOverrides
@@ -329,6 +351,16 @@ export type Database = {
                 },
                 Record<never, never>
             >
+            push_subscriptions: TableDefinition<
+                PushSubscriptionRow,
+                { id?: string; created_at?: string; updated_at?: string; user_agent?: string | null },
+                Record<never, never>
+            >
+            scheduled_pushes: TableDefinition<
+                ScheduledPushRow,
+                { created_at?: string; updated_at?: string; body?: string; sent_at?: string | null },
+                Record<never, never>
+            >
         }
         Views: Record<string, never>
         Functions: {
@@ -355,6 +387,15 @@ export type Database = {
                     p_drops: unknown
                 }
                 Returns: WorkoutSetDropRow[]
+            }
+            register_push_subscription: {
+                Args: {
+                    p_endpoint: string
+                    p_p256dh: string
+                    p_auth: string
+                    p_user_agent: string
+                }
+                Returns: undefined
             }
         }
     }
