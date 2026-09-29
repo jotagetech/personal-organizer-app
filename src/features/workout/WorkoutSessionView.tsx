@@ -1,8 +1,11 @@
-import { ArrowLeftRight, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Minus } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { ArrowLeftRight, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Minus, Plus } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+
+import { AddExtraExercisePanel } from '@/features/workout/AddExtraExercisePanel'
 
 import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/features/workout/api'
 import { DropSetStepRow } from '@/features/workout/DropSetStepRow'
+import { appendExtraExercise } from '@/features/workout/extraExercises'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
 import { IntervalStep } from '@/features/workout/IntervalStep'
 import { RestTimerBar } from '@/features/workout/RestTimerBar'
@@ -67,15 +70,16 @@ import { suggestWorkoutForWeekday } from '@/features/workout/workoutSelection'
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useOutbox } from '@/contexts/OutboxContext'
 import {
+    applyPendingExtraExercises,
     buildOverlaySetRow,
     findPendingFinishedAt,
     findPendingPauseState,
     findPendingStartedAt,
-    isSessionCreatingOperation,
     overlayPendingDrops,
     overlayPendingSets,
     resolveEffectivePauseState,
     resolveEffectiveStartedAt,
+    resolvePendingSnapshot,
     type OutboxDropValues,
     type OutboxOperation,
 } from '@/lib/outbox/outboxQueue'
@@ -112,6 +116,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     const [isSwitchingWorkout, setIsSwitchingWorkout] = useState(false)
     const [switchWorkoutErrorMessage, setSwitchWorkoutErrorMessage] = useState<string | null>(null)
     const [isExercisePickerOpen, setIsExercisePickerOpen] = useState(false)
+    const [isAddingExercise, setIsAddingExercise] = useState(false)
     const [restTimer, setRestTimer] = useState<RestTimer | null>(() => loadRestTimer(sessionDate))
     // Início e fim do treino como a tela enxerga: o que veio do servidor ou,
     // enquanto o envio não acontece, a hora guardada na fila. Ficam aqui
@@ -152,8 +157,13 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                     return
                 }
 
+                // Uma sessão nunca sincronizada ainda no servidor (o dia inteiro
+                // foi registrado sem sinal) não aparece em getSessionForDate; o
+                // treino em andamento continua vindo da própria fila de envio,
+                // inclusive quando só o início foi marcado ou um extra foi
+                // acrescentado e nenhuma série existe ainda.
                 const pendingOperationsForDate = outbox.getOperationsForDate(sessionDate)
-                const pendingSnapshot = findSnapshotInPendingOperations(pendingOperationsForDate)
+                const pendingSnapshot = resolvePendingSnapshot(pendingOperationsForDate, sessionDate)
                 if (pendingSnapshot) {
                     resumeFromPendingOperations(pendingSnapshot, pendingOperationsForDate, savedStep)
                     return
@@ -204,17 +214,6 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionDate, plan, reloadToken])
-
-    // Uma sessão nunca sincronizada ainda no servidor (o dia inteiro foi
-    // registrado sem sinal) não aparece em getSessionForDate; o treino em
-    // andamento continua vindo da própria fila de envio, inclusive quando só
-    // o início foi marcado e nenhuma série existe ainda.
-    function findSnapshotInPendingOperations(operations: OutboxOperation[]): WorkoutSnapshot | null {
-        const sessionCreatingOperation = operations.find(isSessionCreatingOperation)
-        const pendingSnapshot = sessionCreatingOperation?.snapshot ?? null
-
-        return pendingSnapshot
-    }
 
     function goToSet(nextPosition: StepPosition | null) {
         setPosition(nextPosition)
@@ -273,25 +272,32 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             nextSetsByKey.set(setKey(set.exercise_key, set.set_index), set)
         }
 
+        // Extras ainda na fila entram por cima do snapshot do servidor, como as
+        // séries: a retomada, o progresso e a finalização já contam com eles.
         const pendingOperationsForDate = outbox.getOperationsForDate(sessionDate)
         const overlaidSetsByKey = overlayPendingSets(nextSetsByKey, pendingOperationsForDate, sessionDate)
+        const effectiveSnapshot = applyPendingExtraExercises(
+            existingSession.workout_snapshot,
+            pendingOperationsForDate,
+            sessionDate,
+        )
 
-        setSession(existingSession)
+        setSession({ ...existingSession, workout_snapshot: effectiveSnapshot })
         setStartedAt(resolveEffectiveStartedAt(existingSession.started_at ?? null, pendingOperationsForDate, sessionDate))
         updatePauseState(
             resolveEffectivePauseState(pauseStateFromSession(existingSession), pendingOperationsForDate, sessionDate),
         )
         setFinishedAt(existingSession.finished_at ?? findPendingFinishedAt(pendingOperationsForDate, sessionDate))
-        setSnapshot(existingSession.workout_snapshot)
+        setSnapshot(effectiveSnapshot)
         setSetsByKey(overlaidSetsByKey)
         setDropsBySetKey(groupDropsBySetKey(sets, dropRows))
         setWorkoutChoices(null)
 
-        const resumePosition = findFirstIncompletePosition(existingSession.workout_snapshot, overlaidSetsByKey)
+        const resumePosition = findFirstIncompletePosition(effectiveSnapshot, overlaidSetsByKey)
         if (resumePosition === null) {
             goToSet(null)
         } else {
-            resumeAt(existingSession.workout_snapshot, overlaidSetsByKey, resumePosition, savedStep)
+            resumeAt(effectiveSnapshot, overlaidSetsByKey, resumePosition, savedStep)
         }
 
         const allSetsAlreadyResolved = resumePosition === null
@@ -300,7 +306,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             // reabertura: o fim real é a última série concluída, quando existe.
             const activeWindow = deriveSessionActiveWindow(Array.from(overlaidSetsByKey.values()))
             const finishedSession = await finishSession(existingSession.id, activeWindow?.endIso)
-            setSession(finishedSession)
+            setSession({ ...finishedSession, workout_snapshot: effectiveSnapshot })
             setFinishedAt(finishedSession.finished_at)
             resumeWorkoutAt(finishedSession.finished_at ?? new Date().toISOString())
             refreshDayStatus()
@@ -328,7 +334,8 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // antigo. Sem nada feito na data não há o que procurar; sem sinal, a troca
     // segue local como antes.
     async function findSessionCreatedMeanwhile(): Promise<WorkoutSessionRow | null> {
-        const hasAnythingRecorded = startedAt !== null || currentEffectiveSetsByKey().size > 0
+        const hasExtraExercise = snapshot?.exercicios.some((exercicio) => exercicio.extra === true) ?? false
+        const hasAnythingRecorded = startedAt !== null || currentEffectiveSetsByKey().size > 0 || hasExtraExercise
         if (!hasAnythingRecorded) {
             return null
         }
@@ -359,6 +366,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // a hora do início.
     function switchUnsavedWorkout(workout: Workout) {
         const nextSnapshot = buildWorkoutSnapshot(workout, planWeek, planDefaultRest(plan))
+        outbox.discardPendingExtraExercises(sessionDate)
         showUnsavedSnapshot(nextSnapshot, null)
         if (startedAt) {
             outbox.enqueueStartSession({ sessionDate, planId, snapshot: nextSnapshot, startedAt })
@@ -389,6 +397,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                 planId,
                 snapshot: nextSnapshot,
             })
+            outbox.discardPendingExtraExercises(sessionDate)
             setSnapshot(nextSnapshot)
             setSession(updatedSession)
             setSetsByKey(new Map())
@@ -705,6 +714,27 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         setIsExercisePickerOpen(false)
     }
 
+    // O extra entra só no snapshot desta sessão, no fim da lista, e o
+    // assistente vai direto para a primeira série dele. Não inicia o treino:
+    // isso continua sendo o toque em "Iniciar treino" ou a primeira série
+    // resolvida.
+    function handleAddExtraExercise(exercise: WorkoutSnapshotExercise) {
+        if (!snapshot || finishedAt || session?.finished_at) {
+            return
+        }
+        const nextSnapshot = appendExtraExercise(snapshot, exercise)
+        setIsAddingExercise(false)
+        setIsExercisePickerOpen(false)
+        if (nextSnapshot === snapshot) {
+            return
+        }
+
+        setSnapshot(nextSnapshot)
+        setSession((previous) => (previous ? { ...previous, workout_snapshot: nextSnapshot } : previous))
+        outbox.enqueueAddExtraExercise({ sessionDate, planId, snapshot: nextSnapshot, exercise })
+        goToSet({ exerciseIndex: nextSnapshot.exercicios.length - 1, setIndexInExercise: 0 })
+    }
+
     function handleGoBack() {
         if (!snapshot || !position) {
             return
@@ -872,8 +902,24 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                 progress={summarizeExerciseProgress(snapshot, effectiveSetsByKey)}
                 currentExerciseIndex={position.exerciseIndex}
                 isOpen={isExercisePickerOpen}
-                onToggle={() => setIsExercisePickerOpen((isOpen) => !isOpen)}
+                onToggle={() => {
+                    setIsExercisePickerOpen((isOpen) => !isOpen)
+                    setIsAddingExercise(false)
+                }}
                 onSelect={handleSelectExercise}
+                onRequestAddExercise={() => setIsAddingExercise(true)}
+                addExercisePanel={
+                    isAddingExercise ? (
+                        <AddExtraExercisePanel
+                            plan={plan}
+                            planWeek={planWeek}
+                            sessionDate={sessionDate}
+                            todaySnapshot={snapshot}
+                            onAdd={handleAddExtraExercise}
+                            onCancel={() => setIsAddingExercise(false)}
+                        />
+                    ) : null
+                }
             />
             {restTimer && (
                 <RestTimerBar
@@ -1047,9 +1093,21 @@ type ExercisePickerProps = {
     isOpen: boolean
     onToggle: () => void
     onSelect: (exerciseIndex: number) => void
+    onRequestAddExercise: () => void
+    // Com o painel aberto, ele ocupa o lugar do botão de adicionar no fim da
+    // lista.
+    addExercisePanel: ReactNode
 }
 
-function ExercisePicker({ progress, currentExerciseIndex, isOpen, onToggle, onSelect }: ExercisePickerProps) {
+function ExercisePicker({
+    progress,
+    currentExerciseIndex,
+    isOpen,
+    onToggle,
+    onSelect,
+    onRequestAddExercise,
+    addExercisePanel,
+}: ExercisePickerProps) {
     return (
         <div className="exercise-picker">
             <button type="button" className="exercise-picker__toggle" aria-expanded={isOpen} onClick={onToggle}>
@@ -1076,10 +1134,21 @@ function ExercisePicker({ progress, currentExerciseIndex, isOpen, onToggle, onSe
                             onClick={() => onSelect(exercise.exerciseIndex)}
                         >
                             <ExerciseStatusMarker exercise={exercise} />
-                            <span className="exercise-picker__name">{exercise.nome}</span>
+                            <span className="exercise-picker__name">
+                                {exercise.nome}
+                                {exercise.isExtra && <span className="exercise-picker__extra-tag">extra</span>}
+                            </span>
                             <span className="exercise-picker__status">{formatExerciseStatus(exercise)}</span>
                         </button>
                     ))}
+                    {addExercisePanel ? (
+                        <div className="exercise-picker__add-panel">{addExercisePanel}</div>
+                    ) : (
+                        <button type="button" className="exercise-picker__add" onClick={onRequestAddExercise}>
+                            <Plus size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                            Adicionar exercício
+                        </button>
+                    )}
                 </div>
             )}
         </div>

@@ -1035,6 +1035,91 @@ h1, h2, h3, h4 {
     color: var(--color-skipped);
 }
 
+.exercise-picker__extra-tag {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-text);
+    font-size: 11px;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+/* Último item da lista, separado dos exercícios pela mesma linha entre eles. */
+.exercise-picker__add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: var(--touch-target-large);
+    padding: 0 14px;
+    border: none;
+    border-top: 1px solid var(--color-divider);
+    background: transparent;
+    color: var(--color-accent-text);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.exercise-picker__add:active {
+    background: var(--color-surface-pressed);
+}
+
+.exercise-picker__add-panel {
+    padding: 12px 14px;
+    border-top: 1px solid var(--color-divider);
+}
+
+.extra-exercise__suggestions {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.extra-exercise__suggestion {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+    width: 100%;
+    min-height: var(--touch-target-large);
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    text-align: left;
+}
+
+.extra-exercise__suggestion + .extra-exercise__suggestion {
+    border-top: 1px solid var(--color-divider);
+}
+
+.extra-exercise__suggestion:active {
+    background: var(--color-surface-pressed);
+}
+
+.extra-exercise__suggestion-name {
+    font-size: 15px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.extra-exercise__suggestion-meta {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.extra-exercise__create {
+    margin-bottom: 8px;
+}
+
 /* Pular fica abaixo do confirmar e em texto, pra um toque apressado com a mão
    suada cair na ação principal e não num pulo por engano. */
 .set-skip-actions {
