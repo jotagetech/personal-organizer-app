@@ -54,8 +54,8 @@ export function resolveSessionDuration(session: SessionTimes, sets: WorkoutSetRo
     return derivedWindow
 }
 
-export function durationInMinutes(window: SessionActiveWindow): number {
-    const elapsedMs = new Date(window.endIso).getTime() - new Date(window.startIso).getTime()
+export function durationInMinutes(activeWindow: SessionActiveWindow): number {
+    const elapsedMs = new Date(activeWindow.endIso).getTime() - new Date(activeWindow.startIso).getTime()
     const totalMinutes = Math.max(0, Math.round(elapsedMs / MS_PER_MINUTE))
 
     return totalMinutes

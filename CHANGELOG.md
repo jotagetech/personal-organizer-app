@@ -7,6 +7,29 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Cronômetro da sessão de treino. Antes de começar, o topo do treino mostra
+  "Iniciar treino" (botão grande); ao tocar, o início é gravado e o topo
+  passa a mostrar o tempo decorrido, em `m:ss` até uma hora e `h:mm:ss`
+  depois, calculado do horário de início (certo depois de sair da aba,
+  bloquear a tela ou reabrir o app). Confirmar ou pular uma série sem ter
+  tocado no botão inicia o treino naquele momento. O início entra na fila
+  otimista como operação própria (`start_session`), que cria a sessão se
+  preciso, grava `started_at` só se ainda estiver vazio e é enviada antes
+  das séries e da finalização da mesma data; sem sinal, a tela usa o
+  horário guardado na fila, e um treino só iniciado, sem série nenhuma,
+  volta ao reabrir a data. O status de sincronização mostra "Iniciar treino
+  de" para essa operação. Ao finalizar, o relógio para e mostra o tempo
+  total. Migração `20260929030000_workout_sessions_started_at.sql` (coluna
+  `started_at` em `workout_sessions`), que precisa ser aplicada no SQL
+  Editor antes do deploy.
+- Retomada do treino no mesmo passo: sair da aba Treino (ou fechar o app) e
+  voltar para a mesma data reabre o treino escolhido (inclusive num dia com
+  mais de um treino, antes de qualquer registro), o exercício e a série em
+  que estava na navegação livre e a queda do drop set. O passo fica em
+  localStorage por data (só as datas mais recentes), é conferido contra o
+  treino atual (outro treino ou posição que não existe mais caem na
+  retomada pela primeira série pendente) e é apagado ao finalizar o treino.
+
 - Suporte a mais de uma conta: todo usuário novo recebe a própria cópia do
   catálogo TACO (antes só a primeira conta do banco recebia). A seed fica
   numa tabela de referência (`food_items_seed`) sem acesso pelo cliente, e
@@ -91,6 +114,14 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- A duração do treino (painel de finalização, detalhe do dia e relatório
+  em Resultados, exportação) passa a ser de `started_at` a `finished_at`
+  quando a sessão tem início marcado; sessões antigas continuam medidas da
+  primeira à última série concluída. A exportação acrescenta `started_at`
+  por treino, sem mudar `format_version`.
+- Trocar o treino depois de ter iniciado (ou registrado uma série) numa
+  data aberta antes de a sessão existir no servidor passa a conferir se ela
+  já foi criada lá, para a troca valer no servidor e não só no aparelho.
 - Repaginação visual do app inteiro, sem mudar regra de negócio nem dados.
   Todas as cores, raios, sombras e fontes saem de variáveis CSS, com tema
   claro e escuro automático pelo sistema. Cards brancos sem borda com sombra
