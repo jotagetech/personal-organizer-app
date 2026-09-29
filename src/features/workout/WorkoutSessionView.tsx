@@ -10,7 +10,14 @@ import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import type { PlanWeek } from '@/features/workout/planWeek'
 import { exerciseTags } from '@/features/workout/setPresentation'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
-import { loadRestTimer, saveRestTimer } from '@/features/workout/timerStorage'
+import { buildSavedWorkoutStep, restoreWorkoutStep, type SavedWorkoutStep } from '@/features/workout/sessionResume'
+import {
+    clearWorkoutStep,
+    loadRestTimer,
+    loadSavedWorkoutStep,
+    saveRestTimer,
+    saveWorkoutStep,
+} from '@/features/workout/timerStorage'
 import {
     extendRestTimer,
     REST_EXTENSION_SECONDS,
@@ -61,6 +68,7 @@ import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
 import type { Workout, WorkoutPlan } from '@/lib/workoutPlanSchema'
 
 const BUTTON_ICON_SIZE = 18
+const FIRST_POSITION: StepPosition = { exerciseIndex: 0, setIndexInExercise: 0 }
 const STATUS_ICON_SIZE = 14
 const STATUS_ICON_STROKE = 3
 
@@ -103,20 +111,29 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             setIsLoading(true)
             setLoadErrorMessage(null)
             try {
+                const savedStep = loadSavedWorkoutStep(sessionDate)
                 const existing = await getSessionForDate(sessionDate)
                 if (isCancelled) {
                     return
                 }
 
                 if (existing) {
-                    await applyExistingSession(existing.session, existing.sets, existing.drops)
+                    await applyExistingSession(existing.session, existing.sets, existing.drops, savedStep)
                     return
                 }
 
                 const pendingOperationsForDate = outbox.getOperationsForDate(sessionDate)
                 const pendingSnapshot = findSnapshotInPendingOperations(pendingOperationsForDate)
                 if (pendingSnapshot) {
-                    resumeFromPendingOperations(pendingSnapshot, pendingOperationsForDate)
+                    resumeFromPendingOperations(pendingSnapshot, pendingOperationsForDate, savedStep)
+                    return
+                }
+
+                // Treino já escolhido nesta data, mas ainda sem nada gravado
+                // (nem no servidor nem na fila): o passo guardado lembra qual.
+                const savedWorkout = plan.treinos.find((workout) => workout.id === savedStep?.workoutKey)
+                if (savedWorkout) {
+                    startUnsavedWorkout(savedWorkout, savedStep)
                     return
                 }
 
@@ -124,7 +141,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                 const suggestion = suggestWorkoutForWeekday(plan, weekday)
 
                 if (suggestion.kind === 'single') {
-                    startUnsavedWorkout(suggestion.workout)
+                    startUnsavedWorkout(suggestion.workout, null)
                 } else if (suggestion.kind === 'choose_one') {
                     setWorkoutChoices(suggestion.workouts)
                     setSnapshot(null)
@@ -173,22 +190,49 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         setDropPosition(null)
     }
 
-    function resumeFromPendingOperations(pendingSnapshot: WorkoutSnapshot, operations: OutboxOperation[]) {
+    function goToStep(step: WizardStep) {
+        setPosition(step.position)
+        setDropPosition(step.dropPosition)
+    }
+
+    // Volta ao passo guardado quando ele ainda vale para este treino; sem ele,
+    // segue a retomada pela primeira série pendente.
+    function resumeAt(
+        resumeSnapshot: WorkoutSnapshot,
+        resumeSetsByKey: Map<string, WorkoutSetRow>,
+        firstIncompletePosition: StepPosition,
+        savedStep: SavedWorkoutStep | null,
+    ) {
+        const restoredStep = restoreWorkoutStep(resumeSnapshot, resumeSetsByKey, savedStep)
+        goToStep(restoredStep ?? mainStepOf(firstIncompletePosition))
+    }
+
+    function resumeFromPendingOperations(
+        pendingSnapshot: WorkoutSnapshot,
+        operations: OutboxOperation[],
+        savedStep: SavedWorkoutStep | null,
+    ) {
         const overlaidSetsByKey = overlayPendingSets(new Map(), operations, sessionDate)
         const isFinishPending = operations.some((operation) => operation.kind === 'finish_session')
+        const firstIncompletePosition = findFirstIncompletePosition(pendingSnapshot, overlaidSetsByKey)
 
         setSnapshot(pendingSnapshot)
         setSession(null)
         setSetsByKey(overlaidSetsByKey)
         setDropsBySetKey(new Map())
         setWorkoutChoices(null)
-        goToSet(isFinishPending ? null : findFirstIncompletePosition(pendingSnapshot, overlaidSetsByKey))
+        if (isFinishPending || firstIncompletePosition === null) {
+            goToSet(null)
+            return
+        }
+        resumeAt(pendingSnapshot, overlaidSetsByKey, firstIncompletePosition, savedStep)
     }
 
     async function applyExistingSession(
         existingSession: WorkoutSessionRow,
         sets: WorkoutSetRow[],
         dropRows: WorkoutSetDropRow[],
+        savedStep: SavedWorkoutStep | null,
     ) {
         const nextSetsByKey = new Map<string, WorkoutSetRow>()
         for (const set of sets) {
@@ -208,7 +252,11 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         setWorkoutChoices(null)
 
         const resumePosition = findFirstIncompletePosition(existingSession.workout_snapshot, overlaidSetsByKey)
-        goToSet(resumePosition)
+        if (resumePosition === null) {
+            goToSet(null)
+        } else {
+            resumeAt(existingSession.workout_snapshot, overlaidSetsByKey, resumePosition, savedStep)
+        }
 
         const allSetsAlreadyResolved = resumePosition === null
         if (allSetsAlreadyResolved && !existingSession.finished_at) {
@@ -221,19 +269,19 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         }
     }
 
-    function startUnsavedWorkout(workout: Workout) {
+    function startUnsavedWorkout(workout: Workout, savedStep: SavedWorkoutStep | null) {
         const nextSnapshot = buildWorkoutSnapshot(workout, planWeek)
         setSnapshot(nextSnapshot)
         setSession(null)
         setSetsByKey(new Map())
         setDropsBySetKey(new Map())
         setWorkoutChoices(null)
-        goToSet({ exerciseIndex: 0, setIndexInExercise: 0 })
+        resumeAt(nextSnapshot, new Map(), FIRST_POSITION, savedStep)
     }
 
     async function handleChooseWorkout(workout: Workout) {
         if (!session) {
-            startUnsavedWorkout(workout)
+            startUnsavedWorkout(workout, null)
             return
         }
 
@@ -259,7 +307,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             setSetsByKey(new Map())
             setDropsBySetKey(new Map())
             setWorkoutChoices(null)
-            goToSet({ exerciseIndex: 0, setIndexInExercise: 0 })
+            goToSet(FIRST_POSITION)
         } catch (switchError) {
             const message =
                 switchError instanceof Error ? switchError.message : 'Falha ao trocar o treino'
@@ -493,6 +541,20 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         setPosition(previousStep.position)
         setDropPosition(previousStep.dropPosition)
     }
+
+    // O passo atual fica guardado a cada mudança, para sair da aba (ou fechar
+    // o app) e voltar na mesma tela. Com o treino concluído não há passo, e o
+    // registro da data é apagado; trocar de treino grava o passo do novo.
+    useEffect(() => {
+        if (isLoading || !snapshot || workoutChoices) {
+            return
+        }
+        if (!position) {
+            clearWorkoutStep(sessionDate)
+            return
+        }
+        saveWorkoutStep(sessionDate, buildSavedWorkoutStep(snapshot, { position, dropPosition }))
+    }, [isLoading, snapshot, workoutChoices, position, dropPosition, sessionDate])
 
     // Treino terminado antes de a sessão ter sido criada no servidor (o dia
     // inteiro foi feito sem sinal): o painel de finalização depende do id real

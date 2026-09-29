@@ -1,7 +1,14 @@
 // Início dos cronômetros em localStorage: o timestamp sobrevive a fechar e
-// reabrir o app, e o tempo decorrido é recalculado a partir dele.
+// reabrir o app, e o tempo decorrido é recalculado a partir dele. O passo do
+// assistente em que o treino estava fica aqui também, pelo mesmo motivo.
 
 import { parseIntervalTimer, type IntervalTimerState } from '@/features/workout/intervalTimer'
+import {
+    forgetWorkoutStep,
+    parseSavedWorkoutSteps,
+    rememberWorkoutStep,
+    type SavedWorkoutStep,
+} from '@/features/workout/sessionResume'
 import {
     parseRestTimer,
     parseStopwatchRecord,
@@ -12,6 +19,7 @@ import {
 const STOPWATCH_KEY = 'workout-timer:serie'
 const REST_KEY = 'workout-timer:descanso'
 const INTERVAL_KEY = 'workout-timer:intervalado'
+const RESUME_KEY = 'workout-resume:passo'
 
 function readItem(key: string): string | null {
     try {
@@ -74,4 +82,26 @@ export function clearIntervalTimer(sessionDate: string, exerciseKey: string): vo
     if (loadIntervalTimer(sessionDate, exerciseKey)) {
         saveIntervalTimer(null)
     }
+}
+
+// Um registro só para todas as datas, já limitado às mais recentes pela regra
+// pura; cada escrita reaproveita o que as outras datas tinham guardado.
+export function loadSavedWorkoutStep(sessionDate: string): SavedWorkoutStep | null {
+    const savedSteps = parseSavedWorkoutSteps(readItem(RESUME_KEY))
+    const savedStep = savedSteps[sessionDate] ?? null
+
+    return savedStep
+}
+
+export function saveWorkoutStep(sessionDate: string, savedStep: SavedWorkoutStep): void {
+    const savedSteps = rememberWorkoutStep(parseSavedWorkoutSteps(readItem(RESUME_KEY)), sessionDate, savedStep)
+    writeItem(RESUME_KEY, JSON.stringify(savedSteps))
+}
+
+export function clearWorkoutStep(sessionDate: string): void {
+    const savedSteps = parseSavedWorkoutSteps(readItem(RESUME_KEY))
+    if (!(sessionDate in savedSteps)) {
+        return
+    }
+    writeItem(RESUME_KEY, JSON.stringify(forgetWorkoutStep(savedSteps, sessionDate)))
 }
