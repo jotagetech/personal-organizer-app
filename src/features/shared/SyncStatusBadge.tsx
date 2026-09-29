@@ -1,27 +1,44 @@
 import { useState } from 'react'
+import { CloudCheck, CloudOff, CloudUpload } from 'lucide-react'
 
 import { useOutbox } from '@/contexts/OutboxContext'
 import { naturalKeyOf, type OutboxOperation } from '@/lib/outbox/outboxQueue'
 
+const SYNC_ICON_SIZE = 18
+
+// No cabeçalho só cabe o ícone e a contagem; a descrição completa do que está
+// na fila aparece no painel ao tocar.
 export function SyncStatusBadge() {
     const { pendingCount, failedCount, isOnline, listFailedOperations, discardOperation } = useOutbox()
-    const [isFailedPanelOpen, setIsFailedPanelOpen] = useState(false)
+    const [isPanelOpen, setIsPanelOpen] = useState(false)
 
     if (pendingCount === 0 && failedCount === 0) {
-        return <span className="sync-status-badge sync-status-badge--ok">Tudo salvo</span>
+        return (
+            <span className="sync-status-badge sync-status-badge--ok" role="img" aria-label="Tudo salvo">
+                <CloudCheck size={SYNC_ICON_SIZE} aria-hidden="true" />
+            </span>
+        )
     }
+
+    const badgeLabel = formatBadgeLabel(pendingCount, failedCount, isOnline)
+    const queuedCount = pendingCount + failedCount
+    const StatusIcon = isOnline ? CloudUpload : CloudOff
 
     return (
         <div className="sync-status-badge-wrapper">
             <button
                 type="button"
                 className="sync-status-badge sync-status-badge--pending"
-                onClick={() => setIsFailedPanelOpen((previous) => !previous)}
+                aria-label={badgeLabel}
+                aria-expanded={isPanelOpen}
+                onClick={() => setIsPanelOpen((previous) => !previous)}
             >
-                {formatBadgeLabel(pendingCount, failedCount, isOnline)}
+                <StatusIcon size={SYNC_ICON_SIZE} aria-hidden="true" />
+                <span className="sync-status-badge__count">{queuedCount}</span>
             </button>
-            {isFailedPanelOpen && failedCount > 0 && (
+            {isPanelOpen && (
                 <div className="sync-status-badge__panel">
+                    <p className="sync-status-badge__summary">{badgeLabel}</p>
                     {listFailedOperations().map((operation) => (
                         <div key={naturalKeyOf(operation)} className="sync-status-badge__panel-row">
                             <span>{describeOperation(operation)}</span>

@@ -8,6 +8,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { BottomNav } from '@/features/shared/BottomNav'
 import { DateHeader } from '@/features/shared/DateHeader'
 import { UndoBar } from '@/features/shared/UndoBar'
+import { useTrainingMode } from '@/features/shared/useTrainingMode'
 import { FoodTab } from '@/features/food/FoodTab'
 import { MenuTab } from '@/features/menu/MenuTab'
 import { ResultsTab } from '@/features/results/ResultsTab'
@@ -50,6 +51,7 @@ function AuthGate() {
 
 function AuthenticatedShell() {
     const { activeTab, goToTab } = useAppNavigation()
+    useTrainingMode(activeTab === 'treino')
 
     return (
         <div className="app-shell">

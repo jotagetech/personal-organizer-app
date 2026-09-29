@@ -258,21 +258,70 @@ h1, h2, h3, h4 {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 8px 12px;
-    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+    padding: 6px 8px 6px 16px;
+    padding-top: calc(6px + env(safe-area-inset-top, 0px));
     background: var(--color-chrome-bg);
     position: sticky;
     top: 0;
     z-index: 10;
 }
 
-.date-header__label {
+.date-header__date {
     flex: 1;
     min-width: 0;
-    text-align: center;
-    font-weight: 600;
-    font-size: 15px;
-    white-space: nowrap;
+    min-height: var(--touch-target);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2px 0;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    text-align: left;
+}
+
+.date-header__weekday {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+}
+
+.date-header__weekday svg {
+    color: var(--color-text-muted);
+}
+
+.date-header__day-month {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
+.date-header__date--not-today .date-header__weekday {
+    color: var(--color-pending-text);
+}
+
+.date-header__today {
+    flex-shrink: 0;
+    min-height: 36px;
+    padding: 0 14px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.date-header__stepper {
+    display: flex;
+    flex-shrink: 0;
 }
 
 .icon-button {
@@ -304,40 +353,33 @@ h1, h2, h3, h4 {
     pointer-events: none;
 }
 
-.date-header .secondary-button {
-    flex-shrink: 0;
-    min-height: 36px;
-    padding: 0 14px;
-    border-radius: var(--radius-pill);
-    font-size: 13px;
-    font-weight: 600;
-}
-
 .bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     display: flex;
+    padding: 4px 4px env(safe-area-inset-bottom, 0);
     background: var(--color-nav-bg);
     border-top: 1px solid var(--color-nav-border);
-    padding-bottom: env(safe-area-inset-bottom, 0);
     z-index: 20;
 }
 
 .bottom-nav__tab {
-    position: relative;
     flex: 1;
     min-width: 0;
-    padding: 8px 2px;
-    min-height: 56px;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 0 6px;
     border: none;
     background: transparent;
-    font-size: 12px;
     color: var(--color-nav-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .bottom-nav__tab--active {
@@ -345,22 +387,50 @@ h1, h2, h3, h4 {
     font-weight: 700;
 }
 
-/* Ponto sobreposto no canto em vez de inline, pra o indicador não disputar
-   largura com o rótulo quando cinco abas dividem uma tela estreita. */
+.bottom-nav__icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 30px;
+    border-radius: var(--radius-pill);
+    transition: background-color 150ms ease;
+}
+
+.bottom-nav__tab--active .bottom-nav__icon {
+    background: var(--color-nav-pill);
+}
+
+.bottom-nav__label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Sobreposto no canto do ícone em vez de inline, pra o indicador não
+   disputar largura com o rótulo quando cinco abas dividem uma tela estreita. */
 .bottom-nav__indicator {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    font-size: 10px;
-    line-height: 1;
+    top: 0;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--color-nav-bg);
+    border-radius: var(--radius-pill);
 }
 
 .bottom-nav__indicator--done {
-    color: var(--color-done);
+    width: 15px;
+    height: 15px;
+    background: var(--color-done);
+    color: var(--color-on-done);
 }
 
 .bottom-nav__indicator--pending {
-    color: var(--color-pending);
+    width: 11px;
+    height: 11px;
+    background: var(--color-pending);
 }
 
 .card {
@@ -897,31 +967,39 @@ h1, h2, h3, h4 {
     color: var(--color-text-muted);
 }
 
-.date-header__label--not-today {
-    color: var(--color-pending-text);
-}
-
 .sync-status-badge-wrapper {
     position: relative;
 }
 
 .sync-status-badge {
-    display: inline-block;
-    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 8px;
     border: none;
     border-radius: var(--radius-pill);
-    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
 .sync-status-badge--ok {
-    color: var(--color-text-secondary);
-    background: var(--color-surface-muted);
+    color: var(--color-text-muted);
 }
 
 .sync-status-badge--pending {
     color: var(--color-pending-strong-text);
     background: var(--color-pending-soft);
+}
+
+.sync-status-badge__summary {
+    margin: 2px 4px 6px;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .sync-status-badge__panel {
