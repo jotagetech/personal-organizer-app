@@ -9,6 +9,8 @@
     { "semana": 3, "descricao": "Mais carga" },
     { "semana": 4, "descricao": "Redução de volume" }
   ],
+  "descanso_padrao_segundos_min": 90,
+  "descanso_padrao_segundos_max": 90,
   "treinos": [
     {
       "id": "treino-a",
@@ -81,7 +83,13 @@
           "rir_alvo_max": 0,
           "observacoes": "Última série em drop set: reduza a carga sem descanso entre as quedas.",
           "series": [
-            { "repeticoes_min": 10, "repeticoes_max": 12, "carga_sugerida": 30 },
+            {
+              "repeticoes_min": 10,
+              "repeticoes_max": 12,
+              "carga_sugerida": 30,
+              "descanso_segundos_min": 60,
+              "descanso_segundos_max": 60
+            },
             {
               "repeticoes_min": 10,
               "repeticoes_max": 12,

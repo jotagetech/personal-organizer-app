@@ -460,16 +460,16 @@ describe('rascunho do montador', () => {
 })
 
 describe('descanso padrão e descanso por série no montador', () => {
-    it('editar o plano e preencher só o padrão gera o mesmo arquivo com o padrão a mais', () => {
+    it('editar o plano e trocar só o padrão gera o mesmo arquivo com o padrão novo', () => {
         const plan = builderFromExample()
-        plan.descansoPadrao = setRangeValue(plan.descansoPadrao, 'min', '90')
+        plan.descansoPadrao = setRangeValue(plan.descansoPadrao, 'min', '75')
         const result = validateBuilderPlan(plan)
 
         expect(result.success).toBe(true)
         expect(builderPlanToDocument(plan)).toEqual({
             ...(readExampleDocument() as Record<string, unknown>),
-            descanso_padrao_segundos_min: 90,
-            descanso_padrao_segundos_max: 90,
+            descanso_padrao_segundos_min: 75,
+            descanso_padrao_segundos_max: 75,
         })
     })
 

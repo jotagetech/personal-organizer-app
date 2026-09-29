@@ -117,7 +117,8 @@ npm run dev
   comentário livre por série), com barra de progresso e opção de voltar.
   Séries podem ser de repetições, tempo ou distância, com drop set (cada
   queda é um passo próprio), e o card mostra equipamento, execução por lado,
-  RIR alvo, descanso prescrito e observações do plano (ver "Plano de treino
+  RIR alvo, descanso prescrito (o da série, senão o do exercício, senão o
+  padrão do plano) e observações do plano (ver "Plano de treino
   (contrato)").
   Série de tempo tem cronômetro (bipe e aviso ao atingir o mínimo e o
   máximo da meta), e o descanso prescrito vira uma contagem regressiva
@@ -188,6 +189,10 @@ hash, o plano salvo vira o ativo); nada muda na forma como o plano é lido.
   assistência; peso corporal: peso corporal), e dá para trocar.
 - Toda faixa tem o modo "Fixo", que grava o mesmo número no mínimo e no
   máximo.
+- "Descanso padrão", no topo do plano, vale para os exercícios sem descanso
+  próprio; editar o plano atual, preencher só ele e salvar já basta. Cada
+  série tem "Descanso próprio" entre as ações dela, que abre um campo de
+  descanso só daquela série (com lixeira para voltar ao do exercício).
 - "Usar progressão por semanas" (desligado por padrão) pede as semanas do
   bloco, uma descrição opcional por semana e, por exercício, "Semana
   diferente", que copia a prescrição base para editar só o que muda. No
@@ -278,6 +283,42 @@ barra). Os dois podem aparecer juntos ou separados.
 ```json
 { "descanso_segundos_min": 90, "descanso_segundos_max": 120 }
 ```
+
+O descanso pode vir de quatro lugares, e vale o mais específico que existir:
+
+1. a própria série (`descanso_segundos_min/max` dentro de um item de
+   `series`, inclusive nas séries de uma variação da semana), para a série
+   que foge da regra, como a última mais pesada;
+2. a variação da semana ativa do bloco (`variacoes_semana`);
+3. o exercício;
+4. o padrão do plano (`descanso_padrao_segundos_min/max` na raiz), que cobre
+   todo exercício de séries sem descanso próprio.
+
+Sem nenhum deles a série não tem descanso prescrito. O exercício intervalado
+não usa nenhum dos quatro: a pausa dele é a recuperação entre rodadas. A
+queda de um drop set não tem descanso, que só começa quando a série termina
+inteira. Um plano que já existe ganha descanso em tudo só com o padrão:
+
+```json
+{
+  "versao": 2,
+  "nome": "Meu plano",
+  "unidade_carga": "kg",
+  "descanso_padrao_segundos_min": 90,
+  "descanso_padrao_segundos_max": 90,
+  "treinos": [{ "id": "treino-a", "nome": "A", "exercicios": [{
+    "id": "supino-reto", "nome": "Supino reto", "forma_carga": "total",
+    "series": [
+      { "repeticoes_min": 8, "repeticoes_max": 10 },
+      { "repeticoes_min": 5, "repeticoes_max": 6, "descanso_segundos_min": 180, "descanso_segundos_max": 180 }
+    ]
+  }] }]
+}
+```
+
+A sessão grava o descanso já resolvido no snapshot (no exercício, e na série
+só quando ela difere dele), então mudar o plano depois não muda o histórico,
+e sessões antigas continuam lendo o descanso do exercício como antes.
 
 **RIR alvo** (`rir_alvo_min` e `rir_alvo_max`, sempre o par, de 0 a 10):
 
@@ -442,7 +483,7 @@ aparecer em uma variação do mesmo exercício.
 - A exportação JSON por período mantém o formato anterior e só acrescenta
   campos: por exercício `equipment`, `per_side`, `rest_seconds_min/max`,
   `target_rir_min/max` e `notes`; por série planejada `drops` (alvos das
-  quedas); por série realizada `drops` (o que foi feito em cada queda); por
+  quedas) e `rest_seconds_min/max` (descanso efetivo depois da série); por série realizada `drops` (o que foi feito em cada queda); por
   treino `block_week` e `block_weeks` (semana do bloco e duração dele, nulos
   sem bloco); por exercício `exercise_type` (`series` ou `intervalado`) e
   `interval` (modalidade, rodadas e faixas de trabalho, recuperação e RPE

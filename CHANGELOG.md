@@ -7,6 +7,21 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Descanso padrão do plano e descanso por série. O plano aceita
+  `descanso_padrao_segundos_min/max` na raiz, que vale para todo exercício de
+  séries sem descanso próprio, e cada série aceita
+  `descanso_segundos_min/max` (também nas séries de uma variação da semana).
+  Vale o mais específico: série, variação da semana ativa, exercício e, por
+  fim, o padrão do plano; o intervalado continua usando só a recuperação.
+  Os campos são opcionais e o contrato continua `versao: 2`, então planos e
+  sessões já salvos seguem iguais. O snapshot da sessão grava o descanso já
+  resolvido (no exercício, e na série só quando ela difere), o texto
+  "Descanso" do card e a contagem regressiva usam o da série atual, e a
+  exportação por período ganha `rest_seconds_min/max` em cada série
+  planejada. No montador, "Descanso padrão" fica no topo do plano e
+  "Descanso próprio" entre as ações de cada série; o exemplo em
+  `examples/plano-exemplo.json` passou a usar os dois. Sem migração: plano
+  e snapshot ficam em colunas jsonb.
 - Cronômetro da sessão de treino. Antes de começar, o topo do treino mostra
   "Iniciar treino" (botão grande); ao tocar, o início é gravado e o topo
   passa a mostrar o tempo decorrido, em `m:ss` até uma hora e `h:mm:ss`
