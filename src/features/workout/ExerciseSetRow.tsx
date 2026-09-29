@@ -21,6 +21,7 @@ import {
     resultFieldLabel,
     resultFieldPlaceholder,
 } from '@/features/workout/setPresentation'
+import { snapshotSetRest } from '@/features/workout/restPrescription'
 import { SetStopwatch } from '@/features/workout/SetStopwatch'
 import { unlockAudio } from '@/features/workout/timerDevice'
 import {
@@ -325,7 +326,8 @@ export function ExerciseSetRow({
     )
 
     const target = formatSetTarget(metric, serie.alvo_min, serie.alvo_max, exercicio.por_lado)
-    const restPrescription = formatRestPrescription(exercicio.descanso_segundos_min, exercicio.descanso_segundos_max)
+    const setRest = snapshotSetRest(exercicio, serie)
+    const restPrescription = formatRestPrescription(setRest?.min ?? null, setRest?.max ?? null)
     const rirTarget = formatRirTarget(exercicio.rir_alvo_min, exercicio.rir_alvo_max)
     const loadHint = loadFieldHint(formaCarga, exercicio.por_lado, fields.loadKgText)
 

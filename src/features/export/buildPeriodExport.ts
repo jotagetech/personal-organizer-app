@@ -11,6 +11,7 @@ import {
     durationInMinutes,
     resolveSessionDuration,
 } from '@/features/workout/sessionDuration'
+import { snapshotSetRest } from '@/features/workout/restPrescription'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSessionRow, type WorkoutSetDropRow, type WorkoutSetRow } from '@/features/workout/types'
@@ -66,6 +67,8 @@ export type ExportedSetDrop = {
 // target_min/target_max estão na unidade de `metric` (repetições, segundos ou
 // metros); reps_min/reps_max repetem o alvo só quando a métrica é repetições,
 // para quem já lia o arquivo antes das séries de tempo e distância.
+// rest_seconds_min/max é o descanso efetivo depois desta série: o dela
+// quando a ficha deu um próprio, senão o do exercício.
 export type ExportedPlannedSet = {
     set_index: number
     metric: SetMetric
@@ -74,6 +77,8 @@ export type ExportedPlannedSet = {
     reps_min: number | null
     reps_max: number | null
     suggested_load_kg: number | null
+    rest_seconds_min: number | null
+    rest_seconds_max: number | null
     drops: ExportedPlannedDrop[]
 }
 
@@ -266,6 +271,7 @@ function buildWorkout(
         notes: exercicio.observacoes,
         planned: exercicio.series.map((serie): ExportedPlannedSet => {
             const isRepsSet = serie.metrica === 'repeticoes'
+            const rest = snapshotSetRest(exercicio, serie)
             return {
                 set_index: serie.set_index,
                 metric: serie.metrica,
@@ -274,6 +280,8 @@ function buildWorkout(
                 reps_min: isRepsSet ? serie.alvo_min : null,
                 reps_max: isRepsSet ? serie.alvo_max : null,
                 suggested_load_kg: serie.carga_sugerida,
+                rest_seconds_min: rest?.min ?? null,
+                rest_seconds_max: rest?.max ?? null,
                 drops: serie.quedas.map(
                     (queda): ExportedPlannedDrop => ({
                         drop_index: queda.drop_index,

@@ -58,6 +58,8 @@ function intervalExercise(): WorkoutSnapshotExercise {
             alvo_min: 30,
             alvo_max: 30,
             carga_sugerida: null,
+            descanso_segundos_min: null,
+            descanso_segundos_max: null,
             quedas: [],
         })),
     }

@@ -5,7 +5,7 @@ import { buildDayReport } from '@/features/results/dayReport'
 import type { RoutineRow } from '@/features/routine/types'
 import type { WorkoutSetRow } from '@/features/workout/types'
 import type { WorkoutSnapshot } from '@/lib/databaseTypes'
-import { EMPTY_SET_METRIC_COLUMNS, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
+import { EMPTY_SET_METRIC_COLUMNS, NO_SET_REST, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
 
 const TODAY = '2026-09-28'
 const PAST_DATE = '2026-09-20'
@@ -395,8 +395,8 @@ describe('buildDayReport', () => {
                     nome: 'Prancha',
                     forma_carga: 'peso_corporal',
                     series: [
-                        { set_index: 0, metrica: 'tempo', alvo_min: 30, alvo_max: 45, carga_sugerida: null, quedas: [] },
-                        { set_index: 1, metrica: 'distancia', alvo_min: 20, alvo_max: 30, carga_sugerida: null, quedas: [] },
+                        { set_index: 0, metrica: 'tempo', alvo_min: 30, alvo_max: 45, carga_sugerida: null, ...NO_SET_REST, quedas: [] },
+                        { set_index: 1, metrica: 'distancia', alvo_min: 20, alvo_max: 30, carga_sugerida: null, ...NO_SET_REST, quedas: [] },
                     ],
                 },
             ],

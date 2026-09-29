@@ -17,12 +17,17 @@ const snapshotDropSchema = z.object({
     carga_sugerida: z.number().nullable(),
 })
 
+// Descanso já resolvido pela ficha no dia da sessão. A série só leva o
+// próprio quando ele difere do descanso do exercício; nulo é "igual ao
+// exercício", que é também o que um snapshot antigo sem o campo significa.
 const snapshotSetSchema = z.object({
     set_index: z.number().int(),
     metrica: z.enum(SET_METRICS),
     alvo_min: z.number(),
     alvo_max: z.number(),
     carga_sugerida: z.number().nullable(),
+    descanso_segundos_min: z.number().nullable().default(null),
+    descanso_segundos_max: z.number().nullable().default(null),
     quedas: z.array(snapshotDropSchema).default([]),
 })
 
@@ -125,6 +130,8 @@ function upgradeLegacySnapshot(legacy: LegacyWorkoutSnapshot): WorkoutSnapshot {
                 alvo_min: serie.repeticoes_min,
                 alvo_max: serie.repeticoes_max,
                 carga_sugerida: serie.carga_sugerida,
+                descanso_segundos_min: null,
+                descanso_segundos_max: null,
                 quedas: [],
             })),
         })),

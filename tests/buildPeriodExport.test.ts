@@ -258,6 +258,8 @@ describe('buildPeriodExport', () => {
             reps_min: 8,
             reps_max: 10,
             suggested_load_kg: 60,
+            rest_seconds_min: null,
+            rest_seconds_max: null,
             drops: [],
         })
         expect(supino.sets.map((set) => set.status)).toEqual(['completed', 'completed', 'skipped'])
@@ -455,12 +457,23 @@ describe('buildPeriodExport', () => {
                             alvo_min: 10,
                             alvo_max: 12,
                             carga_sugerida: 30,
+                            descanso_segundos_min: null,
+                            descanso_segundos_max: null,
                             quedas: [
                                 { drop_index: 1, alvo_min: 8, alvo_max: 10, carga_sugerida: 22.5 },
                                 { drop_index: 2, alvo_min: 8, alvo_max: 10, carga_sugerida: 15 },
                             ],
                         },
-                        { set_index: 2, metrica: 'repeticoes', alvo_min: 10, alvo_max: 12, carga_sugerida: 30, quedas: [] },
+                        {
+                            set_index: 2,
+                            metrica: 'repeticoes',
+                            alvo_min: 10,
+                            alvo_max: 12,
+                            carga_sugerida: 30,
+                            descanso_segundos_min: 120,
+                            descanso_segundos_max: 120,
+                            quedas: [],
+                        },
                     ],
                 },
             ],
@@ -513,6 +526,8 @@ describe('buildPeriodExport', () => {
             target_rir_max: 1,
             notes: 'Última série em drop set.',
         })
+        expect(exercise.planned[0]).toMatchObject({ rest_seconds_min: 60, rest_seconds_max: 90 })
+        expect(exercise.planned[1]).toMatchObject({ rest_seconds_min: 120, rest_seconds_max: 120 })
         expect(exercise.planned[0].drops).toEqual([
             { drop_index: 1, target_min: 8, target_max: 10, suggested_load_kg: 22.5 },
             { drop_index: 2, target_min: 8, target_max: 10, suggested_load_kg: 15 },
@@ -578,6 +593,8 @@ describe('buildPeriodExport', () => {
                         alvo_min: 30,
                         alvo_max: 30,
                         carga_sugerida: null,
+                        descanso_segundos_min: null,
+                        descanso_segundos_max: null,
                         quedas: [],
                     })),
                 },

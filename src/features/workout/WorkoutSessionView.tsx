@@ -9,6 +9,7 @@ import { RestTimerBar } from '@/features/workout/RestTimerBar'
 import { SessionClock } from '@/features/workout/SessionClock'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import type { PlanWeek } from '@/features/workout/planWeek'
+import { planDefaultRest, snapshotSetRest } from '@/features/workout/restPrescription'
 import { exerciseTags } from '@/features/workout/setPresentation'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
 import { buildSavedWorkoutStep, restoreWorkoutStep, type SavedWorkoutStep } from '@/features/workout/sessionResume'
@@ -281,7 +282,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     }
 
     function startUnsavedWorkout(workout: Workout, savedStep: SavedWorkoutStep | null) {
-        const nextSnapshot = buildWorkoutSnapshot(workout, planWeek)
+        const nextSnapshot = buildWorkoutSnapshot(workout, planWeek, planDefaultRest(plan))
         showUnsavedSnapshot(nextSnapshot, savedStep)
     }
 
@@ -331,7 +332,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // sessão; trocar de treino antes do envio atualiza esse snapshot e mantém
     // a hora do início.
     function switchUnsavedWorkout(workout: Workout) {
-        const nextSnapshot = buildWorkoutSnapshot(workout, planWeek)
+        const nextSnapshot = buildWorkoutSnapshot(workout, planWeek, planDefaultRest(plan))
         showUnsavedSnapshot(nextSnapshot, null)
         if (startedAt) {
             outbox.enqueueStartSession({ sessionDate, planId, snapshot: nextSnapshot, startedAt })
@@ -352,7 +353,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             return
         }
 
-        const nextSnapshot = buildWorkoutSnapshot(workout, planWeek)
+        const nextSnapshot = buildWorkoutSnapshot(workout, planWeek, planDefaultRest(plan))
         setIsSwitchingWorkout(true)
         setSwitchWorkoutErrorMessage(null)
 
@@ -495,16 +496,17 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             return
         }
         const exercicio = snapshot.exercicios[confirmedPosition.exerciseIndex]
-        const { descanso_segundos_min: minSeconds, descanso_segundos_max: maxSeconds } = exercicio
-        if (minSeconds === null || maxSeconds === null) {
+        const confirmedSet = exercicio.series[confirmedPosition.setIndexInExercise]
+        const rest = snapshotSetRest(exercicio, confirmedSet)
+        if (rest === null) {
             return
         }
         const hasNextUnresolvedSet =
             findNextUnresolvedPosition(snapshot, resolvedSetsByKey, confirmedPosition) !== null
-        if (!shouldStartRest(minSeconds, maxSeconds, hasNextUnresolvedSet)) {
+        if (!shouldStartRest(rest.min, rest.max, hasNextUnresolvedSet)) {
             return
         }
-        updateRestTimer(startRestTimer(sessionDate, minSeconds, maxSeconds, Date.now()))
+        updateRestTimer(startRestTimer(sessionDate, rest.min, rest.max, Date.now()))
     }
 
     function handleDropConfirmed() {

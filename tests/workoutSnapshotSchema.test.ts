@@ -4,6 +4,8 @@ import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
 import { parseWorkoutPlanJson } from '@/lib/workoutPlanSchema'
 import { normalizeWorkoutSnapshot } from '@/lib/workoutSnapshotSchema'
 
+const NO_OWN_REST = { descanso_segundos_min: null, descanso_segundos_max: null }
+
 // Formato gravado em workout_sessions.workout_snapshot antes da versão 2.
 const LEGACY_SNAPSHOT = {
     workout_key: 'treino-a',
@@ -81,8 +83,8 @@ describe('normalizeWorkoutSnapshot', () => {
                     rir_alvo_max: null,
                     observacoes: null,
                     series: [
-                        { set_index: 1, metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: 60, quedas: [] },
-                        { set_index: 2, metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, quedas: [] },
+                        { set_index: 1, metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: 60, ...NO_OWN_REST, quedas: [] },
+                        { set_index: 2, metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, ...NO_OWN_REST, quedas: [] },
                     ],
                 },
             ],

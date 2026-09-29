@@ -72,8 +72,17 @@ function applyWeekToIntervalExercise(
     return buildIntervalExercise(exercise, prescriptionForWeek)
 }
 
+export function findWeekVariation(exercise: Exercise, semana: number | null): ExerciseWeekVariation | null {
+    if (semana === null) {
+        return null
+    }
+    const variation = exercise.variacoes_semana.find((candidate) => candidate.semanas.includes(semana)) ?? null
+
+    return variation
+}
+
 function applyWeekToExercise(exercise: Exercise, semana: number): Exercise {
-    const variation = exercise.variacoes_semana.find((candidate) => candidate.semanas.includes(semana))
+    const variation = findWeekVariation(exercise, semana)
     if (!variation) {
         return exercise
     }
