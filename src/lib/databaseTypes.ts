@@ -37,6 +37,10 @@ type WorkoutSessionRow = {
     // Início do treino. Opcional no tipo porque a coluna só existe depois da
     // migração que a cria; ausente ou null, a duração sai das séries.
     started_at?: string | null
+    // Pausa em andamento (paused_at) e total das pausas encerradas. Opcionais
+    // pelo mesmo motivo de started_at: ausentes, o treino conta sem pausa.
+    paused_at?: string | null
+    paused_seconds?: number
     finished_at: string | null
     feeling_scale: number | null
     feeling_note: string | null
@@ -207,6 +211,8 @@ export type Database = {
                     created_at?: string
                     updated_at?: string
                     started_at?: string | null
+                    paused_at?: string | null
+                    paused_seconds?: number
                     finished_at?: string | null
                     feeling_scale?: number | null
                     feeling_note?: string | null

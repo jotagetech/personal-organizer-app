@@ -143,3 +143,47 @@ describe('durationInMinutes', () => {
         expect(durationInMinutes({ startIso: '2026-09-28T12:00:00.000Z', endIso: '2026-09-28T12:44:40.000Z' })).toBe(45)
     })
 })
+
+describe('resolveSessionDuration com pausas', () => {
+    const startedAt = '2026-09-28T12:00:00.000Z'
+    const finishedAt = '2026-09-28T13:00:00.000Z'
+
+    it('desconta o total das pausas encerradas', () => {
+        const session = { started_at: startedAt, finished_at: finishedAt, paused_at: null, paused_seconds: 15 * 60 }
+        const activeWindow = resolveSessionDuration(session, [])
+
+        expect(activeWindow).toEqual({ startIso: '2026-09-28T12:15:00.000Z', endIso: finishedAt })
+        expect(activeWindow && formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)).toBe('45 min')
+    })
+
+    it('sessão sem pausa continua com a janela do início ao fim', () => {
+        const session = { started_at: startedAt, finished_at: finishedAt, paused_at: null, paused_seconds: 0 }
+
+        expect(resolveSessionDuration(session, [])).toEqual({ startIso: startedAt, endIso: finishedAt })
+    })
+
+    it('uma pausa ainda aberta numa sessão finalizada conta até o fim', () => {
+        const session = {
+            started_at: startedAt,
+            finished_at: finishedAt,
+            paused_at: '2026-09-28T12:50:00.000Z',
+            paused_seconds: 5 * 60,
+        }
+        const activeWindow = resolveSessionDuration(session, [])
+
+        expect(activeWindow && durationInMinutes(activeWindow)).toBe(45)
+    })
+
+    it('pausa maior que o treino dá zero, nunca duração negativa', () => {
+        const session = { started_at: startedAt, finished_at: finishedAt, paused_at: null, paused_seconds: 2 * 60 * 60 }
+        const activeWindow = resolveSessionDuration(session, [])
+
+        expect(activeWindow && durationInMinutes(activeWindow)).toBe(0)
+    })
+
+    it('ignora tempo pausado inválido', () => {
+        const session = { started_at: startedAt, finished_at: finishedAt, paused_at: 'ontem', paused_seconds: -30 }
+
+        expect(resolveSessionDuration(session, [])).toEqual({ startIso: startedAt, endIso: finishedAt })
+    })
+})
