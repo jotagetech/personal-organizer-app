@@ -141,7 +141,10 @@ describe('parseWorkoutPlanJson com versao 1 (normalização)', () => {
                 { metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: 60, quedas: [] },
                 { metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, quedas: [] },
             ],
+            variacoes_semana: [],
         })
+        expect(result.plan.bloco_semanas).toBeNull()
+        expect(result.plan.semanas).toEqual([])
     })
 
     it('lê um payload v1 já salvo no banco no formato interno', () => {
@@ -365,5 +368,119 @@ describe('parseWorkoutPlanJson com versao 2', () => {
         const unknownField = validV2PlanObject()
         firstExerciseOf(unknownField).series = [{ repeticoes_min: 8, repeticoes_max: 8, tipo: 'repeticoes' }]
         expect(parseWorkoutPlanJson(JSON.stringify(unknownField)).success).toBe(false)
+    })
+})
+
+function planWithBlock(blockWeeks: number | undefined, variations: unknown[] | undefined) {
+    const plan: Record<string, unknown> & ReturnType<typeof validV2PlanObject> = validV2PlanObject()
+    if (blockWeeks !== undefined) {
+        plan.bloco_semanas = blockWeeks
+    }
+    if (variations !== undefined) {
+        firstExerciseOf(plan).variacoes_semana = variations
+    }
+
+    return plan
+}
+
+describe('parseWorkoutPlanJson com progressão por semana', () => {
+    it('normaliza bloco, descrições e variações por semana', () => {
+        const plan = planWithBlock(4, [
+            { semanas: [4], series: [{ repeticoes_min: 8, repeticoes_max: 12 }], rir_alvo_min: 3, rir_alvo_max: 4 },
+        ])
+        plan.semanas = [{ semana: 1, descricao: ' Calibração ' }]
+        const result = parseWorkoutPlanJson(JSON.stringify(plan))
+
+        expect(result.success).toBe(true)
+        if (!result.success) {
+            return
+        }
+        expect(result.plan.bloco_semanas).toBe(4)
+        expect(result.plan.semanas).toEqual([{ semana: 1, descricao: 'Calibração' }])
+        expect(result.plan.treinos[0].exercicios[0].variacoes_semana).toEqual([
+            {
+                semanas: [4],
+                series: [{ metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, quedas: [] }],
+                descanso_segundos_min: null,
+                descanso_segundos_max: null,
+                rir_alvo_min: 3,
+                rir_alvo_max: 4,
+            },
+        ])
+    })
+
+    it('aceita um plano v2 sem progressão com bloco e variações vazios no formato interno', () => {
+        const result = parseWorkoutPlanJson(JSON.stringify(validV2PlanObject()))
+
+        expect(result.success).toBe(true)
+        if (result.success) {
+            expect(result.plan.bloco_semanas).toBeNull()
+            expect(result.plan.semanas).toEqual([])
+            expect(result.plan.treinos[0].exercicios[0].variacoes_semana).toEqual([])
+        }
+    })
+
+    it('exige bloco_semanas quando o plano usa variações ou descrições de semana', () => {
+        const withVariation = planWithBlock(undefined, [{ semanas: [2], rir_alvo_min: 1, rir_alvo_max: 2 }])
+        const message = expectFailureAt(parseWorkoutPlanJson(JSON.stringify(withVariation)), 'bloco_semanas')
+        expect(message).toBe('obrigatório quando o plano usa variacoes_semana ou semanas')
+
+        const withDescription: Record<string, unknown> = { ...validV2PlanObject(), semanas: [{ semana: 1, descricao: 'x' }] }
+        expectFailureAt(parseWorkoutPlanJson(JSON.stringify(withDescription)), 'bloco_semanas')
+    })
+
+    it('rejeita semana fora do bloco na variação e na descrição', () => {
+        const plan = planWithBlock(4, [{ semanas: [3, 5], rir_alvo_min: 1, rir_alvo_max: 2 }])
+        plan.semanas = [{ semana: 6, descricao: 'x' }]
+        const result = parseWorkoutPlanJson(JSON.stringify(plan))
+
+        const variationMessage = expectFailureAt(result, 'treinos[0].exercicios[0].variacoes_semana[0].semanas[1]')
+        expect(variationMessage).toBe('semana 5 fora do bloco de 4 semanas (bloco_semanas)')
+        expectFailureAt(result, 'semanas[0].semana')
+    })
+
+    it('rejeita a mesma semana em duas variações do exercício e descrição repetida', () => {
+        const plan = planWithBlock(4, [
+            { semanas: [2, 3], rir_alvo_min: 1, rir_alvo_max: 2 },
+            { semanas: [3], rir_alvo_min: 0, rir_alvo_max: 1 },
+        ])
+        plan.semanas = [
+            { semana: 1, descricao: 'a' },
+            { semana: 1, descricao: 'b' },
+        ]
+        const result = parseWorkoutPlanJson(JSON.stringify(plan))
+
+        const message = expectFailureAt(result, 'treinos[0].exercicios[0].variacoes_semana[1].semanas[0]')
+        expect(message).toBe('a semana 3 já tem variação neste exercício')
+        expectFailureAt(result, 'semanas[1].semana')
+    })
+
+    it('rejeita variação que não muda nada e par incompleto na variação', () => {
+        const empty = planWithBlock(4, [{ semanas: [2] }])
+        const message = expectFailureAt(parseWorkoutPlanJson(JSON.stringify(empty)), 'treinos[0].exercicios[0].variacoes_semana[0]')
+        expect(message).toMatch(/informe o que muda na semana/)
+
+        const halfPair = planWithBlock(4, [{ semanas: [2], descanso_segundos_min: 60 }])
+        expectFailureAt(
+            parseWorkoutPlanJson(JSON.stringify(halfPair)),
+            'treinos[0].exercicios[0].variacoes_semana[0].descanso_segundos_max',
+        )
+    })
+
+    it('valida as séries da variação com as mesmas regras das séries base', () => {
+        const plan = planWithBlock(4, [{ semanas: [2], series: [{ repeticoes_min: 12, repeticoes_max: 8 }] }])
+
+        expectFailureAt(
+            parseWorkoutPlanJson(JSON.stringify(plan)),
+            'treinos[0].exercicios[0].variacoes_semana[0].series[0].repeticoes_max',
+        )
+    })
+
+    it('rejeita bloco_semanas fora de 1 a 12 e os campos de progressão na v1', () => {
+        expectFailureAt(parseWorkoutPlanJson(JSON.stringify(planWithBlock(13, undefined))), 'bloco_semanas')
+        expectFailureAt(parseWorkoutPlanJson(JSON.stringify(planWithBlock(0, undefined))), 'bloco_semanas')
+
+        const v1WithBlock = { ...validPlanObject(), bloco_semanas: 4 }
+        expect(parseWorkoutPlanJson(JSON.stringify(v1WithBlock)).success).toBe(false)
     })
 })

@@ -1,9 +1,11 @@
 import type { Workout } from '@/lib/workoutPlanSchema'
 import { CURRENT_SNAPSHOT_VERSION } from '@/lib/workoutSnapshotSchema'
+import { applyWeekToWorkout, type PlanWeek } from '@/features/workout/planWeek'
 import type { WorkoutSnapshot } from '@/features/workout/types'
 
-export function buildWorkoutSnapshot(workout: Workout): WorkoutSnapshot {
-    const exercicios = workout.exercicios.map((exercicio) => ({
+export function buildWorkoutSnapshot(workout: Workout, planWeek: PlanWeek | null = null): WorkoutSnapshot {
+    const workoutForWeek = applyWeekToWorkout(workout, planWeek?.semana ?? null)
+    const exercicios = workoutForWeek.exercicios.map((exercicio) => ({
         exercise_key: exercicio.id,
         nome: exercicio.nome,
         equipamento: exercicio.equipamento,
@@ -33,6 +35,9 @@ export function buildWorkoutSnapshot(workout: Workout): WorkoutSnapshot {
         versao: CURRENT_SNAPSHOT_VERSION,
         workout_key: workout.id,
         nome: workout.nome,
+        semana_bloco: planWeek?.semana ?? null,
+        bloco_semanas: planWeek?.totalSemanas ?? null,
+        descricao_semana: planWeek?.descricao ?? null,
         exercicios,
     }
 

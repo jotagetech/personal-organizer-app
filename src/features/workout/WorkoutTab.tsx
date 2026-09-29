@@ -7,6 +7,7 @@ import { StartCycleForm } from '@/features/cycle/StartCycleForm'
 import type { WorkoutCycleRow } from '@/features/cycle/types'
 import { getActivePlan, type ActivePlan } from '@/features/workout/api'
 import { ImportWorkoutPlan } from '@/features/workout/ImportWorkoutPlan'
+import { formatPlanWeekLabel, resolvePlanWeek } from '@/features/workout/planWeek'
 import { WorkoutSessionView } from '@/features/workout/WorkoutSessionView'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 
@@ -82,10 +83,22 @@ export function WorkoutTab() {
         return <ImportWorkoutPlan onImported={reloadActivePlan} />
     }
 
+    // A semana também entra na chave da sessão: iniciar um ciclo novo refaz o
+    // treino ainda não gravado com as séries da semana certa.
+    const planWeek = resolvePlanWeek(activePlan.plan, cycle?.start_date ?? null, selectedDate)
+
     return (
         <div>
             <div className="page-header page-header--compact">
-                <CycleStatusBadge cycle={cycle} referenceDate={selectedDate} />
+                <div className="cycle-status">
+                    <CycleStatusBadge cycle={cycle} referenceDate={selectedDate} />
+                    {planWeek && (
+                        <span className="cycle-status__week">
+                            {formatPlanWeekLabel(planWeek.semana, planWeek.totalSemanas)}
+                            {planWeek.descricao && ` · ${planWeek.descricao}`}
+                        </span>
+                    )}
+                </div>
                 <div className="overflow-menu" ref={menuRef}>
                     <button
                         type="button"
@@ -135,10 +148,11 @@ export function WorkoutTab() {
                 </div>
             </div>
             <WorkoutSessionView
-                key={selectedDate}
+                key={`${selectedDate}:${planWeek?.semana ?? ''}`}
                 plan={activePlan.plan}
                 planId={activePlan.planId}
                 sessionDate={selectedDate}
+                planWeek={planWeek}
             />
         </div>
     )

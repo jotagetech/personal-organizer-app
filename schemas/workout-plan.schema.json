@@ -16,6 +16,36 @@
           "type": "string",
           "const": "kg"
         },
+        "bloco_semanas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "Duração do bloco em semanas, contadas a partir do início do ciclo. Ao terminar, o bloco recomeça na semana 1."
+        },
+        "semanas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "semana": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "descricao": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            },
+            "required": [
+              "semana",
+              "descricao"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "description": "Descrição curta de cada semana do bloco, mostrada na aba Treino."
+        },
         "treinos": {
           "type": "array",
           "items": {
@@ -186,6 +216,127 @@
                         "description": "Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois."
                       },
                       "minItems": 1
+                    },
+                    "variacoes_semana": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "semanas": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "minItems": 1,
+                            "description": "Semanas do bloco (a partir de 1) em que a variação vale."
+                          },
+                          "series": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "repeticoes_min": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "repeticoes_max": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "segundos_min": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "segundos_max": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0
+                                },
+                                "metros_min": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0
+                                },
+                                "metros_max": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0
+                                },
+                                "carga_sugerida": {
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "quedas": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "repeticoes_min": {
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "repeticoes_max": {
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "segundos_min": {
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "segundos_max": {
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "metros_min": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "metros_max": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "carga_sugerida": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      }
+                                    },
+                                    "additionalProperties": false,
+                                    "description": "Queda de um drop set, feita logo após a série, com a mesma métrica dela. Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois."
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 10
+                                }
+                              },
+                              "additionalProperties": false,
+                              "description": "Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois."
+                            },
+                            "minItems": 1
+                          },
+                          "descanso_segundos_min": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "descanso_segundos_max": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "rir_alvo_min": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10
+                          },
+                          "rir_alvo_max": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10
+                          }
+                        },
+                        "required": [
+                          "semanas"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Substitui, nas semanas indicadas, as séries e/ou o descanso e o RIR alvo do exercício."
+                      },
+                      "minItems": 1,
+                      "description": "Progressão por semana do bloco. Exige bloco_semanas no plano; semana sem variação usa as séries base."
                     }
                   },
                   "required": [

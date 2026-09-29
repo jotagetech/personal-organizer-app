@@ -810,6 +810,21 @@ h1, h2, h3, h4 {
     font-variant-numeric: tabular-nums;
 }
 
+/* Badge do ciclo com a semana do bloco ao lado, discreta. */
+.cycle-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    min-width: 0;
+}
+
+.cycle-status__week {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
 .overflow-menu {
     position: relative;
     margin-left: auto;

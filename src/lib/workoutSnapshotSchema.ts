@@ -40,10 +40,17 @@ const snapshotExerciseSchema = z.object({
     series: z.array(snapshotSetSchema),
 })
 
+// A semana do bloco fica gravada junto com as séries já resolvidas para ela,
+// então o histórico mostra o que foi prescrito naquele dia mesmo que o plano
+// ou o ciclo mudem depois. Nula quando o plano não tem bloco ou não havia
+// ciclo em andamento.
 const workoutSnapshotV2Schema = z.object({
     versao: z.literal(CURRENT_SNAPSHOT_VERSION),
     workout_key: z.string(),
     nome: z.string(),
+    semana_bloco: z.number().int().positive().nullable().default(null),
+    bloco_semanas: z.number().int().positive().nullable().default(null),
+    descricao_semana: z.string().nullable().default(null),
     exercicios: z.array(snapshotExerciseSchema),
 })
 
@@ -79,6 +86,9 @@ function upgradeLegacySnapshot(legacy: LegacyWorkoutSnapshot): WorkoutSnapshot {
         versao: CURRENT_SNAPSHOT_VERSION,
         workout_key: legacy.workout_key,
         nome: legacy.nome,
+        semana_bloco: null,
+        bloco_semanas: null,
+        descricao_semana: null,
         exercicios: legacy.exercicios.map((exercicio) => ({
             exercise_key: exercicio.exercise_key,
             nome: exercicio.nome,

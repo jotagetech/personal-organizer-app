@@ -6,6 +6,7 @@ import { DropSetStepRow } from '@/features/workout/DropSetStepRow'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
 import { RestTimerBar } from '@/features/workout/RestTimerBar'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
+import type { PlanWeek } from '@/features/workout/planWeek'
 import { exerciseTags } from '@/features/workout/setPresentation'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
 import { loadRestTimer, saveRestTimer } from '@/features/workout/timerStorage'
@@ -64,9 +65,10 @@ type WorkoutSessionViewProps = {
     plan: WorkoutPlan
     planId: string
     sessionDate: IsoDate
+    planWeek: PlanWeek | null
 }
 
-export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSessionViewProps) {
+export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: WorkoutSessionViewProps) {
     const outbox = useOutbox()
     const { refreshDayStatus } = useDayStatus()
     const [isLoading, setIsLoading] = useState(true)
@@ -217,7 +219,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     }
 
     function startUnsavedWorkout(workout: Workout) {
-        const nextSnapshot = buildWorkoutSnapshot(workout)
+        const nextSnapshot = buildWorkoutSnapshot(workout, planWeek)
         setSnapshot(nextSnapshot)
         setSession(null)
         setSetsByKey(new Map())
@@ -239,7 +241,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             return
         }
 
-        const nextSnapshot = buildWorkoutSnapshot(workout)
+        const nextSnapshot = buildWorkoutSnapshot(workout, planWeek)
         setIsSwitchingWorkout(true)
         setSwitchWorkoutErrorMessage(null)
 

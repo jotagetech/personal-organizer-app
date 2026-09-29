@@ -63,6 +63,9 @@ describe('normalizeWorkoutSnapshot', () => {
             versao: 2,
             workout_key: 'treino-a',
             nome: 'A: peito',
+            semana_bloco: null,
+            bloco_semanas: null,
+            descricao_semana: null,
             exercicios: [
                 {
                     exercise_key: 'supino-reto',
@@ -100,6 +103,24 @@ describe('normalizeWorkoutSnapshot', () => {
         expect(snapshot.exercicios[1].series[0].quedas).toEqual([
             { drop_index: 1, alvo_min: 8, alvo_max: 10, carga_sugerida: 20 },
         ])
+    })
+
+    it('lê um snapshot v2 gravado antes da progressão por semana sem semana do bloco', () => {
+        const parsed = parseWorkoutPlanJson(JSON.stringify(V2_PLAN))
+        expect(parsed.success).toBe(true)
+        if (!parsed.success) {
+            return
+        }
+
+        const storedWithoutWeek: Record<string, unknown> = { ...buildWorkoutSnapshot(parsed.plan.treinos[0]) }
+        delete storedWithoutWeek.semana_bloco
+        delete storedWithoutWeek.bloco_semanas
+        delete storedWithoutWeek.descricao_semana
+
+        const snapshot = normalizeWorkoutSnapshot(storedWithoutWeek)
+
+        expect(snapshot).toMatchObject({ semana_bloco: null, bloco_semanas: null, descricao_semana: null })
+        expect(snapshot.exercicios).toHaveLength(2)
     })
 
     it('recusa snapshot em formato desconhecido', () => {

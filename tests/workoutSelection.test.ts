@@ -10,6 +10,8 @@ function planWithWorkouts(
         versao: 2,
         nome: 'Plano de teste',
         unidade_carga: 'kg',
+        bloco_semanas: null,
+        semanas: [],
         treinos: workouts.map((workout) => ({
             id: workout.id,
             nome: workout.id,
@@ -27,6 +29,7 @@ function planWithWorkouts(
                     rir_alvo_max: null,
                     observacoes: null,
                     series: [{ metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, quedas: [] }],
+                    variacoes_semana: [],
                 },
             ],
         })),

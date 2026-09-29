@@ -46,6 +46,16 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   vem de timestamps guardados em localStorage (certo depois de o iPhone
   suspender a aba ou de reabrir o app), o bipe usa Web Audio e a tela fica
   acesa com wake lock quando o aparelho oferece.
+- Progressão por semana no plano de treino: `bloco_semanas` no plano,
+  `semanas` com uma descrição curta por semana e `variacoes_semana` no
+  exercício, que substitui as séries (e, se informados, o descanso e o RIR
+  alvo) só nas semanas indicadas. A semana vem do ciclo em andamento (dias 1
+  a 7 são a semana 1) e o bloco recomeça na semana 1 quando o ciclo passa
+  da duração dele. A sessão grava as séries já resolvidas e a semana no
+  snapshot, a aba Treino mostra "Semana N de M" ao lado do badge do ciclo,
+  o detalhe do dia em Resultados mostra a semana e a exportação ganha
+  `block_week` e `block_weeks` por treino. Planos e sessões já salvos
+  continuam iguais, sem migração.
 
 ### Alterado
 

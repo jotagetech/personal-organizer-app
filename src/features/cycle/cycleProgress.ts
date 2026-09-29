@@ -13,3 +13,16 @@ export function cycleStatusOn(startDate: IsoDate, today: IsoDate): CycleStatus {
 
     return { kind: 'in_progress', dayNumber: elapsedDays + 1 }
 }
+
+const DAYS_PER_WEEK = 7
+
+// Semana corrida do ciclo: dias 1 a 7 são a semana 1, dias 8 a 14 a semana
+// 2 e assim por diante. Antes do início não há semana.
+export function cycleWeekOn(startDate: IsoDate, date: IsoDate): number | null {
+    const status = cycleStatusOn(startDate, date)
+    if (status.kind !== 'in_progress') {
+        return null
+    }
+
+    return Math.floor((status.dayNumber - 1) / DAYS_PER_WEEK) + 1
+}

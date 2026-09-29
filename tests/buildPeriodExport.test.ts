@@ -24,6 +24,9 @@ const SNAPSHOT: WorkoutSnapshot = {
     versao: 2,
     workout_key: 'treino_a',
     nome: 'Treino A',
+    semana_bloco: null,
+    bloco_semanas: null,
+    descricao_semana: null,
     exercicios: [
         {
             ...SNAPSHOT_EXERCISE_DEFAULTS,
@@ -426,6 +429,9 @@ describe('buildPeriodExport', () => {
             versao: 2,
             workout_key: 'treino_a',
             nome: 'Treino A',
+            semana_bloco: null,
+            bloco_semanas: null,
+            descricao_semana: null,
             exercicios: [
                 {
                     exercise_key: 'triceps',
@@ -540,6 +546,17 @@ describe('buildPeriodExport', () => {
             target_rir_max: null,
             notes: null,
         })
+    })
+
+    it('exporta a semana do bloco gravada na sessão e deixa nula quando não havia bloco', () => {
+        const sessionInWeek = buildSession({
+            workout_snapshot: { ...SNAPSHOT, semana_bloco: 3, bloco_semanas: 4, descricao_semana: 'Mais carga' },
+        })
+        const [workoutInWeek] = buildPeriodExport(buildRawData({ workoutSessions: [sessionInWeek] }), PERIOD, META).workouts
+        const [workoutWithoutBlock] = buildPeriodExport(buildRawData(), PERIOD, META).workouts
+
+        expect(workoutInWeek).toMatchObject({ block_week: 3, block_weeks: 4 })
+        expect(workoutWithoutBlock).toMatchObject({ block_week: null, block_weeks: null })
     })
 
     it('não expõe user_id em nenhum ponto do resultado', () => {

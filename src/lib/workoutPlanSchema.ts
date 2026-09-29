@@ -42,8 +42,10 @@ export const EQUIPMENT_TYPES = [
 export const SET_METRICS = ['repeticoes', 'tempo', 'distancia'] as const
 
 export const MAX_RIR = 10
+export const MAX_BLOCK_WEEKS = 12
 const MAX_DROPS_PER_SET = 10
 const MAX_OBSERVATION_LENGTH = 2000
+const MAX_WEEK_DESCRIPTION_LENGTH = 120
 
 const SET_METRIC_DESCRIPTION =
     'Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois.'
@@ -214,6 +216,53 @@ const workoutSetV2Schema = z
         })
     })
 
+const restAndRirShape = {
+    descanso_segundos_min: z.number().int().min(0).optional(),
+    descanso_segundos_max: z.number().int().min(0).optional(),
+    rir_alvo_min: z.number().int().min(0).max(MAX_RIR).optional(),
+    rir_alvo_max: z.number().int().min(0).max(MAX_RIR).optional(),
+}
+
+function refineRestAndRirPairs(value: Record<string, unknown>, ctx: z.RefinementCtx): void {
+    refinePairedRange(value, 'descanso_segundos_min', 'descanso_segundos_max', ctx)
+    refinePairedRange(value, 'rir_alvo_min', 'rir_alvo_max', ctx)
+}
+
+// Uma variação troca só o que muda nas semanas indicadas; o que ela não
+// informa continua vindo do exercício. `series` substitui a lista inteira,
+// o que cobre tanto mudar o alvo quanto tirar ou acrescentar séries.
+const weekVariationV2Schema = z
+    .object({
+        semanas: z
+            .array(z.number().int().positive())
+            .min(1)
+            .describe('Semanas do bloco (a partir de 1) em que a variação vale.'),
+        series: z.array(workoutSetV2Schema).min(1).optional(),
+        ...restAndRirShape,
+    })
+    .strict()
+    .describe('Substitui, nas semanas indicadas, as séries e/ou o descanso e o RIR alvo do exercício.')
+    .superRefine((variation, ctx) => {
+        const restAndRirFields = Object.keys(restAndRirShape) as (keyof typeof restAndRirShape)[]
+        const overridesSomething =
+            variation.series !== undefined || restAndRirFields.some((field) => variation[field] !== undefined)
+        if (!overridesSomething) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message:
+                    'informe o que muda na semana: series, descanso_segundos_min/descanso_segundos_max ou rir_alvo_min/rir_alvo_max',
+            })
+        }
+        refineRestAndRirPairs(variation, ctx)
+    })
+
+const weekDescriptionV2Schema = z
+    .object({
+        semana: z.number().int().positive(),
+        descricao: nonEmptyText.max(MAX_WEEK_DESCRIPTION_LENGTH),
+    })
+    .strict()
+
 const exerciseV2Schema = z
     .object({
         id: nonEmptyText,
@@ -228,17 +277,19 @@ const exerciseV2Schema = z
             .boolean()
             .optional()
             .describe('Repetições, tempo ou distância prescritos para cada lado (perna, braço). Não muda a forma de registrar a carga.'),
-        descanso_segundos_min: z.number().int().min(0).optional(),
-        descanso_segundos_max: z.number().int().min(0).optional(),
-        rir_alvo_min: z.number().int().min(0).max(MAX_RIR).optional(),
-        rir_alvo_max: z.number().int().min(0).max(MAX_RIR).optional(),
+        ...restAndRirShape,
         observacoes: nonEmptyText.max(MAX_OBSERVATION_LENGTH).optional(),
         series: z.array(workoutSetV2Schema).min(1),
+        variacoes_semana: z
+            .array(weekVariationV2Schema)
+            .min(1)
+            .optional()
+            .describe('Progressão por semana do bloco. Exige bloco_semanas no plano; semana sem variação usa as séries base.'),
     })
     .strict()
     .superRefine((exercise, ctx) => {
-        refinePairedRange(exercise, 'descanso_segundos_min', 'descanso_segundos_max', ctx)
-        refinePairedRange(exercise, 'rir_alvo_min', 'rir_alvo_max', ctx)
+        refineRestAndRirPairs(exercise, ctx)
+        refineUniqueVariationWeeks(exercise.variacoes_semana ?? [], ctx)
     })
 
 const workoutV2Schema = z
@@ -256,10 +307,25 @@ export const workoutPlanV2Schema = z
         versao: z.literal(2),
         nome: nonEmptyText,
         unidade_carga: z.literal('kg'),
+        bloco_semanas: z
+            .number()
+            .int()
+            .min(1)
+            .max(MAX_BLOCK_WEEKS)
+            .optional()
+            .describe('Duração do bloco em semanas, contadas a partir do início do ciclo. Ao terminar, o bloco recomeça na semana 1.'),
+        semanas: z
+            .array(weekDescriptionV2Schema)
+            .min(1)
+            .optional()
+            .describe('Descrição curta de cada semana do bloco, mostrada na aba Treino.'),
         treinos: z.array(workoutV2Schema).min(1),
     })
     .strict()
-    .superRefine((plan, ctx) => refinePlanUniqueness(plan, ctx))
+    .superRefine((plan, ctx) => {
+        refinePlanUniqueness(plan, ctx)
+        refineWeeksWithinBlock(plan, ctx)
+    })
 
 export type WorkoutPlanV1Document = z.infer<typeof workoutPlanV1Schema>
 export type WorkoutPlanV2Document = z.infer<typeof workoutPlanV2Schema>
@@ -285,6 +351,22 @@ export type WorkoutSet = {
     quedas: PlannedDrop[]
 }
 
+// Campos nulos numa variação significam "igual ao exercício"; `series` nula
+// mantém as séries base.
+export type ExerciseWeekVariation = {
+    semanas: number[]
+    series: WorkoutSet[] | null
+    descanso_segundos_min: number | null
+    descanso_segundos_max: number | null
+    rir_alvo_min: number | null
+    rir_alvo_max: number | null
+}
+
+export type PlanWeekDescription = {
+    semana: number
+    descricao: string
+}
+
 export type Exercise = {
     id: string
     nome: string
@@ -297,6 +379,7 @@ export type Exercise = {
     rir_alvo_max: number | null
     observacoes: string | null
     series: WorkoutSet[]
+    variacoes_semana: ExerciseWeekVariation[]
 }
 
 export type Workout = {
@@ -310,6 +393,8 @@ export type WorkoutPlan = {
     versao: typeof CURRENT_PLAN_VERSION
     nome: string
     unidade_carga: 'kg'
+    bloco_semanas: number | null
+    semanas: PlanWeekDescription[]
     treinos: Workout[]
 }
 
@@ -325,6 +410,7 @@ export type WorkoutPlanValidationResult =
 type V1Set = WorkoutPlanV1Document['treinos'][number]['exercicios'][number]['series'][number]
 type V2Exercise = WorkoutPlanV2Document['treinos'][number]['exercicios'][number]
 type V2Set = V2Exercise['series'][number]
+type V2WeekVariation = NonNullable<V2Exercise['variacoes_semana']>[number]
 type V2Drop = NonNullable<V2Set['quedas']>[number]
 
 function normalizeV1Set(set: V1Set): WorkoutSet {
@@ -342,6 +428,8 @@ function normalizeV1Plan(document: WorkoutPlanV1Document): WorkoutPlan {
         versao: CURRENT_PLAN_VERSION,
         nome: document.nome,
         unidade_carga: document.unidade_carga,
+        bloco_semanas: null,
+        semanas: [],
         treinos: document.treinos.map((workout) => ({
             id: workout.id,
             nome: workout.nome,
@@ -358,6 +446,7 @@ function normalizeV1Plan(document: WorkoutPlanV1Document): WorkoutPlan {
                 rir_alvo_max: null,
                 observacoes: null,
                 series: exercise.series.map(normalizeV1Set),
+                variacoes_semana: [],
             })),
         })),
     }
@@ -386,6 +475,17 @@ function normalizeV2Set(set: V2Set): WorkoutSet {
     }
 }
 
+function normalizeV2WeekVariation(variation: V2WeekVariation): ExerciseWeekVariation {
+    return {
+        semanas: variation.semanas,
+        series: variation.series ? variation.series.map(normalizeV2Set) : null,
+        descanso_segundos_min: variation.descanso_segundos_min ?? null,
+        descanso_segundos_max: variation.descanso_segundos_max ?? null,
+        rir_alvo_min: variation.rir_alvo_min ?? null,
+        rir_alvo_max: variation.rir_alvo_max ?? null,
+    }
+}
+
 function normalizeV2Exercise(exercise: V2Exercise): Exercise {
     return {
         id: exercise.id,
@@ -399,6 +499,7 @@ function normalizeV2Exercise(exercise: V2Exercise): Exercise {
         rir_alvo_max: exercise.rir_alvo_max ?? null,
         observacoes: exercise.observacoes ?? null,
         series: exercise.series.map(normalizeV2Set),
+        variacoes_semana: (exercise.variacoes_semana ?? []).map(normalizeV2WeekVariation),
     }
 }
 
@@ -407,6 +508,8 @@ function normalizeV2Plan(document: WorkoutPlanV2Document): WorkoutPlan {
         versao: CURRENT_PLAN_VERSION,
         nome: document.nome,
         unidade_carga: document.unidade_carga,
+        bloco_semanas: document.bloco_semanas ?? null,
+        semanas: document.semanas ?? [],
         treinos: document.treinos.map((workout) => ({
             id: workout.id,
             nome: workout.nome,
@@ -468,6 +571,106 @@ function refinePlanUniqueness(plan: { treinos: { id: string }[] }, ctx: z.Refine
             path: ['treinos'],
         })
     }
+}
+
+// Uma semana só pode ter uma variação por exercício; senão não haveria como
+// saber qual delas vale.
+function refineUniqueVariationWeeks(variations: { semanas: number[] }[], ctx: z.RefinementCtx): void {
+    const seenWeeks = new Set<number>()
+
+    variations.forEach((variation, variationIndex) => {
+        variation.semanas.forEach((week, weekPosition) => {
+            if (seenWeeks.has(week)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `a semana ${week} já tem variação neste exercício`,
+                    path: ['variacoes_semana', variationIndex, 'semanas', weekPosition],
+                })
+            }
+            seenWeeks.add(week)
+        })
+    })
+}
+
+type BlockWeeksPlan = {
+    bloco_semanas?: number
+    semanas?: { semana: number }[]
+    treinos: { exercicios: { variacoes_semana?: { semanas: number[] }[] }[] }[]
+}
+
+function weekOutsideBlockMessage(week: number, blockWeeks: number): string {
+    return `semana ${week} fora do bloco de ${blockWeeks} semana${blockWeeks === 1 ? '' : 's'} (bloco_semanas)`
+}
+
+function refineWeekDescriptions(descriptions: { semana: number }[], blockWeeks: number, ctx: z.RefinementCtx): void {
+    const describedWeeks = new Set<number>()
+
+    descriptions.forEach((description, descriptionIndex) => {
+        const path = ['semanas', descriptionIndex, 'semana']
+        if (description.semana > blockWeeks) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: weekOutsideBlockMessage(description.semana, blockWeeks),
+                path,
+            })
+        }
+        if (describedWeeks.has(description.semana)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: `semana duplicada: ${description.semana}`, path })
+        }
+        describedWeeks.add(description.semana)
+    })
+}
+
+function refineVariationWeeksWithinBlock(plan: BlockWeeksPlan, blockWeeks: number, ctx: z.RefinementCtx): void {
+    plan.treinos.forEach((workout, workoutIndex) => {
+        workout.exercicios.forEach((exercise, exerciseIndex) => {
+            const variations = exercise.variacoes_semana ?? []
+            variations.forEach((variation, variationIndex) => {
+                variation.semanas.forEach((week, weekPosition) => {
+                    if (week <= blockWeeks) {
+                        return
+                    }
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: weekOutsideBlockMessage(week, blockWeeks),
+                        path: [
+                            'treinos',
+                            workoutIndex,
+                            'exercicios',
+                            exerciseIndex,
+                            'variacoes_semana',
+                            variationIndex,
+                            'semanas',
+                            weekPosition,
+                        ],
+                    })
+                })
+            })
+        })
+    })
+}
+
+// A semana de cada variação e de cada descrição só faz sentido dentro de um
+// bloco com duração declarada.
+function refineWeeksWithinBlock(plan: BlockWeeksPlan, ctx: z.RefinementCtx): void {
+    const weekDescriptions = plan.semanas ?? []
+    const usesVariations = plan.treinos.some((workout) =>
+        workout.exercicios.some((exercise) => exercise.variacoes_semana !== undefined),
+    )
+
+    if (plan.bloco_semanas === undefined) {
+        if (usesVariations || weekDescriptions.length > 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'obrigatório quando o plano usa variacoes_semana ou semanas',
+                path: ['bloco_semanas'],
+            })
+        }
+        return
+    }
+
+    refineWeekDescriptions(weekDescriptions, plan.bloco_semanas, ctx)
+    refineVariationWeeksWithinBlock(plan, plan.bloco_semanas, ctx)
 }
 
 function formatIssuePath(issue: z.ZodIssue): string {

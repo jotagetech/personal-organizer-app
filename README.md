@@ -238,6 +238,53 @@ barra). Os dois podem aparecer juntos ou separados.
 { "observacoes": "Descida controlada de 4 a 6 segundos." }
 ```
 
+**Progressão por semana**: o plano declara um bloco (`bloco_semanas`, de 1 a
+12) e cada exercício pode ter `variacoes_semana`, uma lista em que cada item
+diz em quais `semanas` vale e o que muda nelas: `series` (substitui a lista
+inteira, então serve tanto para mudar alvo e carga quanto para tirar ou
+acrescentar séries), `descanso_segundos_min/max` e `rir_alvo_min/max`. O que a
+variação não informa continua vindo do exercício, e uma semana sem variação
+usa as séries base. `semanas` no plano é opcional e dá uma descrição curta a
+cada semana, mostrada na aba Treino. Um bloco de 4 semanas com 3 séries que
+viram 2 na semana de redução de volume:
+
+```json
+{
+  "bloco_semanas": 4,
+  "semanas": [
+    { "semana": 1, "descricao": "Calibração de carga" },
+    { "semana": 4, "descricao": "Redução de volume" }
+  ],
+  "treinos": [{ "id": "treino-a", "nome": "A", "exercicios": [{
+    "id": "supino-reto", "nome": "Supino reto", "forma_carga": "total",
+    "series": [
+      { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 },
+      { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 },
+      { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 }
+    ],
+    "variacoes_semana": [
+      { "semanas": [2], "series": [
+        { "repeticoes_min": 10, "repeticoes_max": 12, "carga_sugerida": 60 },
+        { "repeticoes_min": 10, "repeticoes_max": 12, "carga_sugerida": 60 },
+        { "repeticoes_min": 10, "repeticoes_max": 12, "carga_sugerida": 60 }
+      ] },
+      { "semanas": [4], "rir_alvo_min": 3, "rir_alvo_max": 4, "series": [
+        { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 },
+        { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 }
+      ] }
+    ]
+  }] }]
+}
+```
+
+A semana vem do ciclo em andamento (menu da aba Treino, "Iniciar novo
+ciclo"): dias 1 a 7 do ciclo são a semana 1, dias 8 a 14 a semana 2 e assim
+por diante. Quando o ciclo passa da duração do bloco, o bloco recomeça: com 4
+semanas, a semana 5 do ciclo volta a ser a semana 1. Sem ciclo em andamento,
+ou com plano sem `bloco_semanas`, valem as séries base. Toda semana usada numa
+variação ou numa descrição precisa estar dentro do bloco, e uma semana só pode
+aparecer em uma variação do mesmo exercício.
+
 ### Como os dados ficam no banco e nas telas
 
 - `workout_sets.metric` vem preenchida pelo app novo; é nula só em séries
@@ -251,10 +298,19 @@ barra). Os dois podem aparecer juntos ou separados.
   "0 kg" e as quedas sob a série (`↳ 22,5 kg × 9 reps`). O app não calcula
   volume total, então tempo e distância nunca são somados como repetições nem
   a assistência como carga.
+- A sessão grava no snapshot as séries já resolvidas para a semana do bloco,
+  junto com `semana_bloco`, `bloco_semanas` e `descricao_semana` (nulos sem
+  bloco ou sem ciclo). O histórico mostra o que foi prescrito naquele dia
+  mesmo que o plano ou o ciclo mudem depois, e snapshots antigos são lidos
+  com a semana nula. A aba Treino mostra "Semana N de M" (com a descrição,
+  se houver) ao lado do badge do ciclo e o detalhe do dia em Resultados
+  mostra a semana da sessão.
 - A exportação JSON por período mantém o formato anterior e só acrescenta
   campos: por exercício `equipment`, `per_side`, `rest_seconds_min/max`,
   `target_rir_min/max` e `notes`; por série planejada `drops` (alvos das
-  quedas); por série realizada `drops` (o que foi feito em cada queda).
+  quedas); por série realizada `drops` (o que foi feito em cada queda); por
+  treino `block_week` e `block_weeks` (semana do bloco e duração dele, nulos
+  sem bloco).
 
 ## Estrutura
 

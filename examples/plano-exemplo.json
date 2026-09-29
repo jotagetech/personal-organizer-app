@@ -2,6 +2,13 @@
   "versao": 2,
   "nome": "Meu plano",
   "unidade_carga": "kg",
+  "bloco_semanas": 4,
+  "semanas": [
+    { "semana": 1, "descricao": "Calibração de carga" },
+    { "semana": 2, "descricao": "Mais repetições, mesma carga" },
+    { "semana": 3, "descricao": "Mais carga" },
+    { "semana": 4, "descricao": "Redução de volume" }
+  ],
   "treinos": [
     {
       "id": "treino-a",
@@ -18,9 +25,36 @@
           "rir_alvo_min": 2,
           "rir_alvo_max": 3,
           "series": [
-            { "repeticoes_min": 8, "repeticoes_max": 12, "carga_sugerida": 60 },
-            { "repeticoes_min": 8, "repeticoes_max": 12, "carga_sugerida": 60 },
-            { "repeticoes_min": 8, "repeticoes_max": 12 }
+            { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 },
+            { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 },
+            { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 }
+          ],
+          "variacoes_semana": [
+            {
+              "semanas": [2],
+              "series": [
+                { "repeticoes_min": 10, "repeticoes_max": 12, "carga_sugerida": 60 },
+                { "repeticoes_min": 10, "repeticoes_max": 12, "carga_sugerida": 60 },
+                { "repeticoes_min": 10, "repeticoes_max": 12, "carga_sugerida": 60 }
+              ]
+            },
+            {
+              "semanas": [3],
+              "series": [
+                { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 62.5 },
+                { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 62.5 },
+                { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 62.5 }
+              ]
+            },
+            {
+              "semanas": [4],
+              "series": [
+                { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 },
+                { "repeticoes_min": 8, "repeticoes_max": 10, "carga_sugerida": 60 }
+              ],
+              "rir_alvo_min": 3,
+              "rir_alvo_max": 4
+            }
           ]
         },
         {
@@ -33,6 +67,9 @@
           "series": [
             { "repeticoes_min": 10, "repeticoes_max": 10 },
             { "repeticoes_min": 10, "repeticoes_max": 10 }
+          ],
+          "variacoes_semana": [
+            { "semanas": [4], "series": [{ "repeticoes_min": 10, "repeticoes_max": 10 }] }
           ]
         },
         {

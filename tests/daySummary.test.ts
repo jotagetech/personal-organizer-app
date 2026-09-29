@@ -9,6 +9,9 @@ const SNAPSHOT: WorkoutSnapshot = {
     versao: 2,
     workout_key: 'treino_a',
     nome: 'Treino A',
+    semana_bloco: null,
+    bloco_semanas: null,
+    descricao_semana: null,
     exercicios: [
         {
             ...SNAPSHOT_EXERCISE_DEFAULTS,

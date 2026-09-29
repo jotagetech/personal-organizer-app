@@ -97,10 +97,15 @@ export type ExportedExercise = {
     sets: ExportedSet[]
 }
 
+// block_week é a semana do bloco de progressão em que a sessão foi feita
+// (a partir de 1) e block_weeks a duração do bloco; ambos nulos quando o
+// plano não tinha bloco ou não havia ciclo em andamento.
 export type ExportedWorkout = {
     date: IsoDate
     workout_name: string
     workout_key: string
+    block_week: number | null
+    block_weeks: number | null
     first_set_completed_at: string | null
     last_set_completed_at: string | null
     finished_at: string | null
@@ -272,6 +277,8 @@ function buildWorkout(
         date: session.session_date,
         workout_name: session.workout_snapshot.nome,
         workout_key: session.workout_key,
+        block_week: session.workout_snapshot.semana_bloco,
+        block_weeks: session.workout_snapshot.bloco_semanas,
         first_set_completed_at: activeWindow?.startIso ?? null,
         last_set_completed_at: activeWindow?.endIso ?? null,
         finished_at: session.finished_at,

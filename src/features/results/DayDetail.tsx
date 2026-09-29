@@ -12,6 +12,7 @@ import { getDaySummary, type DaySummary } from '@/features/results/api'
 import { buildDayReport, type DayReport, type DayReportPendingItem } from '@/features/results/dayReport'
 import { summarizeWorkoutSets, type WorkoutExerciseSummary, type WorkoutSetSummary } from '@/features/results/daySummary'
 import { formatDropResult, formatSetResult } from '@/features/results/setResultText'
+import { formatPlanWeekLabel } from '@/features/workout/planWeek'
 import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
 import type { SetStatus } from '@/features/workout/sessionProgress'
 import type { WorkoutSessionRow, WorkoutSetDropRow, WorkoutSetRow } from '@/features/workout/types'
@@ -194,15 +195,22 @@ type WorkoutSessionDetailProps = {
 function WorkoutSessionDetail({ session, sets, drops }: WorkoutSessionDetailProps) {
     const workoutSummary = summarizeWorkoutSets(session.workout_snapshot, sets, drops)
     const activeWindow = deriveSessionActiveWindow(sets)
+    const { semana_bloco: blockWeek, bloco_semanas: blockWeeks } = session.workout_snapshot
+    const finishedDetailParts = session.finished_at
+        ? [
+              activeWindow ? `Duração: ${formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}` : null,
+              session.feeling_scale !== null ? feelingEmoji(session.feeling_scale) : null,
+          ]
+        : []
     const sessionDetailParts = [
-        activeWindow ? `Duração: ${formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}` : null,
-        session.feeling_scale !== null ? feelingEmoji(session.feeling_scale) : null,
+        blockWeek !== null && blockWeeks !== null ? formatPlanWeekLabel(blockWeek, blockWeeks) : null,
+        ...finishedDetailParts,
     ].filter((part): part is string => part !== null)
 
     return (
         <div>
             <p className="day-workout__name">{session.workout_snapshot.nome}</p>
-            {session.finished_at && sessionDetailParts.length > 0 && (
+            {sessionDetailParts.length > 0 && (
                 <p className="day-workout__meta">{sessionDetailParts.join(' · ')}</p>
             )}
             {session.feeling_note && <p className="day-workout__note">{session.feeling_note}</p>}
