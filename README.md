@@ -81,6 +81,14 @@ npm run dev
       versão: o início do treino grava `started_at`, e sem a coluna essa
       escrita falha e aparece como falha no status de sincronização (as
       séries continuam sendo enviadas).
+   15. `20260929040000_workout_sessions_pause.sql` (colunas `paused_at` e
+      `paused_seconds` em `workout_sessions`, a pausa do treino, ver
+      `CHANGELOG.md`). Aditiva e idempotente: `paused_seconds` nasce com zero
+      em todas as sessões já gravadas, então nenhuma duração muda. Precisa
+      estar aplicada **antes** do deploy do app desta versão: pausar,
+      retomar e cancelar o início gravam essas colunas, e sem elas a escrita
+      falha e aparece como falha no status de sincronização (as séries
+      continuam sendo enviadas).
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
@@ -130,13 +138,18 @@ npm run dev
   mostrar o tempo decorrido (`m:ss`, `h:mm:ss` a partir de uma hora), que
   sai do horário de início e continua certo depois de sair da aba ou
   bloquear a tela. Confirmar ou pular uma série sem ter tocado no botão
-  inicia o treino naquele momento. O início passa pela fila otimista, então
-  funciona sem sinal. Sair da aba Treino (ou fechar o app) e voltar para a
+  inicia o treino naquele momento. Com o treino em andamento, "Pausar" para
+  o relógio (a faixa mostra "Pausado" e o tempo congelado) e "Retomar"
+  volta a contar; dá para pausar quantas vezes quiser, e confirmar ou pular
+  uma série com o treino pausado retoma sozinho. Enquanto nenhuma série foi
+  concluída ou pulada, "Cancelar início" volta para antes de "Iniciar
+  treino"; depois disso só existe pausar. Início, pausa, retomada e
+  cancelamento passam pela fila otimista, então funcionam sem sinal. Sair da aba Treino (ou fechar o app) e voltar para a
   mesma data reabre o mesmo passo: o treino escolhido, o exercício e a
   série da navegação livre e a queda do drop set em que estava.
   Finalizar o treino para o relógio, mostra o tempo total, registra a
-  duração (do início ao fim; em sessões anteriores ao início marcado, da
-  primeira à última série concluída), o sentimento (escala 1-5) e abre o
+  duração (do início ao fim, sem o tempo pausado; em sessões anteriores ao
+  início marcado, da primeira à última série concluída), o sentimento (escala 1-5) e abre o
   registro de cardio do dia.
 - **Ciclo**: marca a data de início de um ciclo de treino (menu de três pontos
   na aba Treino) e mostra "Dia N do ciclo", independente de trocas no plano.
@@ -489,7 +502,9 @@ aparecer em uma variação do mesmo exercício.
   `interval` (modalidade, rodadas e faixas de trabalho, recuperação e RPE
   alvo, nulo em exercício de séries); por série realizada `rpe`; por
   treino `started_at` (início marcado, nulo em sessões anteriores a ele),
-  e com ele `duration_minutes` passa a ser de `started_at` a `finished_at`. No
+  e com ele `duration_minutes` passa a ser de `started_at` a `finished_at`
+  menos o tempo pausado; por treino `paused_seconds` (total pausado, zero
+  sem pausa). No
   intervalado, cada item de `planned` e `sets` é uma rodada e
   `load_convention` não tem significado.
 

@@ -7,6 +7,27 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Pausar, retomar e cancelar o início do treino. Com o treino em andamento,
+  o relógio do topo ganha "Pausar"; pausado, ele mostra "Pausado", congela o
+  tempo exibido e oferece "Retomar", quantas vezes for preciso. Confirmar ou
+  pular uma série (ou uma queda do drop set) com o treino pausado retoma
+  naquele momento, e um treino finalizado nunca fica pausado. Enquanto
+  nenhuma série da sessão foi concluída ou pulada (contando a fila local),
+  "Cancelar início" volta ao estado de antes de "Iniciar treino"; depois
+  disso só existe pausar. Na fila otimista, pausar e retomar
+  (`pause_session`, `resume_session`) levam o estado completo da pausa,
+  calculado no aparelho com a hora de cada toque, e dividem a chave da
+  data, então reenviar é idempotente e várias pausas sem sinal deixam só o
+  estado mais recente. Cancelar um início que ainda não saiu do aparelho
+  só tira da fila o início e a pausa pendentes; se o início já foi tentado
+  ou enviado, entra `cancel_session_start`, que zera início e pausa no
+  servidor (sem mexer em sessão finalizada) e é enviado antes de tudo da
+  mesma data. A passada de envio também deixa de mandar operações que
+  saíram da fila no meio dela. O status de sincronização mostra "Pausar
+  treino de", "Retomar treino de" e "Cancelar início do treino de" para
+  essas operações. Migração `20260929040000_workout_sessions_pause.sql`
+  (colunas `paused_at` e `paused_seconds` em `workout_sessions`), que
+  precisa ser aplicada no SQL Editor antes do deploy.
 - Descanso padrão do plano e descanso por série. O plano aceita
   `descanso_padrao_segundos_min/max` na raiz, que vale para todo exercício de
   séries sem descanso próprio, e cada série aceita
@@ -129,6 +150,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- A duração do treino (painel de finalização, detalhe do dia e relatório
+  em Resultados, exportação) passa a descontar o tempo pausado; sessões sem
+  pausa continuam iguais. A exportação acrescenta `paused_seconds` por
+  treino, sem mudar `format_version`.
 - A duração do treino (painel de finalização, detalhe do dia e relatório
   em Resultados, exportação) passa a ser de `started_at` a `finished_at`
   quando a sessão tem início marcado; sessões antigas continuam medidas da
