@@ -111,6 +111,8 @@ export type ExportedInterval = {
 export type ExportedExercise = {
     exercise_key: string
     name: string
+    // Acrescentado só àquela sessão, fora do treino do plano.
+    is_extra: boolean
     exercise_type: ExerciseKind
     interval: ExportedInterval | null
     load_convention: LoadConvention
@@ -251,6 +253,7 @@ function buildWorkout(
     const exercises = session.workout_snapshot.exercicios.map((exercicio): ExportedExercise => ({
         exercise_key: exercicio.exercise_key,
         name: exercicio.nome,
+        is_extra: exercicio.extra === true,
         exercise_type: exercicio.tipo,
         interval: exercicio.intervalado
             ? {

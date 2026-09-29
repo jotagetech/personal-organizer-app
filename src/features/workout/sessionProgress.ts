@@ -203,6 +203,7 @@ export function countSetsByStatus(snapshot: WorkoutSnapshot, setsByKey: Map<stri
 export type ExerciseProgress = {
     exerciseIndex: number
     nome: string
+    isExtra: boolean
     completed: number
     skipped: number
     total: number
@@ -220,6 +221,7 @@ export function summarizeExerciseProgress(
         return {
             exerciseIndex,
             nome: exercicio.nome,
+            isExtra: exercicio.extra === true,
             completed: statuses.filter((status) => status === 'completed').length,
             skipped: statuses.filter((status) => status === 'skipped').length,
             total: statuses.length,

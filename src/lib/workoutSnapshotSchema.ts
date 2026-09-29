@@ -45,7 +45,9 @@ const snapshotIntervalSchema = z.object({
     rpe_alvo_max: z.number().nullable().default(null),
 })
 
-const snapshotExerciseSchema = z.object({
+// `extra` marca o exercício acrescentado só a esta sessão, fora do treino do
+// plano. Ausente é exercício do plano, que é o que todo snapshot antigo tem.
+export const snapshotExerciseSchema = z.object({
     exercise_key: z.string(),
     nome: z.string(),
     tipo: z.enum(EXERCISE_KINDS).default('series'),
@@ -59,6 +61,7 @@ const snapshotExerciseSchema = z.object({
     rir_alvo_max: z.number().nullable().default(null),
     observacoes: z.string().nullable().default(null),
     series: z.array(snapshotSetSchema),
+    extra: z.boolean().optional(),
 })
 
 // A semana do bloco fica gravada junto com as séries já resolvidas para ela,

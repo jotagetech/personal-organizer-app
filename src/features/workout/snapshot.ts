@@ -1,6 +1,11 @@
 import type { Exercise, Workout, WorkoutSet } from '@/lib/workoutPlanSchema'
 import { CURRENT_SNAPSHOT_VERSION } from '@/lib/workoutSnapshotSchema'
-import { applyWeekToWorkout, findWeekVariation, type PlanWeek } from '@/features/workout/planWeek'
+import {
+    applyWeekToExercise,
+    applyWeekToWorkout,
+    findWeekVariation,
+    type PlanWeek,
+} from '@/features/workout/planWeek'
 import {
     resolveEffectiveRest,
     restFieldsOf,
@@ -80,6 +85,20 @@ function snapshotExerciseOf(input: SnapshotExerciseInput): WorkoutSnapshotExerci
         observacoes: exercicio.observacoes,
         series: exercicio.series.map((set, seriesIndex) => snapshotSetOf(set, seriesIndex, layers, exerciseRest)),
     }
+
+    return snapshotExercise
+}
+
+// Um exercício do plano fora do treino do dia (acrescentado como extra) sai
+// com a mesma resolução de semana e descanso que teria dentro do treino dele.
+export function buildSnapshotExercise(
+    planned: Exercise,
+    planWeek: PlanWeek | null,
+    defaultRest: RestRange | null,
+): WorkoutSnapshotExercise {
+    const semana = planWeek?.semana ?? null
+    const forWeek = semana === null ? planned : applyWeekToExercise(planned, semana)
+    const snapshotExercise = snapshotExerciseOf({ planned, forWeek, semana, defaultRest })
 
     return snapshotExercise
 }

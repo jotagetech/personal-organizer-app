@@ -368,8 +368,58 @@ describe('summarizeExerciseProgress', () => {
         const setsByKey = mapOf([completedSet('supino', 1), skippedSet('supino', 2)])
 
         expect(summarizeExerciseProgress(snapshotWithTwoExercises(), setsByKey)).toEqual([
-            { exerciseIndex: 0, nome: 'Supino', completed: 1, skipped: 1, total: 2 },
-            { exerciseIndex: 1, nome: 'Tríceps', completed: 0, skipped: 0, total: 1 },
+            { exerciseIndex: 0, nome: 'Supino', isExtra: false, completed: 1, skipped: 1, total: 2 },
+            { exerciseIndex: 1, nome: 'Tríceps', isExtra: false, completed: 0, skipped: 0, total: 1 },
         ])
+    })
+})
+
+describe('exercício extra no progresso', () => {
+    function snapshotWithExtra(): WorkoutSnapshot {
+        const snapshot = snapshotWithTwoExercises()
+        return {
+            ...snapshot,
+            exercicios: [
+                ...snapshot.exercicios,
+                {
+                    ...SNAPSHOT_EXERCISE_DEFAULTS,
+                    exercise_key: 'extra-prancha',
+                    nome: 'Prancha',
+                    forma_carga: 'total',
+                    series: [repsSnapshotSet(1, 10, 12, null), repsSnapshotSet(2, 10, 12, null)],
+                    extra: true,
+                },
+            ],
+        }
+    }
+
+    it('entra na contagem de séries, na lista e marca o extra', () => {
+        const snapshot = snapshotWithExtra()
+
+        expect(totalSetCount(snapshot)).toBe(totalSetCount(snapshotWithTwoExercises()) + 2)
+        expect(summarizeExerciseProgress(snapshot, new Map()).map((exercise) => exercise.isExtra)).toEqual([
+            false,
+            false,
+            true,
+        ])
+    })
+
+    it('com as séries do plano resolvidas, o treino ainda não termina enquanto o extra tem série pendente', () => {
+        const snapshot = snapshotWithExtra()
+        const planSets = snapshotWithTwoExercises().exercicios.flatMap((exercicio) =>
+            exercicio.series.map((serie) => completedSet(exercicio.exercise_key, serie.set_index)),
+        )
+        const lastPlanPosition = { exerciseIndex: 1, setIndexInExercise: 0 }
+
+        expect(findNextUnresolvedPosition(snapshotWithTwoExercises(), mapOf(planSets), lastPlanPosition)).toBeNull()
+        expect(findNextUnresolvedPosition(snapshot, mapOf(planSets), lastPlanPosition)).toEqual({
+            exerciseIndex: 2,
+            setIndexInExercise: 0,
+        })
+        expect(findFirstIncompletePosition(snapshot, mapOf(planSets))).toEqual({ exerciseIndex: 2, setIndexInExercise: 0 })
+
+        const allSets = [...planSets, completedSet('extra-prancha', 1), completedSet('extra-prancha', 2)]
+        expect(findFirstIncompletePosition(snapshot, mapOf(allSets))).toBeNull()
+        expect(countSetsByStatus(snapshot, mapOf(allSets))).toMatchObject({ completed: allSets.length, pending: 0 })
     })
 })

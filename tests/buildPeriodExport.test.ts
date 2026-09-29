@@ -714,3 +714,42 @@ describe('exportFileName', () => {
         expect(exportFileName(PERIOD)).toBe('organizer-export_2026-09-28_2026-09-30.json')
     })
 })
+
+describe('exercício extra na exportação', () => {
+    it('sai com as séries dele e marcado como extra, sem mudar os do plano', () => {
+        const snapshotWithExtra: WorkoutSnapshot = {
+            ...SNAPSHOT,
+            exercicios: [
+                ...SNAPSHOT.exercicios,
+                {
+                    ...SNAPSHOT_EXERCISE_DEFAULTS,
+                    exercise_key: 'extra-elevacao-lateral',
+                    nome: 'Elevação lateral',
+                    forma_carga: 'total',
+                    series: [repsSnapshotSet(1, 12, 15, null)],
+                    extra: true,
+                },
+            ],
+        }
+        const raw = buildRawData({
+            workoutSessions: [buildSession({ workout_snapshot: snapshotWithExtra })],
+            workoutSets: [
+                buildSet({
+                    id: 'extra-1',
+                    exercise_key: 'extra-elevacao-lateral',
+                    load_kg: 8,
+                    reps: 15,
+                    completed_at: '2026-09-28T10:50:00.000Z',
+                }),
+            ],
+        })
+
+        const [workout] = buildPeriodExport(raw, PERIOD, META).workouts
+        expect(workout.exercises.map((exercise) => [exercise.exercise_key, exercise.is_extra])).toEqual([
+            ['supino', false],
+            ['remada', false],
+            ['extra-elevacao-lateral', true],
+        ])
+        expect(workout.exercises[2].sets[0]).toMatchObject({ status: 'completed', load_kg: 8, reps: 15 })
+    })
+})

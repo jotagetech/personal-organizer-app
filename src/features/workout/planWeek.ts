@@ -81,7 +81,7 @@ export function findWeekVariation(exercise: Exercise, semana: number | null): Ex
     return variation
 }
 
-function applyWeekToExercise(exercise: Exercise, semana: number): Exercise {
+export function applyWeekToExercise(exercise: Exercise, semana: number): Exercise {
     const variation = findWeekVariation(exercise, semana)
     if (!variation) {
         return exercise

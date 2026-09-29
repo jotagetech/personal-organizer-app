@@ -210,3 +210,33 @@ describe('rememberWorkoutStep e forgetWorkoutStep', () => {
         expect(forgetWorkoutStep(initial, '2026-09-29')).toEqual({ '2026-09-28': savedStep() })
     })
 })
+
+describe('retomada com exercício extra', () => {
+    it('volta para a série do extra quando o snapshot relido já traz ele', () => {
+        const withExtra: WorkoutSnapshot = {
+            ...snapshotWithDropSet(),
+            exercicios: [
+                ...snapshotWithDropSet().exercicios,
+                {
+                    ...SNAPSHOT_EXERCISE_DEFAULTS,
+                    exercise_key: 'extra-prancha',
+                    nome: 'Prancha',
+                    forma_carga: 'total',
+                    series: [repsSnapshotSet(1, 10, 12, null), repsSnapshotSet(2, 10, 12, null)],
+                    extra: true,
+                },
+            ],
+        }
+        const extraIndex = withExtra.exercicios.length - 1
+        const savedStep = buildSavedWorkoutStep(withExtra, {
+            position: { exerciseIndex: extraIndex, setIndexInExercise: 1 },
+            dropPosition: null,
+        })
+
+        expect(restoreWorkoutStep(withExtra, new Map(), savedStep)).toEqual({
+            position: { exerciseIndex: extraIndex, setIndexInExercise: 1 },
+            dropPosition: null,
+        })
+        expect(restoreWorkoutStep(snapshotWithDropSet(), new Map(), savedStep)).toBeNull()
+    })
+})
