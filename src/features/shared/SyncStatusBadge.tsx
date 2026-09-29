@@ -77,6 +77,15 @@ function describeOperation(operation: OutboxOperation): string {
     if (operation.kind === 'start_session') {
         return `Iniciar treino de ${operation.sessionDate}`
     }
+    if (operation.kind === 'pause_session') {
+        return `Pausar treino de ${operation.sessionDate}`
+    }
+    if (operation.kind === 'resume_session') {
+        return `Retomar treino de ${operation.sessionDate}`
+    }
+    if (operation.kind === 'cancel_session_start') {
+        return `Cancelar início do treino de ${operation.sessionDate}`
+    }
 
     return `Série ${operation.setIndex} de ${operation.exerciseKey} (${operation.sessionDate})`
 }

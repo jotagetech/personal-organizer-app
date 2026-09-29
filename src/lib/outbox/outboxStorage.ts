@@ -79,9 +79,38 @@ const finishSessionOperationSchema = z.object({
     status: outboxOperationStatusSchema,
 })
 
+const sessionPauseValuesSchema = z.object({
+    pausedAt: z.string().nullable(),
+    pausedSeconds: z.number().int().nonnegative(),
+})
+
+function sessionPauseOperationSchema<Kind extends 'pause_session' | 'resume_session'>(kind: Kind) {
+    return z.object({
+        kind: z.literal(kind),
+        sessionDate: z.string(),
+        pause: sessionPauseValuesSchema,
+        enqueuedAt: z.string(),
+        attempts: z.number().int().nonnegative(),
+        status: outboxOperationStatusSchema,
+    })
+}
+
+const cancelSessionStartOperationSchema = z.object({
+    kind: z.literal('cancel_session_start'),
+    sessionDate: z.string(),
+    enqueuedAt: z.string(),
+    attempts: z.number().int().nonnegative(),
+    status: outboxOperationStatusSchema,
+})
+
+// Tipos novos de operação entram na união sem mudar a versão do envelope:
+// filas gravadas antes deles continuam válidas, só não os contêm.
 const outboxOperationSchema = z.discriminatedUnion('kind', [
     upsertSetOperationSchema,
     startSessionOperationSchema,
+    sessionPauseOperationSchema('pause_session'),
+    sessionPauseOperationSchema('resume_session'),
+    cancelSessionStartOperationSchema,
     finishSessionOperationSchema,
 ])
 

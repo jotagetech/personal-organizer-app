@@ -69,7 +69,47 @@ export type FinishSessionOperation = {
     status: OutboxOperationStatus
 }
 
-export type OutboxOperation = UpsertSetOperation | StartSessionOperation | FinishSessionOperation
+// Pausar e retomar levam o estado completo da pausa, calculado no aparelho com
+// a hora de cada toque, e não um incremento: reenviar a mesma escrita depois
+// de uma resposta perdida grava exatamente o mesmo valor. As duas dividem a
+// chave de agrupamento, então pausar e retomar várias vezes sem sinal deixa
+// só o estado mais recente na fila.
+export type SessionPauseValues = {
+    pausedAt: string | null
+    pausedSeconds: number
+}
+
+type SessionPauseOperationOf<Kind extends string> = {
+    kind: Kind
+    sessionDate: string
+    pause: SessionPauseValues
+    enqueuedAt: string
+    attempts: number
+    status: OutboxOperationStatus
+}
+
+export type PauseSessionOperation = SessionPauseOperationOf<'pause_session'>
+export type ResumeSessionOperation = SessionPauseOperationOf<'resume_session'>
+export type SessionPauseOperation = PauseSessionOperation | ResumeSessionOperation
+
+// Desfaz no servidor um início que pode já ter chegado lá. Um início que
+// nunca saiu do aparelho é cancelado só tirando ele da fila, sem esta
+// operação (ver cancelSessionStart).
+export type CancelSessionStartOperation = {
+    kind: 'cancel_session_start'
+    sessionDate: string
+    enqueuedAt: string
+    attempts: number
+    status: OutboxOperationStatus
+}
+
+export type OutboxOperation =
+    | UpsertSetOperation
+    | StartSessionOperation
+    | PauseSessionOperation
+    | ResumeSessionOperation
+    | CancelSessionStartOperation
+    | FinishSessionOperation
 
 // Operações que conseguem criar a sessão do dia sozinhas, sem depender de uma
 // sessão já confirmada no servidor.
@@ -89,6 +129,9 @@ export const BACKOFF_SCHEDULE_MS = [5000, 15000, 30000, 60000] as const
 export function naturalKeyOf(operation: OutboxOperation): string {
     if (operation.kind === 'upsert_set') {
         return `upsert_set:${operation.sessionDate}:${operation.exerciseKey}:${operation.setIndex}`
+    }
+    if (operation.kind === 'pause_session' || operation.kind === 'resume_session') {
+        return `session_pause:${operation.sessionDate}`
     }
 
     return `${operation.kind}:${operation.sessionDate}`
@@ -216,12 +259,17 @@ export function countByStatus(queue: OutboxOperation[]): { pending: number; fail
     return { pending, failed }
 }
 
-// Dentro da mesma data, o início vai antes das séries e a finalização por
-// último, na ordem em que as coisas aconteceram no treino.
+// Dentro da mesma data, o início vai antes da pausa, das séries e da
+// finalização, na ordem em que as coisas aconteceram no treino. O
+// cancelamento de um início anterior vem antes de tudo: com ele ainda na
+// fila, um início novo só vale depois de o antigo ter sido desfeito.
 const SEND_PRIORITY_BY_KIND: Record<OutboxOperation['kind'], number> = {
-    start_session: 0,
-    upsert_set: 1,
-    finish_session: 2,
+    cancel_session_start: 0,
+    start_session: 1,
+    pause_session: 2,
+    resume_session: 2,
+    upsert_set: 3,
+    finish_session: 4,
 }
 
 function sendPriority(operation: OutboxOperation): number {
@@ -343,6 +391,103 @@ export function findPendingStartedAt(operations: OutboxOperation[], sessionDate:
     const pendingStartedAt = startOperation?.enqueuedAt ?? null
 
     return pendingStartedAt
+}
+
+// Estado da pausa ainda não confirmado no servidor; vence o que veio de lá,
+// porque é sempre mais recente.
+export function findPendingPauseState(operations: OutboxOperation[], sessionDate: string): SessionPauseValues | null {
+    const pauseOperation = operations.find(
+        (operation): operation is SessionPauseOperation =>
+            (operation.kind === 'pause_session' || operation.kind === 'resume_session') &&
+            operation.sessionDate === sessionDate,
+    )
+    const pendingPauseState = pauseOperation?.pause ?? null
+
+    return pendingPauseState
+}
+
+export function hasPendingStartCancellation(operations: OutboxOperation[], sessionDate: string): boolean {
+    const hasCancellation = operations.some(
+        (operation) => operation.kind === 'cancel_session_start' && operation.sessionDate === sessionDate,
+    )
+
+    return hasCancellation
+}
+
+// Com um cancelamento ainda na fila, o início e a pausa que vieram do servidor
+// já foram desfeitos no aparelho e não valem mais; só um início novo, também
+// pendente, conta.
+export function resolveEffectiveStartedAt(
+    serverStartedAt: string | null,
+    operations: OutboxOperation[],
+    sessionDate: string,
+): string | null {
+    const pendingStartedAt = findPendingStartedAt(operations, sessionDate)
+    if (hasPendingStartCancellation(operations, sessionDate)) {
+        return pendingStartedAt
+    }
+
+    return serverStartedAt ?? pendingStartedAt
+}
+
+export function resolveEffectivePauseState(
+    serverPauseState: SessionPauseValues,
+    operations: OutboxOperation[],
+    sessionDate: string,
+): SessionPauseValues {
+    const pendingPauseState = findPendingPauseState(operations, sessionDate)
+    if (pendingPauseState) {
+        return pendingPauseState
+    }
+    if (hasPendingStartCancellation(operations, sessionDate)) {
+        return { pausedAt: null, pausedSeconds: 0 }
+    }
+
+    return serverPauseState
+}
+
+function isStartOrPauseOf(operation: OutboxOperation, sessionDate: string): boolean {
+    const isStartOrPause =
+        operation.sessionDate === sessionDate &&
+        (operation.kind === 'start_session' || operation.kind === 'pause_session' || operation.kind === 'resume_session')
+
+    return isStartOrPause
+}
+
+// Um início que nunca tentou sair do aparelho (sem tentativa registrada e
+// sem estar a caminho do servidor agora) pode ser desfeito só tirando ele da
+// fila junto com a pausa, sem mandar início e cancelamento em sequência. Se
+// ele já foi tentado, a resposta pode ter se perdido com a escrita feita,
+// então o cancelamento vai para o servidor; o mesmo quando o início já saiu
+// da fila. Um cancelamento anterior ainda pendente continua valendo.
+export function cancelSessionStart(
+    queue: OutboxOperation[],
+    sessionDate: string,
+    cancelledAt: string,
+    inFlightOperation: OutboxOperation | null,
+): OutboxOperation[] {
+    const pendingStart = queue.find(
+        (operation) => operation.kind === 'start_session' && operation.sessionDate === sessionDate,
+    )
+    const isStartInFlight =
+        pendingStart !== undefined &&
+        inFlightOperation !== null &&
+        naturalKeyOf(inFlightOperation) === naturalKeyOf(pendingStart)
+    const startNeverLeftDevice = pendingStart !== undefined && pendingStart.attempts === 0 && !isStartInFlight
+    const queueWithoutStart = queue.filter((operation) => !isStartOrPauseOf(operation, sessionDate))
+
+    if (startNeverLeftDevice) {
+        return queueWithoutStart
+    }
+
+    const cancelOperation: CancelSessionStartOperation = {
+        kind: 'cancel_session_start',
+        sessionDate,
+        enqueuedAt: cancelledAt,
+        attempts: 0,
+        status: 'pending',
+    }
+    return enqueueOperation(queueWithoutStart, cancelOperation)
 }
 
 export function findPendingFinishedAt(operations: OutboxOperation[], sessionDate: string): string | null {

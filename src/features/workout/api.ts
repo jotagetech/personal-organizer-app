@@ -311,6 +311,36 @@ export async function recordSessionStart(sessionId: string, startedAt: string): 
     }
 }
 
+// Grava o estado completo da pausa, não um incremento: a fila pode reenviar
+// a mesma escrita depois de uma resposta perdida sem somar a pausa duas vezes.
+export async function recordSessionPause(
+    sessionId: string,
+    pause: { pausedAt: string | null; pausedSeconds: number },
+): Promise<void> {
+    const { error } = await supabase
+        .from('workout_sessions')
+        .update({ paused_at: pause.pausedAt, paused_seconds: pause.pausedSeconds })
+        .eq('id', sessionId)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
+// Volta a sessão para antes de "Iniciar treino". Uma sessão já finalizada
+// nunca perde o início; nenhuma linha atualizada, nesse caso, não é erro.
+export async function clearSessionStart(sessionId: string): Promise<void> {
+    const { error } = await supabase
+        .from('workout_sessions')
+        .update({ started_at: null, paused_at: null, paused_seconds: 0 })
+        .eq('id', sessionId)
+        .is('finished_at', null)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
 export async function updateSessionFeeling(
     sessionId: string,
     feelingScale: number,

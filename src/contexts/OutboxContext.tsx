@@ -9,15 +9,26 @@ import {
     type ReactNode,
 } from 'react'
 
-import { createSession, finishSession, getSessionForDate, recordSessionStart, upsertSet } from '@/features/workout/api'
+import {
+    clearSessionStart,
+    createSession,
+    finishSession,
+    getSessionForDate,
+    recordSessionPause,
+    recordSessionStart,
+    upsertSet,
+} from '@/features/workout/api'
 import type { WorkoutSnapshot } from '@/features/workout/types'
 import {
     buildSendPlan,
+    cancelSessionStart,
     classifyOutboxError,
     countByStatus,
     enqueueOperation,
     enqueueOperations,
+    isSessionCreatingOperation,
     markOperationAttempt,
+    naturalKeyOf,
     nextBackoffDelayMs,
     operationsForDate,
     operationsWithStatus,
@@ -26,6 +37,7 @@ import {
     replaceSentOperation,
     type OutboxOperation,
     type OutboxSetValues,
+    type SessionPauseValues,
     type StartSessionOperation,
     type UpsertSetOperation,
 } from '@/lib/outbox/outboxQueue'
@@ -64,6 +76,10 @@ type OutboxContextValue = {
     // exatamente o mesmo horário que vai para o servidor.
     enqueueStartSession: (input: EnqueueStartSessionInput) => void
     enqueueFinishSession: (sessionDate: string, finishedAt: string) => void
+    // O estado da pausa já vem calculado por quem chama, com a hora do toque.
+    enqueuePauseSession: (sessionDate: string, pause: SessionPauseValues, pausedAt: string) => void
+    enqueueResumeSession: (sessionDate: string, pause: SessionPauseValues, resumedAt: string) => void
+    cancelSessionStart: (sessionDate: string, cancelledAt: string) => void
     discardOperation: (naturalKey: string) => void
     listFailedOperations: () => OutboxOperation[]
 }
@@ -115,11 +131,37 @@ async function resolveSessionId(sessionDate: string, sessionIdByDate: Map<string
     return existingSession.session.id
 }
 
+// Sem sessão no servidor não há início para desfazer: o cancelamento conta
+// como enviado em vez de virar falha.
+async function sendStartCancellation(sessionDate: string, sessionIdByDate: Map<string, string>): Promise<void> {
+    const cachedSessionId = sessionIdByDate.get(sessionDate)
+    const sessionId = cachedSessionId ?? (await getSessionForDate(sessionDate))?.session.id
+    if (!sessionId) {
+        return
+    }
+
+    sessionIdByDate.set(sessionDate, sessionId)
+    await clearSessionStart(sessionId)
+}
+
+function isStillQueued(queue: OutboxOperation[], operation: OutboxOperation): boolean {
+    const naturalKey = naturalKeyOf(operation)
+
+    return queue.some((queuedOperation) => naturalKeyOf(queuedOperation) === naturalKey)
+}
+
+function hasSessionCreatingOperationFor(queue: OutboxOperation[], sessionDate: string): boolean {
+    return queue.some((operation) => isSessionCreatingOperation(operation) && operation.sessionDate === sessionDate)
+}
+
 export function OutboxProvider({ children }: { children: ReactNode }) {
     const [queue, setQueue] = useState<OutboxOperation[]>(() => loadOutboxQueue(window.localStorage))
     const [isOnline, setIsOnline] = useState(() => navigator.onLine)
     const queueRef = useRef(queue)
     const isFlushingRef = useRef(false)
+    // A operação que está sendo enviada agora: cancelar o início precisa
+    // saber se ele pode estar chegando ao servidor neste instante.
+    const inFlightOperationRef = useRef<OutboxOperation | null>(null)
     const backoffDelayRef = useRef<number | null>(null)
     const backoffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     // scheduleNextFlush precisa disparar o próximo ciclo completo (flush + novo
@@ -150,10 +192,16 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
             const blockedDates = new Set<string>()
             let madeProgress = false
 
+            // O plano é montado uma vez por passada, mas a fila continua mudando
+            // durante o envio: o que saiu dela nesse meio tempo (início
+            // cancelado, falha descartada) não é mais enviado.
             const sendPlan = buildSendPlan(queueRef.current)
             for (const step of sendPlan) {
                 if (step.type === 'ensure_session') {
                     if (blockedDates.has(step.sessionDate)) {
+                        continue
+                    }
+                    if (!hasSessionCreatingOperationFor(queueRef.current, step.sessionDate)) {
                         continue
                     }
                     try {
@@ -170,11 +218,19 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                 }
 
                 const { operation } = step
-                if (blockedDates.has(operation.sessionDate)) {
+                if (blockedDates.has(operation.sessionDate) || !isStillQueued(queueRef.current, operation)) {
                     continue
                 }
 
+                inFlightOperationRef.current = operation
                 try {
+                    if (operation.kind === 'cancel_session_start') {
+                        await sendStartCancellation(operation.sessionDate, sessionIdByDate)
+                        madeProgress = true
+                        updateQueue(removeSentOperation(queueRef.current, operation))
+                        continue
+                    }
+
                     const sessionId = await resolveSessionId(operation.sessionDate, sessionIdByDate)
                     if (operation.kind === 'upsert_set') {
                         await upsertSet({
@@ -195,6 +251,8 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                         })
                     } else if (operation.kind === 'start_session') {
                         await recordSessionStart(sessionId, operation.enqueuedAt)
+                    } else if (operation.kind === 'pause_session' || operation.kind === 'resume_session') {
+                        await recordSessionPause(sessionId, operation.pause)
                     } else {
                         // A fila pode ficar horas sem sinal: a hora de fim é a do
                         // momento em que o treino terminou, não a do envio.
@@ -210,6 +268,8 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                     if (classification === 'retry') {
                         blockedDates.add(operation.sessionDate)
                     }
+                } finally {
+                    inFlightOperationRef.current = null
                 }
             }
 
@@ -324,6 +384,40 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                     status: 'pending',
                 }
                 updateQueue(enqueueOperation(queueRef.current, operation))
+                void runFlushCycle()
+            },
+            enqueuePauseSession: (sessionDate: string, pause: SessionPauseValues, pausedAt: string) => {
+                const operation: OutboxOperation = {
+                    kind: 'pause_session',
+                    sessionDate,
+                    pause,
+                    enqueuedAt: pausedAt,
+                    attempts: 0,
+                    status: 'pending',
+                }
+                updateQueue(enqueueOperation(queueRef.current, operation))
+                void runFlushCycle()
+            },
+            enqueueResumeSession: (sessionDate: string, pause: SessionPauseValues, resumedAt: string) => {
+                const operation: OutboxOperation = {
+                    kind: 'resume_session',
+                    sessionDate,
+                    pause,
+                    enqueuedAt: resumedAt,
+                    attempts: 0,
+                    status: 'pending',
+                }
+                updateQueue(enqueueOperation(queueRef.current, operation))
+                void runFlushCycle()
+            },
+            cancelSessionStart: (sessionDate: string, cancelledAt: string) => {
+                const nextQueue = cancelSessionStart(
+                    queueRef.current,
+                    sessionDate,
+                    cancelledAt,
+                    inFlightOperationRef.current,
+                )
+                updateQueue(nextQueue)
                 void runFlushCycle()
             },
             discardOperation: (naturalKey: string) => {
