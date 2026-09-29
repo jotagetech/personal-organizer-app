@@ -5,6 +5,14 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ## 2026-09-29
 
+### Adicionado
+
+- Suporte a mais de uma conta: todo usuário novo recebe a própria cópia do
+  catálogo TACO (antes só a primeira conta do banco recebia). A seed fica
+  numa tabela de referência (`food_items_seed`) sem acesso pelo cliente, e
+  contas já existentes sem o catálogo recebem a cópia ao aplicar a
+  migração `20260929000000_food_items_seed_per_user.sql`.
+
 ### Alterado
 
 - Repaginação visual do app inteiro, sem mudar regra de negócio nem dados.

@@ -60,11 +60,16 @@ npm run dev
    10. `20260928050000_food_entries_recalc_on_item_update.sql` (recalcula a
       nutrição dos consumos sem dado quando o item do catálogo é editado, ver
       `CHANGELOG.md`)
+   11. `20260929000000_food_items_seed_per_user.sql` (catálogo TACO copiado
+      para toda conta nova e para contas existentes sem ele, ver
+      `CHANGELOG.md`)
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
-   manualmente o único usuário da conta pessoal (sem tela de cadastro público,
-   por decisão de escopo).
+   manualmente cada usuário em **Authentication → Users → Add user** (sem tela
+   de cadastro público, só entra quem tiver conta criada). Cada conta nova
+   recebe automaticamente as configurações padrão e o próprio catálogo TACO;
+   os dados de uma conta nunca aparecem para outra.
 4. Copie a URL do projeto e a `anon key` para `.env` (`VITE_SUPABASE_URL` e
    `VITE_SUPABASE_ANON_KEY`).
 5. RLS habilitado em todas as tabelas, restringindo cada uma ao próprio
