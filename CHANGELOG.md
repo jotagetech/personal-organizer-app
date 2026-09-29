@@ -42,7 +42,7 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   editável. Depois de confirmar uma série de exercício com descanso
   prescrito, uma faixa compacta faz a contagem regressiva até o máximo,
   destaca a passagem do mínimo, aceita +15 s ou pular e apita ao terminar;
-  não aparece depois de uma queda de drop set nem da última série. O tempo
+  com drop set, começa ao confirmar a última queda (ou pular as restantes), e não aparece entre quedas nem depois da última série. O tempo
   vem de timestamps guardados em localStorage (certo depois de o iPhone
   suspender a aba ou de reabrir o app), o bipe usa Web Audio e a tela fica
   acesa com wake lock quando o aparelho oferece.

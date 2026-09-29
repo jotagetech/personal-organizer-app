@@ -64,6 +64,16 @@ export function restPhase(timer: RestTimer, nowMs: number): RestPhase {
     return 'aguardando_minimo'
 }
 
+// O descanso vem depois de a série terminar por inteiro (a última queda, se
+// houver drop set), e só quando ainda há série pela frente.
+export function shouldStartRest(
+    minSeconds: number | null,
+    maxSeconds: number | null,
+    hasNextUnresolvedSet: boolean,
+): boolean {
+    return minSeconds !== null && maxSeconds !== null && hasNextUnresolvedSet
+}
+
 export function startRestTimer(
     sessionDate: string,
     minSeconds: number,

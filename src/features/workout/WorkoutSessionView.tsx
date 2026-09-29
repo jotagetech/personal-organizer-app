@@ -9,7 +9,13 @@ import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import { exerciseTags } from '@/features/workout/setPresentation'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
 import { loadRestTimer, saveRestTimer } from '@/features/workout/timerStorage'
-import { extendRestTimer, REST_EXTENSION_SECONDS, startRestTimer, type RestTimer } from '@/features/workout/workoutTimers'
+import {
+    extendRestTimer,
+    REST_EXTENSION_SECONDS,
+    shouldStartRest,
+    startRestTimer,
+    type RestTimer,
+} from '@/features/workout/workoutTimers'
 import {
     setKey,
     type WorkoutSessionRow,
@@ -339,9 +345,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         handleSetResolved(row)
     }
 
-    // O descanso só começa quando ainda há série pela frente; depois da última
-    // não há o que esperar. Quedas de drop set são feitas sem pausa e nunca
-    // passam por aqui.
+    // Quedas intermediárias de um drop set são feitas sem pausa: o descanso
+    // começa só quando a série termina por inteiro (última queda confirmada ou
+    // quedas restantes puladas).
     function startRestAfterSet(resolvedSetsByKey: Map<string, WorkoutSetRow>, confirmedPosition: StepPosition) {
         if (!snapshot) {
             return
@@ -351,7 +357,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         if (minSeconds === null || maxSeconds === null) {
             return
         }
-        if (findNextUnresolvedPosition(snapshot, resolvedSetsByKey, confirmedPosition) === null) {
+        const hasNextUnresolvedSet =
+            findNextUnresolvedPosition(snapshot, resolvedSetsByKey, confirmedPosition) !== null
+        if (!shouldStartRest(minSeconds, maxSeconds, hasNextUnresolvedSet)) {
             return
         }
         updateRestTimer(startRestTimer(sessionDate, minSeconds, maxSeconds, Date.now()))
@@ -368,10 +376,14 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             return
         }
 
+        startRestAfterSet(currentEffectiveSetsByKey(), position)
         moveToNextUnresolved(currentEffectiveSetsByKey())
     }
 
     function handleSkipRemainingDrops() {
+        if (position) {
+            startRestAfterSet(currentEffectiveSetsByKey(), position)
+        }
         moveToNextUnresolved(currentEffectiveSetsByKey())
     }
 

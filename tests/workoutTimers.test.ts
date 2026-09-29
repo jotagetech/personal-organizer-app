@@ -8,6 +8,7 @@ import {
     parseStopwatchRecord,
     restPhase,
     restRemainingSeconds,
+    shouldStartRest,
     startRestTimer,
     stopwatchPhase,
 } from '@/features/workout/workoutTimers'
@@ -60,6 +61,21 @@ describe('descanso', () => {
         expect(restRemainingSeconds(extended, START + 120_000)).toBe(15)
         expect(restPhase(extended, START + 120_000)).toBe('na_faixa')
         expect(restPhase(extended, START + 135_000)).toBe('terminado')
+    })
+})
+
+describe('shouldStartRest', () => {
+    it('começa quando há descanso prescrito e série pela frente', () => {
+        expect(shouldStartRest(90, 120, true)).toBe(true)
+    })
+
+    it('não começa depois da última série do treino', () => {
+        expect(shouldStartRest(90, 120, false)).toBe(false)
+    })
+
+    it('não começa sem descanso prescrito', () => {
+        expect(shouldStartRest(null, null, true)).toBe(false)
+        expect(shouldStartRest(90, null, true)).toBe(false)
     })
 })
 
