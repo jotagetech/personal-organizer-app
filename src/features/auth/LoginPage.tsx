@@ -23,36 +23,42 @@ export function LoginPage() {
     }
 
     return (
-        <div className="app-content">
-            <h1>Entrar</h1>
-            {errorMessage && <div className="error-list">{errorMessage}</div>}
-            <form onSubmit={handleSubmit}>
-                <div className="field">
-                    <label htmlFor="email">E-mail</label>
-                    <input
-                        id="email"
-                        type="email"
-                        autoComplete="username"
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        required
-                    />
+        <div className="login-page">
+            <div className="login-page__inner">
+                <img className="login-page__icon" src="/apple-touch-icon.png" alt="" width={72} height={72} />
+                <h1 className="login-page__title">Organizer</h1>
+                <p className="login-page__subtitle">Rotina, treino e alimentação num lugar só.</p>
+                <div className="card login-page__card">
+                    {errorMessage && <div className="error-list">{errorMessage}</div>}
+                    <form onSubmit={handleSubmit}>
+                        <div className="field">
+                            <label htmlFor="email">E-mail</label>
+                            <input
+                                id="email"
+                                type="email"
+                                autoComplete="username"
+                                value={email}
+                                onChange={(event) => setEmail(event.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="field">
+                            <label htmlFor="password">Senha</label>
+                            <input
+                                id="password"
+                                type="password"
+                                autoComplete="current-password"
+                                value={password}
+                                onChange={(event) => setPassword(event.target.value)}
+                                required
+                            />
+                        </div>
+                        <button type="submit" className="primary-button login-page__submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Entrando...' : 'Entrar'}
+                        </button>
+                    </form>
                 </div>
-                <div className="field">
-                    <label htmlFor="password">Senha</label>
-                    <input
-                        id="password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        required
-                    />
-                </div>
-                <button type="submit" className="primary-button" disabled={isSubmitting}>
-                    {isSubmitting ? 'Entrando...' : 'Entrar'}
-                </button>
-            </form>
+            </div>
         </div>
     )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 import { getCurrentCycle } from '@/features/cycle/api'
 import type { WorkoutCycleRow } from '@/features/cycle/types'
@@ -12,6 +13,7 @@ import type { Weekday } from '@/lib/workoutPlanSchema'
 
 const DEFAULT_LOOKBACK_DAYS = 27
 const MAX_COLLAPSED_WEEKS = 6
+const TOGGLE_ICON_SIZE = 16
 
 type GridInputs = {
     rangeStart: IsoDate
@@ -72,7 +74,7 @@ export function ResultsTab() {
     }
 
     if (!gridInputs) {
-        return <p>Carregando resultados...</p>
+        return <p className="text-muted">Carregando resultados...</p>
     }
 
     // A grade continua limitada à janela do ciclo (ou aos últimos dias, sem
@@ -87,10 +89,12 @@ export function ResultsTab() {
 
     const { visible: collapsedWeeks, hiddenCount } = selectVisibleWeeks(weeks, selectedDate, MAX_COLLAPSED_WEEKS)
     const visibleWeeks = isShowingWholeCycle ? weeks : collapsedWeeks
+    const today = todayInTimezone()
+    const ToggleIcon = isShowingWholeCycle ? ChevronUp : ChevronDown
 
     return (
         <div>
-            <h2 style={{ fontSize: 16, marginTop: 0 }}>{gridTitle(cycle)}</h2>
+            <h2 className="section-title results-tab__title">{gridTitle(cycle)}</h2>
             <div className="results-grid">
                 <div className="results-grid__row results-grid__row--header">
                     {(Object.keys(WEEKDAY_LABELS) as Weekday[]).map((weekday) => (
@@ -105,10 +109,11 @@ export function ResultsTab() {
                             <button
                                 key={day.date}
                                 type="button"
-                                className={dayCellClassName(day.inRange, day.completed, day.selected)}
+                                className={dayCellClassName(day.inRange, day.completed, day.selected, day.date === today)}
                                 title={day.date}
                                 aria-label={dayAriaLabel(day.date, day.completed)}
                                 aria-pressed={day.selected}
+                                aria-current={day.date === today ? 'date' : undefined}
                                 onClick={() => setSelectedDate(day.date)}
                             >
                                 {dayOfMonth(day.date)}
@@ -121,10 +126,11 @@ export function ResultsTab() {
                 <div className="results-grid__toggle">
                     <button
                         type="button"
-                        className="secondary-button"
+                        className="results-grid__toggle-button"
                         onClick={() => setIsShowingWholeCycle((previous) => !previous)}
                     >
                         {isShowingWholeCycle ? 'Mostrar menos' : expandGridLabel(cycle, weeks.length)}
+                        <ToggleIcon size={TOGGLE_ICON_SIZE} aria-hidden="true" />
                     </button>
                 </div>
             )}
@@ -165,7 +171,7 @@ function dayOfMonth(isoDate: string): string {
     return dayWithoutLeadingZero
 }
 
-function dayCellClassName(inRange: boolean, completed: boolean, selected: boolean): string {
+function dayCellClassName(inRange: boolean, completed: boolean, selected: boolean, isToday: boolean): string {
     const classNames = ['results-grid__cell']
 
     if (!inRange) {
@@ -176,6 +182,10 @@ function dayCellClassName(inRange: boolean, completed: boolean, selected: boolea
 
     if (selected) {
         classNames.push('results-grid__cell--selected')
+    }
+
+    if (isToday) {
+        classNames.push('results-grid__cell--today')
     }
 
     const className = classNames.join(' ')

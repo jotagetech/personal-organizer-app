@@ -27,7 +27,12 @@ function AuthGate() {
     const { session, isLoadingSession } = useAuth()
 
     if (isLoadingSession) {
-        return <div className="app-content">Carregando...</div>
+        return (
+            <div className="app-loading" role="status">
+                <span className="app-loading__spinner" aria-hidden="true" />
+                <span className="app-loading__label">Carregando...</span>
+            </div>
+        )
     }
 
     if (!session) {
