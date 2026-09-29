@@ -9,7 +9,7 @@ import {
     type ReactNode,
 } from 'react'
 
-import { createSession, finishSession, getSessionForDate, upsertSet } from '@/features/workout/api'
+import { createSession, finishSession, getSessionForDate, recordSessionStart, upsertSet } from '@/features/workout/api'
 import type { WorkoutSnapshot } from '@/features/workout/types'
 import {
     buildSendPlan,
@@ -26,6 +26,7 @@ import {
     replaceSentOperation,
     type OutboxOperation,
     type OutboxSetValues,
+    type StartSessionOperation,
     type UpsertSetOperation,
 } from '@/lib/outbox/outboxQueue'
 import { loadOutboxQueue, saveOutboxQueue } from '@/lib/outbox/outboxStorage'
@@ -37,6 +38,13 @@ type EnqueueUpsertSetInput = {
     exerciseKey: string
     setIndex: number
     values: OutboxSetValues
+}
+
+type EnqueueStartSessionInput = {
+    sessionDate: string
+    planId: string
+    snapshot: WorkoutSnapshot
+    startedAt: string
 }
 
 type OutboxContextValue = {
@@ -52,7 +60,10 @@ type OutboxContextValue = {
     stageUpsertSet: (input: EnqueueUpsertSetInput) => void
     syncNow: () => void
     enqueueUpsertSets: (inputs: EnqueueUpsertSetInput[]) => void
-    enqueueFinishSession: (sessionDate: string) => void
+    // Quem chama escolhe a hora (início e fim do treino), para a tela mostrar
+    // exatamente o mesmo horário que vai para o servidor.
+    enqueueStartSession: (input: EnqueueStartSessionInput) => void
+    enqueueFinishSession: (sessionDate: string, finishedAt: string) => void
     discardOperation: (naturalKey: string) => void
     listFailedOperations: () => OutboxOperation[]
 }
@@ -69,6 +80,18 @@ function buildUpsertSetOperation(input: EnqueueUpsertSetInput, enqueuedAt: strin
         setIndex: input.setIndex,
         values: input.values,
         enqueuedAt,
+        attempts: 0,
+        status: 'pending',
+    }
+}
+
+function buildStartSessionOperation(input: EnqueueStartSessionInput): StartSessionOperation {
+    return {
+        kind: 'start_session',
+        sessionDate: input.sessionDate,
+        planId: input.planId,
+        snapshot: input.snapshot,
+        enqueuedAt: input.startedAt,
         attempts: 0,
         status: 'pending',
     }
@@ -170,6 +193,8 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                             drops: operation.values.drops,
                             rpe: operation.values.rpe,
                         })
+                    } else if (operation.kind === 'start_session') {
+                        await recordSessionStart(sessionId, operation.enqueuedAt)
                     } else {
                         // A fila pode ficar horas sem sinal: a hora de fim é a do
                         // momento em que o treino terminou, não a do envio.
@@ -286,11 +311,15 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                 updateQueue(enqueueOperations(queueRef.current, operations))
                 void runFlushCycle()
             },
-            enqueueFinishSession: (sessionDate: string) => {
+            enqueueStartSession: (input: EnqueueStartSessionInput) => {
+                updateQueue(enqueueOperation(queueRef.current, buildStartSessionOperation(input)))
+                void runFlushCycle()
+            },
+            enqueueFinishSession: (sessionDate: string, finishedAt: string) => {
                 const operation: OutboxOperation = {
                     kind: 'finish_session',
                     sessionDate,
-                    enqueuedAt: new Date().toISOString(),
+                    enqueuedAt: finishedAt,
                     attempts: 0,
                     status: 'pending',
                 }

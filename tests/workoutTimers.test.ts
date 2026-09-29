@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import {
     elapsedSeconds,
+    elapsedSecondsBetween,
     extendRestTimer,
     formatClock,
+    formatElapsedClock,
     parseRestTimer,
     parseStopwatchRecord,
     restPhase,
@@ -112,5 +114,36 @@ describe('leitura do armazenamento', () => {
 
         expect(parseRestTimer(JSON.stringify(timer), START + 1000)).toEqual(timer)
         expect(parseRestTimer('{"startedAtMs":1}', START)).toBeNull()
+    })
+})
+
+describe('formatElapsedClock', () => {
+    it('usa m:ss abaixo de uma hora', () => {
+        expect(formatElapsedClock(0)).toBe('0:00')
+        expect(formatElapsedClock(65)).toBe('1:05')
+        expect(formatElapsedClock(3599)).toBe('59:59')
+    })
+
+    it('usa h:mm:ss a partir de uma hora', () => {
+        expect(formatElapsedClock(3600)).toBe('1:00:00')
+        expect(formatElapsedClock(3600 + 5 * 60 + 7)).toBe('1:05:07')
+        expect(formatElapsedClock(10 * 3600 + 59)).toBe('10:00:59')
+    })
+
+    it('nunca mostra tempo negativo nem fração de segundo', () => {
+        expect(formatElapsedClock(-10)).toBe('0:00')
+        expect(formatElapsedClock(61.9)).toBe('1:01')
+    })
+})
+
+describe('elapsedSecondsBetween', () => {
+    it('conta os segundos desde o instante ISO', () => {
+        const startIso = new Date(START).toISOString()
+
+        expect(elapsedSecondsBetween(startIso, START + 125_400)).toBe(125)
+    })
+
+    it('trata horário ilegível como zero', () => {
+        expect(elapsedSecondsBetween('ontem', START)).toBe(0)
     })
 })

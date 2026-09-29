@@ -296,6 +296,21 @@ export async function finishSession(sessionId: string, finishedAt?: string): Pro
     return normalizeSessionRow(data)
 }
 
+// O primeiro início vale: reenviar (fila repetindo depois de uma falha, ou
+// outro aparelho que também marcou o início) nunca empurra started_at para
+// depois. Nenhuma linha atualizada não é erro, é o início já gravado antes.
+export async function recordSessionStart(sessionId: string, startedAt: string): Promise<void> {
+    const { error } = await supabase
+        .from('workout_sessions')
+        .update({ started_at: startedAt })
+        .eq('id', sessionId)
+        .is('started_at', null)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
 export async function updateSessionFeeling(
     sessionId: string,
     feelingScale: number,

@@ -95,6 +95,35 @@ export function formatClock(totalSeconds: number): string {
     return `${minutes}:${seconds}`
 }
 
+const SECONDS_PER_MINUTE = 60
+const SECONDS_PER_HOUR = 60 * SECONDS_PER_MINUTE
+
+// Relógio do treino inteiro: m:ss como os outros cronômetros até completar uma
+// hora, e h:mm:ss a partir dela, para a hora nunca virar "75:00".
+export function formatElapsedClock(totalSeconds: number): string {
+    const finiteSeconds = Number.isFinite(totalSeconds) ? totalSeconds : 0
+    const safeSeconds = Math.max(0, Math.floor(finiteSeconds))
+    if (safeSeconds < SECONDS_PER_HOUR) {
+        const shortClock = formatClock(safeSeconds)
+        return shortClock
+    }
+    const hours = Math.floor(safeSeconds / SECONDS_PER_HOUR)
+    const minutes = String(Math.floor((safeSeconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE)).padStart(2, '0')
+    const seconds = String(safeSeconds % SECONDS_PER_MINUTE).padStart(2, '0')
+    const longClock = `${hours}:${minutes}:${seconds}`
+
+    return longClock
+}
+
+// Segundos entre dois instantes ISO; um horário ilegível conta como zero, em
+// vez de mostrar NaN no relógio.
+export function elapsedSecondsBetween(startIso: string, endMs: number): number {
+    const startMs = new Date(startIso).getTime()
+    const elapsed = Number.isFinite(startMs) ? elapsedSeconds(startMs, endMs) : 0
+
+    return elapsed
+}
+
 export function parseJsonObject(raw: string | null): Record<string, unknown> | null {
     if (raw === null) {
         return null

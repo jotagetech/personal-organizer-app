@@ -74,6 +74,9 @@ function describeOperation(operation: OutboxOperation): string {
     if (operation.kind === 'finish_session') {
         return `Finalizar treino de ${operation.sessionDate}`
     }
+    if (operation.kind === 'start_session') {
+        return `Iniciar treino de ${operation.sessionDate}`
+    }
 
     return `Série ${operation.setIndex} de ${operation.exerciseKey} (${operation.sessionDate})`
 }

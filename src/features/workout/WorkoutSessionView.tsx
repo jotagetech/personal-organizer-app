@@ -6,6 +6,7 @@ import { DropSetStepRow } from '@/features/workout/DropSetStepRow'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
 import { IntervalStep } from '@/features/workout/IntervalStep'
 import { RestTimerBar } from '@/features/workout/RestTimerBar'
+import { SessionClock } from '@/features/workout/SessionClock'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import type { PlanWeek } from '@/features/workout/planWeek'
 import { exerciseTags } from '@/features/workout/setPresentation'
@@ -58,11 +59,13 @@ import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useOutbox } from '@/contexts/OutboxContext'
 import {
     buildOverlaySetRow,
+    findPendingFinishedAt,
+    findPendingStartedAt,
+    isSessionCreatingOperation,
     overlayPendingDrops,
     overlayPendingSets,
     type OutboxDropValues,
     type OutboxOperation,
-    type UpsertSetOperation,
 } from '@/lib/outbox/outboxQueue'
 import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
 import type { Workout, WorkoutPlan } from '@/lib/workoutPlanSchema'
@@ -98,6 +101,11 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     const [switchWorkoutErrorMessage, setSwitchWorkoutErrorMessage] = useState<string | null>(null)
     const [isExercisePickerOpen, setIsExercisePickerOpen] = useState(false)
     const [restTimer, setRestTimer] = useState<RestTimer | null>(() => loadRestTimer(sessionDate))
+    // Início e fim do treino como a tela enxerga: o que veio do servidor ou,
+    // enquanto o envio não acontece, a hora guardada na fila. Ficam aqui
+    // porque a sessão carregada não é recarregada depois de cada envio.
+    const [startedAt, setStartedAt] = useState<string | null>(null)
+    const [finishedAt, setFinishedAt] = useState<string | null>(null)
 
     function updateRestTimer(nextTimer: RestTimer | null) {
         saveRestTimer(nextTimer)
@@ -177,12 +185,13 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
 
     // Uma sessão nunca sincronizada ainda no servidor (o dia inteiro foi
     // registrado sem sinal) não aparece em getSessionForDate; o treino em
-    // andamento continua vindo da própria fila de envio.
+    // andamento continua vindo da própria fila de envio, inclusive quando só
+    // o início foi marcado e nenhuma série existe ainda.
     function findSnapshotInPendingOperations(operations: OutboxOperation[]): WorkoutSnapshot | null {
-        const upsertOperation = operations.find(
-            (operation): operation is UpsertSetOperation => operation.kind === 'upsert_set',
-        )
-        return upsertOperation?.snapshot ?? null
+        const sessionCreatingOperation = operations.find(isSessionCreatingOperation)
+        const pendingSnapshot = sessionCreatingOperation?.snapshot ?? null
+
+        return pendingSnapshot
     }
 
     function goToSet(nextPosition: StepPosition | null) {
@@ -221,6 +230,8 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         setSetsByKey(overlaidSetsByKey)
         setDropsBySetKey(new Map())
         setWorkoutChoices(null)
+        setStartedAt(findPendingStartedAt(operations, sessionDate))
+        setFinishedAt(findPendingFinishedAt(operations, sessionDate))
         if (isFinishPending || firstIncompletePosition === null) {
             goToSet(null)
             return
@@ -239,13 +250,12 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             nextSetsByKey.set(setKey(set.exercise_key, set.set_index), set)
         }
 
-        const overlaidSetsByKey = overlayPendingSets(
-            nextSetsByKey,
-            outbox.getOperationsForDate(sessionDate),
-            sessionDate,
-        )
+        const pendingOperationsForDate = outbox.getOperationsForDate(sessionDate)
+        const overlaidSetsByKey = overlayPendingSets(nextSetsByKey, pendingOperationsForDate, sessionDate)
 
         setSession(existingSession)
+        setStartedAt(existingSession.started_at ?? findPendingStartedAt(pendingOperationsForDate, sessionDate))
+        setFinishedAt(existingSession.finished_at ?? findPendingFinishedAt(pendingOperationsForDate, sessionDate))
         setSnapshot(existingSession.workout_snapshot)
         setSetsByKey(overlaidSetsByKey)
         setDropsBySetKey(groupDropsBySetKey(sets, dropRows))
@@ -265,12 +275,17 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             const activeWindow = deriveSessionActiveWindow(Array.from(overlaidSetsByKey.values()))
             const finishedSession = await finishSession(existingSession.id, activeWindow?.endIso)
             setSession(finishedSession)
+            setFinishedAt(finishedSession.finished_at)
             refreshDayStatus()
         }
     }
 
     function startUnsavedWorkout(workout: Workout, savedStep: SavedWorkoutStep | null) {
         const nextSnapshot = buildWorkoutSnapshot(workout, planWeek)
+        showUnsavedSnapshot(nextSnapshot, savedStep)
+    }
+
+    function showUnsavedSnapshot(nextSnapshot: WorkoutSnapshot, savedStep: SavedWorkoutStep | null) {
         setSnapshot(nextSnapshot)
         setSession(null)
         setSetsByKey(new Map())
@@ -279,9 +294,54 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         resumeAt(nextSnapshot, new Map(), FIRST_POSITION, savedStep)
     }
 
+    // A sessão carregada fica nula quando ela ainda não existia ao abrir a
+    // data, mesmo depois de o início ou uma série terem chegado ao servidor.
+    // Antes de trocar o treino é preciso saber se ela já existe lá, senão a
+    // troca ficaria só no aparelho e o servidor continuaria com o treino
+    // antigo. Sem nada feito na data não há o que procurar; sem sinal, a troca
+    // segue local como antes.
+    async function findSessionCreatedMeanwhile(): Promise<WorkoutSessionRow | null> {
+        const hasAnythingRecorded = startedAt !== null || currentEffectiveSetsByKey().size > 0
+        if (!hasAnythingRecorded) {
+            return null
+        }
+        try {
+            const existing = await getSessionForDate(sessionDate)
+            const createdSession = existing?.session ?? null
+            return createdSession
+        } catch {
+            return null
+        }
+    }
+
+    async function resolveCurrentSession(): Promise<WorkoutSessionRow | null> {
+        if (session) {
+            return session
+        }
+        setIsSwitchingWorkout(true)
+        try {
+            const createdSession = await findSessionCreatedMeanwhile()
+            return createdSession
+        } finally {
+            setIsSwitchingWorkout(false)
+        }
+    }
+
+    // Um início ainda na fila leva o snapshot do treino que vai criar a
+    // sessão; trocar de treino antes do envio atualiza esse snapshot e mantém
+    // a hora do início.
+    function switchUnsavedWorkout(workout: Workout) {
+        const nextSnapshot = buildWorkoutSnapshot(workout, planWeek)
+        showUnsavedSnapshot(nextSnapshot, null)
+        if (startedAt) {
+            outbox.enqueueStartSession({ sessionDate, planId, snapshot: nextSnapshot, startedAt })
+        }
+    }
+
     async function handleChooseWorkout(workout: Workout) {
-        if (!session) {
-            startUnsavedWorkout(workout, null)
+        const currentSession = await resolveCurrentSession()
+        if (!currentSession) {
+            switchUnsavedWorkout(workout)
             return
         }
 
@@ -298,7 +358,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
 
         try {
             const updatedSession = await replaceSessionWorkout({
-                sessionId: session.id,
+                sessionId: currentSession.id,
                 planId,
                 snapshot: nextSnapshot,
             })
@@ -362,10 +422,33 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         setIsExercisePickerOpen(false)
 
         if (nextPosition === null) {
+            const nowIso = new Date().toISOString()
             updateRestTimer(null)
-            outbox.enqueueFinishSession(sessionDate)
+            setFinishedAt(nowIso)
+            outbox.enqueueFinishSession(sessionDate, nowIso)
             refreshDayStatus()
         }
+    }
+
+    function startWorkoutAt(startIso: string) {
+        if (!snapshot) {
+            return
+        }
+        setStartedAt(startIso)
+        outbox.enqueueStartSession({ sessionDate, planId, snapshot, startedAt: startIso })
+    }
+
+    function handleStartWorkout() {
+        startWorkoutAt(new Date().toISOString())
+    }
+
+    // Resolver uma série sem ter tocado em "Iniciar treino" começa o treino
+    // naquele momento, para a duração nunca ficar sem início.
+    function ensureWorkoutStarted() {
+        if (startedAt) {
+            return
+        }
+        startWorkoutAt(new Date().toISOString())
     }
 
     // O estado (setsByKey e a fila) ainda não reflete a série recém-salva
@@ -379,6 +462,11 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         moveToNextUnresolved(mergeSavedRow(row))
     }
 
+    function handleSetSkipped(row: WorkoutSetRow) {
+        ensureWorkoutStarted()
+        handleSetResolved(row)
+    }
+
     // Série com drop set segue para a primeira queda antes de sair dela; a
     // série já fica concluída aqui, então fechar o app no meio das quedas não
     // perde a série principal.
@@ -386,6 +474,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         if (!snapshot || !position) {
             return
         }
+        ensureWorkoutStarted()
 
         const nextStep = nextStepWithinSet(snapshot, mainStepOf(position))
         if (nextStep) {
@@ -486,6 +575,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             setIndex,
             values,
         }))
+        ensureWorkoutStarted()
         outbox.enqueueUpsertSets(upsertInputs)
 
         const enqueuedAt = new Date().toISOString()
@@ -517,6 +607,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // Todas as rodadas chegam juntas da conferência; o bloco não tem descanso
     // próprio depois dele, então o assistente segue direto.
     function handleIntervalConfirmed(rows: WorkoutSetRow[]) {
+        ensureWorkoutStarted()
         const mergedSetsByKey = new Map(currentEffectiveSetsByKey())
         for (const row of rows) {
             mergedSetsByKey.set(setKey(row.exercise_key, row.set_index), row)
@@ -634,13 +725,18 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     const effectiveSetsByKey = overlayPendingSets(setsByKey, pendingOperationsForDate, sessionDate)
     const effectiveDropsByKey = overlayPendingDrops(dropsBySetKey, pendingOperationsForDate, sessionDate)
 
+    const effectiveFinishedAt = session?.finished_at ?? finishedAt
+
     if (session?.finished_at || !position) {
         return (
             <div>
                 <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
+                {startedAt && effectiveFinishedAt && (
+                    <SessionClock startedAt={startedAt} finishedAt={effectiveFinishedAt} onStart={handleStartWorkout} />
+                )}
                 {session ? (
                     <WorkoutFinishPanel
-                        session={session}
+                        session={withLocalSessionTimes(session, startedAt, effectiveFinishedAt)}
                         sessionDate={sessionDate}
                         sets={Array.from(effectiveSetsByKey.values())}
                         onSessionUpdated={setSession}
@@ -671,6 +767,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     return (
         <div>
             <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
+            <SessionClock startedAt={startedAt} finishedAt={null} onStart={handleStartWorkout} />
             <ExercisePicker
                 progress={summarizeExerciseProgress(snapshot, effectiveSetsByKey)}
                 currentExerciseIndex={position.exerciseIndex}
@@ -752,7 +849,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                                 : 'Confirmar'
                         }
                         onConfirmed={handleSetConfirmed}
-                        onSkipped={handleSetResolved}
+                        onSkipped={handleSetSkipped}
                         onSkipExercise={handleSkipExercise}
                         onLocalSave={handleLocalSetSaved}
                     />
@@ -766,6 +863,22 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             )}
         </div>
     )
+}
+
+// O painel de finalização mede a duração pela sessão; enquanto início e fim
+// ainda estão só no aparelho, eles entram por cima do que veio do servidor.
+function withLocalSessionTimes(
+    session: WorkoutSessionRow,
+    startedAt: string | null,
+    finishedAt: string | null,
+): WorkoutSessionRow {
+    const sessionWithTimes: WorkoutSessionRow = {
+        ...session,
+        started_at: session.started_at ?? startedAt,
+        finished_at: session.finished_at ?? finishedAt,
+    }
+
+    return sessionWithTimes
 }
 
 function setCountLabel(
