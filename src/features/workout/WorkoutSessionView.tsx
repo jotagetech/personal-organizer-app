@@ -9,6 +9,7 @@ import { appendExtraExercise } from '@/features/workout/extraExercises'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
 import { IntervalStep } from '@/features/workout/IntervalStep'
 import { RestTimerBar } from '@/features/workout/RestTimerBar'
+import { decideRestPushAction, planRestPush, type RestPushPlan } from '@/features/workout/restPush'
 import { SessionClock } from '@/features/workout/SessionClock'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import type { PlanWeek } from '@/features/workout/planWeek'
@@ -69,6 +70,7 @@ import { WorkoutFinishPanel } from '@/features/workout/WorkoutFinishPanel'
 import { suggestWorkoutForWeekday } from '@/features/workout/workoutSelection'
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useOutbox } from '@/contexts/OutboxContext'
+import { cancelRestPush, scheduleRestPush } from '@/features/notifications/pushApi'
 import {
     applyPendingExtraExercises,
     buildOverlaySetRow,
@@ -128,6 +130,10 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // encerrada, não o estado da renderização anterior.
     const [pauseState, setPauseState] = useState<SessionPauseState>(RUNNING_PAUSE_STATE)
     const pauseStateRef = useRef<SessionPauseState>(RUNNING_PAUSE_STATE)
+    // Último push de descanso mandado ao servidor por esta tela; undefined
+    // enquanto ela não mandou nenhum.
+    const lastRestPushPlanRef = useRef<RestPushPlan | null | undefined>(undefined)
+    const isPaused = pauseState.pausedAt !== null
 
     function updateRestTimer(nextTimer: RestTimer | null) {
         saveRestTimer(nextTimer)
@@ -367,6 +373,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     function switchUnsavedWorkout(workout: Workout) {
         const nextSnapshot = buildWorkoutSnapshot(workout, planWeek, planDefaultRest(plan))
         outbox.discardPendingExtraExercises(sessionDate)
+        updateRestTimer(null)
         showUnsavedSnapshot(nextSnapshot, null)
         if (startedAt) {
             outbox.enqueueStartSession({ sessionDate, planId, snapshot: nextSnapshot, startedAt })
@@ -398,6 +405,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                 snapshot: nextSnapshot,
             })
             outbox.discardPendingExtraExercises(sessionDate)
+            updateRestTimer(null)
             setSnapshot(nextSnapshot)
             setSession(updatedSession)
             setSetsByKey(new Map())
@@ -743,6 +751,26 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         setPosition(previousStep.position)
         setDropPosition(previousStep.dropPosition)
     }
+
+    // O push de fim de descanso acompanha o timer: começar agenda, "+15 s"
+    // remarca, e pular, fechar, finalizar, pausar ou trocar de treino (todos
+    // zeram o timer ou pausam) cancelam. Quando o descanso começa, a posição
+    // já é a da próxima série, que dá o nome do exercício no aviso.
+    useEffect(() => {
+        if (isLoading) {
+            return
+        }
+        const nextExercise = snapshot && position ? snapshot.exercicios[position.exerciseIndex] : undefined
+        const nextExerciseName = nextExercise?.nome ?? null
+        const nextPlan = planRestPush(restTimer, isPaused, nextExerciseName)
+        const action = decideRestPushAction(lastRestPushPlanRef.current, nextPlan, Date.now())
+        lastRestPushPlanRef.current = nextPlan
+        if (action.kind === 'schedule') {
+            scheduleRestPush(action.plan)
+        } else if (action.kind === 'cancel') {
+            cancelRestPush()
+        }
+    }, [isLoading, restTimer, isPaused, snapshot, position])
 
     // O passo atual fica guardado a cada mudança, para sair da aba (ou fechar
     // o app) e voltar na mesma tela. Com o treino concluído não há passo, e o
