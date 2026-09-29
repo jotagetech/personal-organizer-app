@@ -1,3 +1,5 @@
+import { Moon, Scale } from 'lucide-react'
+
 import {
     deleteBodyWeightEntry,
     deleteSleepEntry,
@@ -21,6 +23,7 @@ export function BodyWeightLog({ entryDate, onChanged }: BodyMetricLogProps) {
     return (
         <QuickMetricLog
             title="Peso corporal"
+            icon={Scale}
             unitLabel="kg"
             placeholder="ex: 78.5"
             entryDate={entryDate}
@@ -49,6 +52,7 @@ export function SleepLog({ entryDate, onChanged }: BodyMetricLogProps) {
     return (
         <QuickMetricLog
             title="Sono (horas)"
+            icon={Moon}
             unitLabel="horas"
             placeholder="ex: 7.5"
             entryDate={entryDate}

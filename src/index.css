@@ -238,6 +238,90 @@ h1, h2, h3, h4 {
     text-transform: var(--display-text-transform);
 }
 
+/* Utilitárias compartilhadas pelas abas: título, texto e alinhamentos que se
+   repetem em toda tela, pra nenhuma aba precisar de estilo inline pra isso. */
+.page-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+}
+
+.section-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.text-muted {
+    color: var(--color-text-muted);
+}
+
+.text-secondary {
+    color: var(--color-text-secondary);
+}
+
+.text-small {
+    font-size: 13px;
+}
+
+.text-tabular {
+    font-variant-numeric: tabular-nums;
+}
+
+.no-margin {
+    margin: 0;
+}
+
+.full-width {
+    width: 100%;
+}
+
+.row-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Cabeçalho de aba: título à esquerda e ações (menu, voltar) à direita. */
+.page-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: var(--touch-target);
+    margin-bottom: 12px;
+}
+
+.page-header__title-group {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+}
+
+.page-header__count {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
 .app-shell {
     display: flex;
     flex-direction: column;
@@ -453,19 +537,108 @@ h1, h2, h3, h4 {
     background: var(--color-info-surface);
 }
 
-.quick-metric-log__recent {
-    margin: 8px 0 0;
-    font-size: 12px;
+.quick-metric-log__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.quick-metric-log__icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-text);
+}
+
+.quick-metric-log__title {
+    flex: 1;
+    min-width: 0;
+}
+
+.quick-metric-log__value {
+    flex-shrink: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.quick-metric-log__value strong {
+    font-family: var(--font-numeric);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.quick-metric-log__unit {
+    font-size: 13px;
+    font-weight: 600;
     color: var(--color-text-muted);
 }
 
+.quick-metric-log__missing {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-pending-text);
+}
+
+.quick-metric-log__form {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.quick-metric-log__recent {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 6px;
+    margin-top: 6px;
+}
+
+.quick-metric-log__recent-label {
+    margin-right: 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+/* O botão mantém a altura mínima de toque; a pílula visível dentro dele é
+   menor pra lista de valores recentes não pesar mais que o campo principal. */
 .quick-metric-log__recent-value {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+    padding: 0;
     border: none;
     background: transparent;
-    padding: 0;
-    font: inherit;
-    color: inherit;
-    text-decoration: underline dotted;
+    color: var(--color-text-secondary);
+}
+
+.quick-metric-log__recent-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 30px;
+    padding: 0 8px 0 10px;
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-muted);
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.quick-metric-log__recent-value:active .quick-metric-log__recent-chip {
+    background: var(--color-surface-pressed);
+}
+
+.quick-metric-log__recent-chip svg {
+    color: var(--color-text-muted);
 }
 
 .field {
@@ -474,6 +647,12 @@ h1, h2, h3, h4 {
     gap: 6px;
     margin-bottom: 12px;
     min-width: 0;
+}
+
+/* Campo que divide a linha com um botão: cresce e não empurra espaço abaixo. */
+.field--inline {
+    flex: 1;
+    margin-bottom: 0;
 }
 
 .field label {
@@ -784,50 +963,73 @@ h1, h2, h3, h4 {
     margin: 10px 0 4px;
 }
 
-.menu-section__title {
-    font-size: 16px;
-    margin: 0 0 4px;
+.menu-section + .menu-section {
+    margin-top: 24px;
 }
 
-.menu-section__title + .menu-section__subtitle {
-    margin-top: 0;
+.menu-section__header {
+    margin-bottom: 10px;
 }
 
 .menu-section__subtitle {
-    margin: 0 0 10px;
+    margin: 2px 0 10px;
     font-size: 13px;
     color: var(--color-text-secondary);
 }
 
-.menu-list + .menu-section__title,
-.card + .menu-section__title {
-    margin-top: 20px;
+.menu-section__header .menu-section__subtitle {
+    margin-bottom: 0;
 }
 
+/* Uma lista num card só, com divisórias, em vez de um card por ferramenta. */
 .menu-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    overflow: hidden;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card);
 }
 
 .menu-list__item {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
+    align-items: center;
+    gap: 12px;
     width: 100%;
-    min-height: var(--touch-target-large);
-    padding: 12px 14px;
-    border: 1px solid var(--color-card-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-card);
+    min-height: 64px;
+    padding: 10px 12px 10px 14px;
+    border: none;
+    background: transparent;
     color: var(--color-text);
     text-align: left;
 }
 
+.menu-list__item + .menu-list__item {
+    border-top: 1px solid var(--color-divider);
+}
+
 .menu-list__item:active {
     background: var(--color-surface-pressed);
+}
+
+.menu-list__icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-text);
+}
+
+.menu-list__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .menu-list__label {
@@ -838,6 +1040,42 @@ h1, h2, h3, h4 {
 .menu-list__description {
     font-size: 12px;
     color: var(--color-text-muted);
+}
+
+.menu-list__chevron {
+    flex-shrink: 0;
+    color: var(--color-text-muted);
+}
+
+.export-panel__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 8px;
+}
+
+.export-panel__shortcuts {
+    row-gap: 8px;
+    margin-bottom: 14px;
+}
+
+.export-panel__generate {
+    width: 100%;
+    min-height: var(--touch-target-large);
+    margin-bottom: 12px;
+}
+
+.export-panel__summary {
+    margin: 0 0 12px;
+    font-size: 14px;
+}
+
+.export-panel__feedback {
+    margin: 8px 0 0;
+}
+
+.export-panel__manual-copy {
+    margin-top: 12px;
+    margin-bottom: 0;
 }
 
 .food-chip-row {
@@ -1072,7 +1310,6 @@ h1, h2, h3, h4 {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
     color: var(--color-on-done);
 }
 
@@ -1144,31 +1381,77 @@ h1, h2, h3, h4 {
     min-height: 32px;
 }
 
+/* Sete colunas fixas: a semana inteira cabe numa linha só mesmo em 360px,
+   sem quebrar um dia sozinho pra linha de baixo. */
 .weekday-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
 }
 
 .weekday-chip {
-    flex-shrink: 0;
-    min-height: 36px;
-    padding: 0 12px;
+    min-width: 0;
+    min-height: var(--touch-target);
+    padding: 0;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     background: var(--color-surface);
     color: var(--color-text);
     font-size: 13px;
+    font-weight: 600;
 }
 
-.weekday-chip--selected {
+.weekday-chip:active {
+    background: var(--color-surface-pressed);
+}
+
+.weekday-chip--selected,
+.weekday-chip--selected:active {
     background: var(--color-accent);
     color: var(--color-on-accent);
     border-color: var(--color-accent);
 }
 
-.routine-adhoc-input {
-    flex: 1;
+.empty-state__text {
+    margin: 0 0 12px;
+    color: var(--color-text-secondary);
+}
+
+.empty-state__text:last-child {
+    margin-bottom: 0;
+}
+
+.adhoc-task-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.adhoc-task-form__confirmation {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+.adhoc-task-form .error-list {
+    margin-bottom: 0;
+}
+
+/* Data e botão de prazo dividem a linha; o campo de prazo, quando aberto,
+   desce pra uma linha inteira em vez de espremer três controles em 360px. */
+.adhoc-task-form__dates {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+.adhoc-task-form__due-date {
+    grid-column: 1 / -1;
+}
+
+.adhoc-task-form__input {
+    display: block;
+    width: 100%;
     min-width: 0;
     min-height: var(--touch-target);
     padding: 10px 12px;
@@ -1178,4 +1461,71 @@ h1, h2, h3, h4 {
     color: var(--color-text);
     font-family: inherit;
     font-size: 16px;
+}
+
+.adhoc-task-form__input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.adhoc-task-form__submit {
+    width: 100%;
+    min-height: var(--touch-target-large);
+}
+
+.routine-item-list {
+    padding-block: 4px;
+}
+
+.routine-item-list__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--touch-target-large);
+    padding: 6px 0;
+}
+
+.routine-item-list__row + .routine-item-list__row {
+    border-top: 1px solid var(--color-divider);
+}
+
+.routine-item-list__row--editing {
+    display: block;
+    padding: 12px 0;
+}
+
+.routine-item-list__text {
+    flex: 1;
+    min-width: 0;
+}
+
+.routine-item-list__title {
+    display: block;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.routine-item-list__meta {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.routine-item-list__actions {
+    flex-shrink: 0;
+    display: flex;
+    color: var(--color-text-secondary);
+}
+
+.routine-item-list__actions .icon-button {
+    color: inherit;
+}
+
+.routine-item-form__heading {
+    margin-bottom: 12px;
+}
+
+.routine-item-form__actions {
+    margin-top: 4px;
 }

@@ -1,3 +1,4 @@
+import { Archive, ArrowLeft, Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { archiveRoutineItem, createRoutineItem, updateRoutineItem } from '@/features/routine/api'
@@ -9,6 +10,8 @@ import { WEEKDAY_LABELS } from '@/lib/weekdayLabels'
 import { WEEKDAYS, type Weekday } from '@/lib/workoutPlanSchema'
 
 const NO_LINK_OPTION_VALUE = 'nenhum'
+const BUTTON_ICON_SIZE = 18
+const ROW_ACTION_ICON_SIZE = 20
 
 type RoutineItemsEditorProps = {
     items: RoutineItemRow[]
@@ -49,57 +52,67 @@ export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onCha
 
     return (
         <div>
-            <div className="workout-toolbar">
-                <h2 style={{ fontSize: 16, margin: 0 }}>Itens de rotina</h2>
+            <div className="page-header">
+                <h2 className="page-title">Itens de rotina</h2>
                 <button type="button" className="secondary-button" onClick={onClose}>
+                    <ArrowLeft size={BUTTON_ICON_SIZE} aria-hidden="true" />
                     Voltar
                 </button>
             </div>
             {errorMessage && <div className="error-list">{errorMessage}</div>}
-            {activeItems.map((item) =>
-                editingItemId === item.id ? (
-                    <div key={item.id} className="card">
-                        <RoutineItemForm
-                            initialValues={{
-                                title: item.title,
-                                weekdays: item.weekdays as Weekday[],
-                                linkKind: (item.link_kind as RoutineLinkKind | null) ?? undefined,
-                            }}
-                            submitLabel="Salvar"
-                            onSubmit={(input) => handleUpdate(item.id, input)}
-                            onCancel={() => setEditingItemId(null)}
-                        />
-                    </div>
-                ) : (
-                    <div key={item.id} className="card">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                                <strong>{item.title}</strong>
-                                <p style={{ margin: '2px 0 0', fontSize: 13, color: '#52525b' }}>
-                                    {formatWeekdays(item.weekdays as Weekday[])}
-                                    {item.link_kind
-                                        ? ` · ${ROUTINE_LINK_KIND_LABELS[item.link_kind as RoutineLinkKind]}`
-                                        : ''}
-                                </p>
+            {activeItems.length > 0 && (
+                <div className="card routine-item-list">
+                    {activeItems.map((item) =>
+                        editingItemId === item.id ? (
+                            <div key={item.id} className="routine-item-list__row routine-item-list__row--editing">
+                                <RoutineItemForm
+                                    initialValues={{
+                                        title: item.title,
+                                        weekdays: item.weekdays as Weekday[],
+                                        linkKind: (item.link_kind as RoutineLinkKind | null) ?? undefined,
+                                    }}
+                                    submitLabel="Salvar"
+                                    onSubmit={(input) => handleUpdate(item.id, input)}
+                                    onCancel={() => setEditingItemId(null)}
+                                />
                             </div>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                                <button
-                                    type="button"
-                                    className="secondary-button"
-                                    onClick={() => setEditingItemId(item.id)}
-                                >
-                                    Editar
-                                </button>
-                                <button type="button" className="secondary-button" onClick={() => handleArchive(item)}>
-                                    Arquivar
-                                </button>
+                        ) : (
+                            <div key={item.id} className="routine-item-list__row">
+                                <div className="routine-item-list__text">
+                                    <strong className="routine-item-list__title">{item.title}</strong>
+                                    <p className="routine-item-list__meta">
+                                        {formatWeekdays(item.weekdays as Weekday[])}
+                                        {item.link_kind
+                                            ? ` · ${ROUTINE_LINK_KIND_LABELS[item.link_kind as RoutineLinkKind]}`
+                                            : ''}
+                                    </p>
+                                </div>
+                                <div className="routine-item-list__actions">
+                                    <button
+                                        type="button"
+                                        className="icon-button"
+                                        aria-label="Editar"
+                                        onClick={() => setEditingItemId(item.id)}
+                                    >
+                                        <Pencil size={ROW_ACTION_ICON_SIZE} aria-hidden="true" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="icon-button"
+                                        aria-label="Arquivar"
+                                        onClick={() => handleArchive(item)}
+                                    >
+                                        <Archive size={ROW_ACTION_ICON_SIZE} aria-hidden="true" />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                ),
+                        ),
+                    )}
+                </div>
             )}
             {isCreating ? (
                 <div className="card">
+                    <h3 className="section-title routine-item-form__heading">Novo item</h3>
                     <RoutineItemForm
                         submitLabel="Criar"
                         onSubmit={handleCreate}
@@ -107,8 +120,9 @@ export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onCha
                     />
                 </div>
             ) : (
-                <button type="button" className="secondary-button" onClick={() => setIsCreating(true)}>
-                    + Novo item de rotina
+                <button type="button" className="secondary-button full-width" onClick={() => setIsCreating(true)}>
+                    <Plus size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                    Novo item de rotina
                 </button>
             )}
         </div>
@@ -210,7 +224,7 @@ function RoutineItemForm({ initialValues, submitLabel, onSubmit, onCancel }: Rou
                     ))}
                 </select>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="inline-actions routine-item-form__actions">
                 <button type="submit" className="primary-button" disabled={isSubmitting}>
                     {isSubmitting ? 'Salvando...' : submitLabel}
                 </button>

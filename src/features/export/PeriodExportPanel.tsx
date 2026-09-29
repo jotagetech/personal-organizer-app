@@ -1,3 +1,4 @@
+import { ArrowLeft, Copy, Download, Share2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { fetchPeriodExportData } from '@/features/export/api'
@@ -22,6 +23,7 @@ type GeneratedExport = {
 }
 
 const FEEDBACK_VISIBLE_MS = 2500
+const BUTTON_ICON_SIZE = 18
 
 export function PeriodExportPanel({ onClose }: PeriodExportPanelProps) {
     const [period, setPeriod] = useState<ExportPeriod>(() => resolvePeriodShortcut('this_week', todayInTimezone()))
@@ -116,16 +118,17 @@ export function PeriodExportPanel({ onClose }: PeriodExportPanelProps) {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <h2 style={{ fontSize: 16, margin: 0 }}>Exportar período</h2>
+            <div className="page-header">
+                <h2 className="page-title">Exportar período</h2>
                 <button type="button" className="secondary-button" onClick={onClose}>
+                    <ArrowLeft size={BUTTON_ICON_SIZE} aria-hidden="true" />
                     Fechar
                 </button>
             </div>
             <p className="menu-section__subtitle">
                 Gera um arquivo JSON com todos os registros do período, para analisar em outra ferramenta.
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginBottom: 10 }}>
+            <div className="export-panel__grid export-panel__shortcuts">
                 {PERIOD_SHORTCUTS.map((shortcut) => (
                     <button
                         key={shortcut}
@@ -137,7 +140,7 @@ export function PeriodExportPanel({ onClose }: PeriodExportPanelProps) {
                     </button>
                 ))}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+            <div className="export-panel__grid">
                 <div className="field">
                     <label htmlFor="export-start">Início</label>
                     <input
@@ -160,8 +163,7 @@ export function PeriodExportPanel({ onClose }: PeriodExportPanelProps) {
             {validationError && <div className="error-list">{validationError}</div>}
             <button
                 type="button"
-                className="primary-button"
-                style={{ width: '100%', marginBottom: 12 }}
+                className="primary-button export-panel__generate"
                 disabled={validationError !== null || isGenerating}
                 onClick={() => void handleGenerate()}
             >
@@ -170,27 +172,30 @@ export function PeriodExportPanel({ onClose }: PeriodExportPanelProps) {
             {errorMessage && <div className="error-list">{errorMessage}</div>}
             {generated && (
                 <div className="card">
-                    <p style={{ margin: '0 0 10px', fontSize: 14 }}>{generated.summary}</p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <p className="export-panel__summary">{generated.summary}</p>
+                    <div className="inline-actions">
                         <button type="button" className="primary-button" onClick={() => void handleCopy(generated.json)}>
+                            <Copy size={BUTTON_ICON_SIZE} aria-hidden="true" />
                             Copiar
                         </button>
                         {canShare && (
                             <button type="button" className="secondary-button" onClick={() => void handleShare(generated)}>
+                                <Share2 size={BUTTON_ICON_SIZE} aria-hidden="true" />
                                 Compartilhar
                             </button>
                         )}
                         <button type="button" className="secondary-button" onClick={() => handleDownload(generated)}>
+                            <Download size={BUTTON_ICON_SIZE} aria-hidden="true" />
                             Baixar .json
                         </button>
                     </div>
                     {feedback && (
-                        <p className="save-status" style={{ margin: '8px 0 0' }} role="status">
+                        <p className="save-status export-panel__feedback" role="status">
                             {feedback}
                         </p>
                     )}
                     {showManualCopy && (
-                        <div className="field" style={{ marginTop: 10, marginBottom: 0 }}>
+                        <div className="field export-panel__manual-copy">
                             <label htmlFor="export-json">JSON gerado</label>
                             <textarea
                                 id="export-json"

@@ -1,3 +1,4 @@
+import { BookOpen, ChevronRight, Download, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { useDayStatus } from '@/contexts/DayStatusContext'
@@ -15,7 +16,11 @@ type MenuTool = {
     key: MenuToolKey
     label: string
     description: string
+    icon: LucideIcon
 }
+
+const TOOL_ICON_SIZE = 20
+const CHEVRON_ICON_SIZE = 20
 
 // Cada ferramenta ganha um painel próprio que ocupa a aba inteira; a lista
 // da tela inicial é gerada daqui, então uma ferramenta nova só precisa de uma
@@ -25,11 +30,13 @@ const MENU_TOOLS: MenuTool[] = [
         key: 'food_catalog',
         label: 'Catálogo de alimentos',
         description: 'Editar a nutrição dos alimentos cadastrados e da TACO',
+        icon: BookOpen,
     },
     {
         key: 'period_export',
         label: 'Exportar período',
         description: 'Gerar um JSON com os registros de um período',
+        icon: Download,
     },
 ]
 
@@ -59,27 +66,44 @@ function MenuHome({ onOpenTool }: { onOpenTool: (toolKey: MenuToolKey) => void }
 
     return (
         <div>
-            <h2 className="menu-section__title">Registros do dia</h2>
-            <p className="menu-section__subtitle">
-                {formatDateLabel(selectedDate)}
-                {isViewingToday ? ' (hoje)' : ''}
-            </p>
-            <BodyWeightLog entryDate={selectedDate} onChanged={refreshDayStatus} />
-            <SleepLog entryDate={selectedDate} onChanged={refreshDayStatus} />
-            <h2 className="menu-section__title">Ferramentas</h2>
-            <div className="menu-list">
-                {MENU_TOOLS.map((tool) => (
-                    <button
-                        key={tool.key}
-                        type="button"
-                        className="menu-list__item"
-                        onClick={() => onOpenTool(tool.key)}
-                    >
-                        <span className="menu-list__label">{tool.label}</span>
-                        <span className="menu-list__description">{tool.description}</span>
-                    </button>
-                ))}
+            <div className="page-header">
+                <h2 className="page-title">Menu</h2>
             </div>
+            <section className="menu-section">
+                <div className="menu-section__header">
+                    <h3 className="section-title">Registros do dia</h3>
+                    <p className="menu-section__subtitle">
+                        {formatDateLabel(selectedDate)}
+                        {isViewingToday ? ' (hoje)' : ''}
+                    </p>
+                </div>
+                <BodyWeightLog entryDate={selectedDate} onChanged={refreshDayStatus} />
+                <SleepLog entryDate={selectedDate} onChanged={refreshDayStatus} />
+            </section>
+            <section className="menu-section">
+                <div className="menu-section__header">
+                    <h3 className="section-title">Ferramentas</h3>
+                </div>
+                <div className="menu-list">
+                    {MENU_TOOLS.map((tool) => (
+                        <button
+                            key={tool.key}
+                            type="button"
+                            className="menu-list__item"
+                            onClick={() => onOpenTool(tool.key)}
+                        >
+                            <span className="menu-list__icon" aria-hidden="true">
+                                <tool.icon size={TOOL_ICON_SIZE} />
+                            </span>
+                            <span className="menu-list__text">
+                                <span className="menu-list__label">{tool.label}</span>
+                                <span className="menu-list__description">{tool.description}</span>
+                            </span>
+                            <ChevronRight className="menu-list__chevron" size={CHEVRON_ICON_SIZE} aria-hidden="true" />
+                        </button>
+                    ))}
+                </div>
+            </section>
         </div>
     )
 }

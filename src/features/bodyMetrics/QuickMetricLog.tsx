@@ -1,3 +1,4 @@
+import { X, type LucideIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { useUndoableActions } from '@/contexts/UndoableActionContext'
@@ -5,8 +6,13 @@ import { parseMetricValue } from '@/features/bodyMetrics/parseMetric'
 
 type MetricPoint = { id: string; entryDate: string; value: number }
 
+const HEADER_ICON_SIZE = 20
+const RECENT_DELETE_ICON_SIZE = 12
+const RECENT_DELETE_ICON_STROKE = 2.5
+
 type QuickMetricLogProps = {
     title: string
+    icon: LucideIcon
     unitLabel: string
     placeholder: string
     entryDate: string
@@ -20,6 +26,7 @@ type QuickMetricLogProps = {
 
 export function QuickMetricLog({
     title,
+    icon: Icon,
     unitLabel,
     placeholder,
     entryDate,
@@ -127,13 +134,26 @@ export function QuickMetricLog({
     const isEntryPendingDeletion = existingEntry !== null && isPendingDeletion(existingEntry.id)
     const isMissingEntry = hasLoadedEntry && (existingEntry === null || isEntryPendingDeletion)
     const cardClassName = isMissingEntry ? 'card card--pending' : 'card'
+    const savedValue = existingEntry !== null && !isEntryPendingDeletion ? existingEntry.value : null
 
     return (
         <div className={cardClassName}>
-            <h3 style={{ fontSize: 14, marginTop: 0 }}>{title}</h3>
+            <div className="quick-metric-log__header">
+                <span className="quick-metric-log__icon" aria-hidden="true">
+                    <Icon size={HEADER_ICON_SIZE} />
+                </span>
+                <h4 className="section-title quick-metric-log__title">{title}</h4>
+                {savedValue !== null && (
+                    <span className="quick-metric-log__value">
+                        <strong>{savedValue}</strong>
+                        <span className="quick-metric-log__unit">{unitLabel}</span>
+                    </span>
+                )}
+                {isMissingEntry && <span className="quick-metric-log__missing">Sem registro</span>}
+            </div>
             {errorMessage && <div className="error-list">{errorMessage}</div>}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+            <form className="quick-metric-log__form" onSubmit={handleSubmit}>
+                <div className="field field--inline">
                     <label>{unitLabel}</label>
                     <input
                         type="text"
@@ -148,23 +168,28 @@ export function QuickMetricLog({
                 </button>
             </form>
             {visiblePoints.length > 0 && (
-                <p className="quick-metric-log__recent">
-                    últimos:{' '}
-                    {visiblePoints.map((point, index) => (
-                        <span key={point.id}>
-                            {index > 0 && ' · '}
-                            <button
-                                type="button"
-                                className="quick-metric-log__recent-value"
-                                title="Toque para excluir"
-                                aria-label={`Excluir registro de ${point.entryDate.slice(5)}: ${point.value}`}
-                                onClick={() => handleDeleteClick(point)}
-                            >
+                <div className="quick-metric-log__recent">
+                    <span className="quick-metric-log__recent-label">Últimos</span>
+                    {visiblePoints.map((point) => (
+                        <button
+                            key={point.id}
+                            type="button"
+                            className="quick-metric-log__recent-value"
+                            title="Toque para excluir"
+                            aria-label={`Excluir registro de ${point.entryDate.slice(5)}: ${point.value}`}
+                            onClick={() => handleDeleteClick(point)}
+                        >
+                            <span className="quick-metric-log__recent-chip">
                                 {point.value}
-                            </button>
-                        </span>
+                                <X
+                                    size={RECENT_DELETE_ICON_SIZE}
+                                    strokeWidth={RECENT_DELETE_ICON_STROKE}
+                                    aria-hidden="true"
+                                />
+                            </span>
+                        </button>
                     ))}
-                </p>
+                </div>
             )}
         </div>
     )

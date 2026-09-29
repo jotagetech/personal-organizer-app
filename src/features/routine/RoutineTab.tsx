@@ -1,3 +1,4 @@
+import { Check, EllipsisVertical, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAppNavigation } from '@/contexts/AppNavigationContext'
@@ -22,6 +23,11 @@ import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
 import type { RoutineDayEntryRow, RoutineItemRow, RoutineRow, RoutineRowState } from '@/features/routine/types'
 import { fetchDaySignals, type DaySignals } from '@/features/shared/daySignals'
 import { shiftIsoDate, type IsoDate } from '@/lib/dateUtils'
+
+const MENU_ICON_SIZE = 22
+const CHECK_ICON_SIZE = 16
+const CHECK_ICON_STROKE = 3
+const BUTTON_ICON_SIZE = 18
 
 export function RoutineTab() {
     const { selectedDate } = useSelectedDate()
@@ -80,6 +86,7 @@ export function RoutineTab() {
     )
     const rows = resolvedRows.filter((row) => !(row.source === 'adhoc' && isPendingDeletion(row.id)))
     const emptyState = useMemo(() => deriveRoutineEmptyState(items, rows), [items, rows])
+    const doneRowCount = rows.filter((row) => isRowDone(row.state)).length
     const activeItemIds = useMemo(
         () => new Set(items.filter((item) => item.archived_on === null).map((item) => item.id)),
         [items],
@@ -171,8 +178,15 @@ export function RoutineTab() {
 
     return (
         <div>
-            <div className="workout-toolbar">
-                <h2 style={{ fontSize: 16, margin: 0 }}>Rotina do dia</h2>
+            <div className="page-header">
+                <div className="page-header__title-group">
+                    <h2 className="page-title">Rotina do dia</h2>
+                    {!isLoading && !errorMessage && rows.length > 0 && (
+                        <span className="page-header__count">
+                            {doneRowCount} de {rows.length}
+                        </span>
+                    )}
+                </div>
                 <div className="overflow-menu" ref={menuRef}>
                     <button
                         type="button"
@@ -180,7 +194,7 @@ export function RoutineTab() {
                         aria-label="Mais ações"
                         onClick={() => setIsMenuOpen((previous) => !previous)}
                     >
-                        ⋮
+                        <EllipsisVertical size={MENU_ICON_SIZE} aria-hidden="true" />
                     </button>
                     {isMenuOpen && (
                         <div className="overflow-menu__panel">
@@ -198,11 +212,11 @@ export function RoutineTab() {
                     )}
                 </div>
             </div>
-            {isLoading && <p>Carregando...</p>}
+            {isLoading && <p className="text-muted">Carregando...</p>}
             {errorMessage && <div className="error-list">{errorMessage}</div>}
             {!isLoading && !errorMessage && emptyState === 'offer_suggested' && (
                 <div className="card">
-                    <p style={{ marginTop: 0 }}>Nenhum item de rotina criado ainda.</p>
+                    <p className="empty-state__text">Nenhum item de rotina criado ainda.</p>
                     <button
                         type="button"
                         className="primary-button"
@@ -215,7 +229,7 @@ export function RoutineTab() {
             )}
             {!isLoading && !errorMessage && emptyState === 'nothing_for_day' && (
                 <div className="card">
-                    <p style={{ margin: 0 }}>Nada de rotina pra este dia.</p>
+                    <p className="empty-state__text">Nada de rotina pra este dia.</p>
                 </div>
             )}
             {actionErrorMessage && <div className="error-list">{actionErrorMessage}</div>}
@@ -322,7 +336,7 @@ function RoutineRowView({
         )
     }
 
-    const isDone = row.state === 'done' || row.state === 'done_manual_override'
+    const isDone = isRowDone(row.state)
     const isTappable = actions.primary === 'confirm_done'
     const hasRowActions = actions.canEdit || actions.removal !== null
     const deadlineHint = isDone ? null : describeDeadline(row)
@@ -338,7 +352,7 @@ function RoutineRowView({
                 aria-pressed={isDone}
             >
                 <span className={routineCheckClassName(row.state)} aria-hidden="true">
-                    {isDone ? '✓' : ''}
+                    {isDone && <Check size={CHECK_ICON_SIZE} strokeWidth={CHECK_ICON_STROKE} />}
                 </span>
                 <span className={isDone ? 'routine-row__title routine-row__title--done' : 'routine-row__title'}>
                     {row.title}
@@ -405,6 +419,10 @@ function describeDeadline(row: RoutineRow): { text: string; className: string } 
     }
 }
 
+function isRowDone(state: RoutineRowState): boolean {
+    return state === 'done' || state === 'done_manual_override'
+}
+
 function routineCheckClassName(state: RoutineRowState): string {
     if (state === 'done_manual_override') {
         return 'routine-row__check routine-row__check--override'
@@ -465,40 +483,28 @@ function NewAdhocTaskField({ entryDate, onCreated }: NewAdhocTaskFieldProps) {
         }
     }
 
+    const DueToggleIcon = hasDueDate ? X : Plus
+
     return (
-        <form onSubmit={handleSubmit}>
+        <form className="card adhoc-task-form" onSubmit={handleSubmit}>
             {errorMessage && <div className="error-list">{errorMessage}</div>}
-            {confirmationMessage && (
-                <p style={{ fontSize: 13, color: '#52525b', margin: '0 0 8px' }}>{confirmationMessage}</p>
-            )}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <input
-                    type="text"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder="+ Nova tarefa avulsa"
-                    aria-label="Nova tarefa avulsa"
-                    className="routine-adhoc-input"
-                />
+            {confirmationMessage && <p className="adhoc-task-form__confirmation">{confirmationMessage}</p>}
+            <input
+                type="text"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="+ Nova tarefa avulsa"
+                aria-label="Nova tarefa avulsa"
+                className="adhoc-task-form__input"
+            />
+            <div className="adhoc-task-form__dates">
                 <input
                     type="date"
                     value={targetDate}
                     onChange={(event) => setTargetDate(event.target.value)}
                     aria-label="Data da tarefa"
-                    className="routine-adhoc-input"
-                    style={{ flex: '0 0 auto' }}
+                    className="adhoc-task-form__input"
                 />
-                {hasDueDate && (
-                    <input
-                        type="date"
-                        value={dueDate}
-                        min={targetDate}
-                        onChange={(event) => setDueDate(event.target.value)}
-                        aria-label="Prazo da tarefa"
-                        className="routine-adhoc-input"
-                        style={{ flex: '0 0 auto' }}
-                    />
-                )}
                 <button
                     type="button"
                     className="secondary-button"
@@ -510,12 +516,24 @@ function NewAdhocTaskField({ entryDate, onCreated }: NewAdhocTaskFieldProps) {
                         setHasDueDate((previous) => !previous)
                     }}
                 >
-                    {hasDueDate ? 'Sem prazo' : '+ Prazo'}
+                    <DueToggleIcon size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                    {hasDueDate ? 'Sem prazo' : 'Prazo'}
                 </button>
-                <button type="submit" className="secondary-button" disabled={isSubmitting}>
-                    {isSubmitting ? 'Adicionando...' : 'Adicionar'}
-                </button>
+                {hasDueDate && (
+                    <input
+                        type="date"
+                        value={dueDate}
+                        min={targetDate}
+                        onChange={(event) => setDueDate(event.target.value)}
+                        aria-label="Prazo da tarefa"
+                        className="adhoc-task-form__input adhoc-task-form__due-date"
+                    />
+                )}
             </div>
+            <button type="submit" className="primary-button adhoc-task-form__submit" disabled={isSubmitting}>
+                <Plus size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                {isSubmitting ? 'Adicionando...' : 'Adicionar'}
+            </button>
         </form>
     )
 }
