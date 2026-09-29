@@ -2445,6 +2445,178 @@ h1, h2, h3, h4 {
     text-transform: var(--display-text-transform);
 }
 
+.stopwatch__start {
+    width: 100%;
+    min-height: 64px;
+    margin-bottom: 12px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+}
+
+.stopwatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 14px 12px;
+    border: 2px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+    text-align: center;
+}
+
+.stopwatch__clock {
+    font-family: var(--font-numeric);
+    font-size: 72px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+}
+
+.stopwatch__target {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+}
+
+.stopwatch__message {
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+    color: var(--color-text-secondary);
+}
+
+.stopwatch__stop {
+    width: 100%;
+    min-height: 56px;
+    margin-top: 8px;
+    font-family: var(--font-display);
+    font-size: 19px;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+}
+
+.stopwatch--na_faixa {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    animation: timer-flash 700ms ease-out 1;
+}
+
+.stopwatch--na_faixa .stopwatch__clock,
+.stopwatch--na_faixa .stopwatch__message {
+    color: var(--color-accent-text);
+}
+
+.stopwatch--passou_do_maximo {
+    border-color: var(--color-pending);
+    background: var(--color-pending-soft);
+    animation: timer-flash 700ms ease-out 3;
+}
+
+.stopwatch--passou_do_maximo .stopwatch__clock,
+.stopwatch--passou_do_maximo .stopwatch__message {
+    color: var(--color-pending-strong-text);
+}
+
+.rest-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 8px 8px 14px;
+    border: 2px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+}
+
+.rest-bar__info {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.rest-bar__label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.rest-bar__clock {
+    font-family: var(--font-numeric);
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+}
+
+.rest-bar__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 72px;
+    min-height: var(--touch-target-large);
+    padding: 0 12px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.rest-bar__button:active {
+    background: var(--color-surface-pressed);
+}
+
+.rest-bar--na_faixa {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+.rest-bar--na_faixa .rest-bar__clock,
+.rest-bar--na_faixa .rest-bar__label {
+    color: var(--color-accent-text);
+}
+
+.rest-bar--terminado {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    animation: timer-flash 700ms ease-out 3;
+}
+
+.rest-bar--terminado .rest-bar__clock,
+.rest-bar--terminado .rest-bar__label {
+    color: var(--color-on-accent);
+}
+
+@keyframes timer-flash {
+    0% {
+        transform: scale(1.03);
+        filter: brightness(1.5);
+    }
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stopwatch--na_faixa,
+    .stopwatch--passou_do_maximo,
+    .rest-bar--terminado {
+        animation: none;
+    }
+}
+
 .set-card__undo-skip {
     width: 100%;
     min-height: var(--touch-target-large);

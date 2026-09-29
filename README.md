@@ -106,6 +106,9 @@ npm run dev
   queda é um passo próprio), e o card mostra equipamento, execução por lado,
   RIR alvo, descanso prescrito e observações do plano (ver "Plano de treino
   (contrato)").
+  Série de tempo tem cronômetro (bipe e aviso ao atingir o mínimo e o
+  máximo da meta), e o descanso prescrito vira uma contagem regressiva
+  compacta depois de cada série.
   Finalizar o treino registra duração, sentimento (escala 1-5) e abre o
   registro de cardio do dia.
 - **Ciclo**: marca a data de início de um ciclo de treino (menu de três pontos

@@ -21,11 +21,14 @@ import {
     resultFieldLabel,
     resultFieldPlaceholder,
 } from '@/features/workout/setPresentation'
-import type {
-    WorkoutSetRow,
-    WorkoutSnapshot,
-    WorkoutSnapshotExercise,
-    WorkoutSnapshotExerciseSet,
+import { SetStopwatch } from '@/features/workout/SetStopwatch'
+import { unlockAudio } from '@/features/workout/timerDevice'
+import {
+    setKey,
+    type WorkoutSetRow,
+    type WorkoutSnapshot,
+    type WorkoutSnapshotExercise,
+    type WorkoutSnapshotExerciseSet,
 } from '@/features/workout/types'
 import type { SetMetric } from '@/lib/workoutPlanSchema'
 
@@ -200,6 +203,12 @@ export function ExerciseSetRow({
         scheduleAutosave(nextFields)
     }
 
+    function handleStopwatchStop(seconds: number) {
+        const nextFields = { ...fieldsRef.current, resultText: String(seconds) }
+        updateFields(nextFields)
+        scheduleAutosave(nextFields)
+    }
+
     function handleFieldBlur() {
         clearPendingAutosave()
         saveToOutbox(fields)
@@ -212,6 +221,7 @@ export function ExerciseSetRow({
             return
         }
 
+        unlockAudio()
         clearPendingAutosave()
         const confirmedFields: SetFieldState = {
             ...fields,
@@ -299,39 +309,51 @@ export function ExerciseSetRow({
             {isSkipped ? (
                 <p className="set-skipped-badge">Série pulada</p>
             ) : (
-                <div className="set-fields">
-                    <LoadField
-                        label={loadFieldLabel(formaCarga, exercicio.equipamento)}
-                        hint={loadHint}
-                        placeholder={loadFieldPlaceholder(formaCarga, serie.carga_sugerida)}
-                        value={fields.loadKgText}
-                        onChange={handleLoadChange}
-                        onBlur={handleFieldBlur}
-                    />
-                    <div className="field set-fields__field">
-                        <label>{resultFieldLabel(metric)}</label>
-                        <input
-                            type="text"
-                            inputMode={metric === 'distancia' ? 'decimal' : 'numeric'}
-                            value={fields.resultText}
-                            onChange={(event) => handleResultChange(event.target.value)}
-                            onBlur={handleFieldBlur}
-                            placeholder={resultFieldPlaceholder(metric)}
+                <>
+                    {metric === 'tempo' && (
+                        <SetStopwatch
+                            sessionDate={sessionDate}
+                            setKey={setKey(exerciseKey, setIndex)}
+                            targetMin={serie.alvo_min}
+                            targetMax={serie.alvo_max}
+                            targetText={`${target.value} ${target.unit}`}
+                            onStop={handleStopwatchStop}
                         />
-                    </div>
-                    <div className="field set-fields__field">
-                        <label>RIR</label>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={fields.rirText}
-                            onChange={(event) => handleRirChange(event.target.value)}
+                    )}
+                    <div className="set-fields">
+                        <LoadField
+                            label={loadFieldLabel(formaCarga, exercicio.equipamento)}
+                            hint={loadHint}
+                            placeholder={loadFieldPlaceholder(formaCarga, serie.carga_sugerida)}
+                            value={fields.loadKgText}
+                            onChange={handleLoadChange}
                             onBlur={handleFieldBlur}
-                            placeholder="0-10"
                         />
-                        {rirTarget && <span className="set-fields__hint">{rirTarget}</span>}
+                        <div className="field set-fields__field">
+                            <label>{resultFieldLabel(metric)}</label>
+                            <input
+                                type="text"
+                                inputMode={metric === 'distancia' ? 'decimal' : 'numeric'}
+                                value={fields.resultText}
+                                onChange={(event) => handleResultChange(event.target.value)}
+                                onBlur={handleFieldBlur}
+                                placeholder={resultFieldPlaceholder(metric)}
+                            />
+                        </div>
+                        <div className="field set-fields__field">
+                            <label>RIR</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                value={fields.rirText}
+                                onChange={(event) => handleRirChange(event.target.value)}
+                                onBlur={handleFieldBlur}
+                                placeholder="0-10"
+                            />
+                            {rirTarget && <span className="set-fields__hint">{rirTarget}</span>}
+                        </div>
                     </div>
-                </div>
+                </>
             )}
             {isNoteOpen ? (
                 <div className="field set-card__note">

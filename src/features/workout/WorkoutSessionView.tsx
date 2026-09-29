@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react'
 import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/features/workout/api'
 import { DropSetStepRow } from '@/features/workout/DropSetStepRow'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
+import { RestTimerBar } from '@/features/workout/RestTimerBar'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import { exerciseTags } from '@/features/workout/setPresentation'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
+import { loadRestTimer, saveRestTimer } from '@/features/workout/timerStorage'
+import { extendRestTimer, REST_EXTENSION_SECONDS, startRestTimer, type RestTimer } from '@/features/workout/workoutTimers'
 import {
     setKey,
     type WorkoutSessionRow,
@@ -75,6 +78,12 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
     const [isSwitchingWorkout, setIsSwitchingWorkout] = useState(false)
     const [switchWorkoutErrorMessage, setSwitchWorkoutErrorMessage] = useState<string | null>(null)
     const [isExercisePickerOpen, setIsExercisePickerOpen] = useState(false)
+    const [restTimer, setRestTimer] = useState<RestTimer | null>(() => loadRestTimer(sessionDate))
+
+    function updateRestTimer(nextTimer: RestTimer | null) {
+        saveRestTimer(nextTimer)
+        setRestTimer(nextTimer)
+    }
 
     useEffect(() => {
         let isCancelled = false
@@ -294,6 +303,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
         setIsExercisePickerOpen(false)
 
         if (nextPosition === null) {
+            updateRestTimer(null)
             outbox.enqueueFinishSession(sessionDate)
             refreshDayStatus()
         }
@@ -325,7 +335,26 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
             return
         }
 
+        startRestAfterSet(mergeSavedRow(row), position)
         handleSetResolved(row)
+    }
+
+    // O descanso só começa quando ainda há série pela frente; depois da última
+    // não há o que esperar. Quedas de drop set são feitas sem pausa e nunca
+    // passam por aqui.
+    function startRestAfterSet(resolvedSetsByKey: Map<string, WorkoutSetRow>, confirmedPosition: StepPosition) {
+        if (!snapshot) {
+            return
+        }
+        const exercicio = snapshot.exercicios[confirmedPosition.exerciseIndex]
+        const { descanso_segundos_min: minSeconds, descanso_segundos_max: maxSeconds } = exercicio
+        if (minSeconds === null || maxSeconds === null) {
+            return
+        }
+        if (findNextUnresolvedPosition(snapshot, resolvedSetsByKey, confirmedPosition) === null) {
+            return
+        }
+        updateRestTimer(startRestTimer(sessionDate, minSeconds, maxSeconds, Date.now()))
     }
 
     function handleDropConfirmed() {
@@ -538,6 +567,13 @@ export function WorkoutSessionView({ plan, planId, sessionDate }: WorkoutSession
                 onToggle={() => setIsExercisePickerOpen((isOpen) => !isOpen)}
                 onSelect={handleSelectExercise}
             />
+            {restTimer && (
+                <RestTimerBar
+                    timer={restTimer}
+                    onExtend={() => updateRestTimer(extendRestTimer(restTimer, REST_EXTENSION_SECONDS))}
+                    onDismiss={() => updateRestTimer(null)}
+                />
+            )}
             <section className="card set-card">
                 <div className="set-card__eyebrow">
                     <span>

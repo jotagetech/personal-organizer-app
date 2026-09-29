@@ -36,6 +36,16 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   formato anterior continua igual): por exercício `equipment`, `per_side`,
   `rest_seconds_min/max`, `target_rir_min/max` e `notes`; por série planejada
   e por série realizada, `drops`.
+- Cronômetros na sessão de treino. A série de tempo ganha "Iniciar" e
+  "Parar": o tempo sobe mostrando a meta, avisa (visual e bipe) ao atingir o
+  mínimo e o máximo e, ao parar, preenche o campo "Tempo (s)", que continua
+  editável. Depois de confirmar uma série de exercício com descanso
+  prescrito, uma faixa compacta faz a contagem regressiva até o máximo,
+  destaca a passagem do mínimo, aceita +15 s ou pular e apita ao terminar;
+  não aparece depois de uma queda de drop set nem da última série. O tempo
+  vem de timestamps guardados em localStorage (certo depois de o iPhone
+  suspender a aba ou de reabrir o app), o bipe usa Web Audio e a tela fica
+  acesa com wake lock quando o aparelho oferece.
 
 ### Alterado
 
