@@ -9,6 +9,8 @@ import {
     type WorkoutPlanValidationResult,
 } from '@/lib/workoutPlanSchema'
 
+const NO_OWN_REST = { descanso_segundos_min: null, descanso_segundos_max: null }
+
 function validPlanObject() {
     return {
         versao: 1,
@@ -140,8 +142,8 @@ describe('parseWorkoutPlanJson com versao 1 (normalização)', () => {
             rir_alvo_max: null,
             observacoes: null,
             series: [
-                { metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: 60, quedas: [] },
-                { metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, quedas: [] },
+                { metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: 60, ...NO_OWN_REST, quedas: [] },
+                { metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, ...NO_OWN_REST, quedas: [] },
             ],
             variacoes_semana: [],
         })
@@ -206,6 +208,7 @@ describe('parseWorkoutPlanJson com versao 2', () => {
                 alvo_min: 8,
                 alvo_max: 12,
                 carga_sugerida: 60,
+                ...NO_OWN_REST,
                 quedas: [],
             })
         }
@@ -254,13 +257,14 @@ describe('parseWorkoutPlanJson com versao 2', () => {
             observacoes: 'descida em 4 segundos',
         })
         expect(exercise.series).toEqual([
-            { metrica: 'tempo', alvo_min: 20, alvo_max: 30, carga_sugerida: null, quedas: [] },
-            { metrica: 'distancia', alvo_min: 25, alvo_max: 40.5, carga_sugerida: 24, quedas: [] },
+            { metrica: 'tempo', alvo_min: 20, alvo_max: 30, carga_sugerida: null, ...NO_OWN_REST, quedas: [] },
+            { metrica: 'distancia', alvo_min: 25, alvo_max: 40.5, carga_sugerida: 24, ...NO_OWN_REST, quedas: [] },
             {
                 metrica: 'repeticoes',
                 alvo_min: 10,
                 alvo_max: 12,
                 carga_sugerida: 30,
+                ...NO_OWN_REST,
                 quedas: [
                     { alvo_min: 8, alvo_max: 10, carga_sugerida: 20 },
                     { alvo_min: 6, alvo_max: 8, carga_sugerida: null },
@@ -402,7 +406,7 @@ describe('parseWorkoutPlanJson com progressão por semana', () => {
         expect(result.plan.treinos[0].exercicios[0].variacoes_semana).toEqual([
             {
                 semanas: [4],
-                series: [{ metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, quedas: [] }],
+                series: [{ metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, ...NO_OWN_REST, quedas: [] }],
                 descanso_segundos_min: null,
                 descanso_segundos_max: null,
                 rir_alvo_min: 3,
@@ -491,5 +495,100 @@ describe('parseWorkoutPlanJson com progressão por semana', () => {
 
         const v1WithBlock = { ...validPlanObject(), bloco_semanas: 4 }
         expect(parseWorkoutPlanJson(JSON.stringify(v1WithBlock)).success).toBe(false)
+    })
+})
+
+describe('descanso padrão do plano e descanso por série', () => {
+    it('aceita o padrão do plano e o descanso de uma série e normaliza os dois', () => {
+        const plan: Record<string, unknown> & ReturnType<typeof validV2PlanObject> = validV2PlanObject()
+        plan.descanso_padrao_segundos_min = 60
+        plan.descanso_padrao_segundos_max = 90
+        firstExerciseOf(plan).series = [
+            { repeticoes_min: 8, repeticoes_max: 12 },
+            { repeticoes_min: 6, repeticoes_max: 8, descanso_segundos_min: 180, descanso_segundos_max: 180 },
+        ]
+        const result = parseWorkoutPlanJson(JSON.stringify(plan))
+
+        expect(result.success, JSON.stringify(!result.success && result.errors)).toBe(true)
+        if (!result.success) {
+            return
+        }
+        expect(result.plan.descanso_padrao_segundos_min).toBe(60)
+        expect(result.plan.descanso_padrao_segundos_max).toBe(90)
+        const [firstSet, lastSet] = result.plan.treinos[0].exercicios[0].series
+        expect(firstSet).toMatchObject(NO_OWN_REST)
+        expect(lastSet).toMatchObject({ descanso_segundos_min: 180, descanso_segundos_max: 180 })
+    })
+
+    it('plano sem os campos novos continua válido, com padrão nulo', () => {
+        const result = parseWorkoutPlanJson(JSON.stringify(validV2PlanObject()))
+
+        expect(result.success).toBe(true)
+        if (result.success) {
+            expect(result.plan.descanso_padrao_segundos_min).toBeNull()
+            expect(result.plan.descanso_padrao_segundos_max).toBeNull()
+        }
+    })
+
+    it('rejeita padrão do plano com só um lado, invertido, negativo ou fracionado', () => {
+        const halfPair: Record<string, unknown> = { ...validV2PlanObject(), descanso_padrao_segundos_min: 60 }
+        const message = expectFailureAt(parseWorkoutPlanJson(JSON.stringify(halfPair)), 'descanso_padrao_segundos_max')
+        expect(message).toBe('obrigatório junto com descanso_padrao_segundos_min')
+
+        const inverted = { ...validV2PlanObject(), descanso_padrao_segundos_min: 90, descanso_padrao_segundos_max: 60 }
+        expectFailureAt(parseWorkoutPlanJson(JSON.stringify(inverted)), 'descanso_padrao_segundos_max')
+
+        const negative = { ...validV2PlanObject(), descanso_padrao_segundos_min: -1, descanso_padrao_segundos_max: 60 }
+        expectFailureAt(parseWorkoutPlanJson(JSON.stringify(negative)), 'descanso_padrao_segundos_min')
+
+        const fractional = { ...validV2PlanObject(), descanso_padrao_segundos_min: 60.5, descanso_padrao_segundos_max: 90 }
+        expectFailureAt(parseWorkoutPlanJson(JSON.stringify(fractional)), 'descanso_padrao_segundos_min')
+    })
+
+    it('rejeita descanso da série com só um lado ou invertido, apontando a série', () => {
+        const halfPair = validV2PlanObject()
+        firstExerciseOf(halfPair).series = [{ repeticoes_min: 8, repeticoes_max: 12, descanso_segundos_max: 90 }]
+        expectFailureAt(
+            parseWorkoutPlanJson(JSON.stringify(halfPair)),
+            'treinos[0].exercicios[0].series[0].descanso_segundos_min',
+        )
+
+        const inverted = validV2PlanObject()
+        firstExerciseOf(inverted).series = [
+            { repeticoes_min: 8, repeticoes_max: 12, descanso_segundos_min: 120, descanso_segundos_max: 60 },
+        ]
+        expectFailureAt(
+            parseWorkoutPlanJson(JSON.stringify(inverted)),
+            'treinos[0].exercicios[0].series[0].descanso_segundos_max',
+        )
+    })
+
+    it('rejeita descanso dentro de uma queda do drop set', () => {
+        const plan = validV2PlanObject()
+        firstExerciseOf(plan).series = [
+            {
+                repeticoes_min: 10,
+                repeticoes_max: 12,
+                quedas: [{ repeticoes_min: 8, repeticoes_max: 10, descanso_segundos_min: 30, descanso_segundos_max: 30 }],
+            },
+        ]
+
+        expect(parseWorkoutPlanJson(JSON.stringify(plan)).success).toBe(false)
+    })
+
+    it('aceita descanso por série dentro de uma variação da semana', () => {
+        const plan = planWithBlock(4, [
+            {
+                semanas: [4],
+                series: [{ repeticoes_min: 8, repeticoes_max: 12, descanso_segundos_min: 60, descanso_segundos_max: 60 }],
+            },
+        ])
+        const result = parseWorkoutPlanJson(JSON.stringify(plan))
+
+        expect(result.success).toBe(true)
+        if (result.success) {
+            const [variation] = result.plan.treinos[0].exercicios[0].variacoes_semana
+            expect(variation.series?.[0]).toMatchObject({ descanso_segundos_min: 60, descanso_segundos_max: 60 })
+        }
     })
 })

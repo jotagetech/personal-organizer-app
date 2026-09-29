@@ -46,6 +46,15 @@
           "minItems": 1,
           "description": "Descrição curta de cada semana do bloco, mostrada na aba Treino."
         },
+        "descanso_padrao_segundos_min": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Descanso usado por todo exercício de séries sem descanso próprio. Não vale para intervalado."
+        },
+        "descanso_padrao_segundos_max": {
+          "type": "integer",
+          "minimum": 0
+        },
         "treinos": {
           "type": "array",
           "items": {
@@ -178,6 +187,14 @@
                                 "type": "number",
                                 "minimum": 0
                               },
+                              "descanso_segundos_min": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "descanso_segundos_max": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
                               "quedas": {
                                 "type": "array",
                                 "items": {
@@ -220,7 +237,7 @@
                               }
                             },
                             "additionalProperties": false,
-                            "description": "Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois."
+                            "description": "Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois. descanso_segundos_min/descanso_segundos_max opcionais valem só para esta série e vencem o descanso do exercício."
                           },
                           "minItems": 1
                         },
@@ -271,6 +288,14 @@
                                       "type": "number",
                                       "minimum": 0
                                     },
+                                    "descanso_segundos_min": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "descanso_segundos_max": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
                                     "quedas": {
                                       "type": "array",
                                       "items": {
@@ -313,7 +338,7 @@
                                     }
                                   },
                                   "additionalProperties": false,
-                                  "description": "Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois."
+                                  "description": "Exatamente uma métrica, com os dois campos do par: repeticoes_min/repeticoes_max, segundos_min/segundos_max ou metros_min/metros_max. Valor fixo repete o número nos dois. descanso_segundos_min/descanso_segundos_max opcionais valem só para esta série e vencem o descanso do exercício."
                                 },
                                 "minItems": 1
                               },

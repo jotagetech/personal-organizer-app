@@ -199,14 +199,28 @@ const dropV2Schema = z
         refineSingleMetric(drop, ctx)
     })
 
+const restRangeShape = {
+    descanso_segundos_min: z.number().int().min(0).optional(),
+    descanso_segundos_max: z.number().int().min(0).optional(),
+}
+
+const REST_FIELDS = { min: 'descanso_segundos_min', max: 'descanso_segundos_max' } as const
+
+// Descanso depois desta série, quando ela foge do descanso do exercício (a
+// última série mais pesada, por exemplo). Não existe na queda: a queda é
+// feita sem pausa e o descanso só começa quando a série termina inteira.
 const workoutSetV2Schema = z
     .object({
         ...setMetricShape,
+        ...restRangeShape,
         quedas: z.array(dropV2Schema).min(1).max(MAX_DROPS_PER_SET).optional(),
     })
     .strict()
-    .describe(SET_METRIC_DESCRIPTION)
+    .describe(
+        `${SET_METRIC_DESCRIPTION} descanso_segundos_min/descanso_segundos_max opcionais valem só para esta série e vencem o descanso do exercício.`,
+    )
     .superRefine((set, ctx) => {
+        refinePairedRange(set, REST_FIELDS.min, REST_FIELDS.max, ctx)
         const setMetric = refineSingleMetric(set, ctx)
         if (!setMetric || !set.quedas) {
             return
@@ -225,14 +239,13 @@ const workoutSetV2Schema = z
     })
 
 const restAndRirShape = {
-    descanso_segundos_min: z.number().int().min(0).optional(),
-    descanso_segundos_max: z.number().int().min(0).optional(),
+    ...restRangeShape,
     rir_alvo_min: z.number().int().min(0).max(MAX_RIR).optional(),
     rir_alvo_max: z.number().int().min(0).max(MAX_RIR).optional(),
 }
 
 function refineRestAndRirPairs(value: Record<string, unknown>, ctx: z.RefinementCtx): void {
-    refinePairedRange(value, 'descanso_segundos_min', 'descanso_segundos_max', ctx)
+    refinePairedRange(value, REST_FIELDS.min, REST_FIELDS.max, ctx)
     refinePairedRange(value, 'rir_alvo_min', 'rir_alvo_max', ctx)
 }
 
@@ -438,10 +451,18 @@ export const workoutPlanV2Schema = z
             .min(1)
             .optional()
             .describe('Descrição curta de cada semana do bloco, mostrada na aba Treino.'),
+        descanso_padrao_segundos_min: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe('Descanso usado por todo exercício de séries sem descanso próprio. Não vale para intervalado.'),
+        descanso_padrao_segundos_max: z.number().int().min(0).optional(),
         treinos: z.array(workoutV2Schema).min(1),
     })
     .strict()
     .superRefine((plan, ctx) => {
+        refinePairedRange(plan, 'descanso_padrao_segundos_min', 'descanso_padrao_segundos_max', ctx)
         refinePlanUniqueness(plan, ctx)
         refineWeeksWithinBlock(plan, ctx)
     })
@@ -462,11 +483,14 @@ export type PlannedDrop = {
     carga_sugerida: number | null
 }
 
+// Descanso nulo na série é "igual ao exercício".
 export type WorkoutSet = {
     metrica: SetMetric
     alvo_min: number
     alvo_max: number
     carga_sugerida: number | null
+    descanso_segundos_min: number | null
+    descanso_segundos_max: number | null
     quedas: PlannedDrop[]
 }
 
@@ -541,6 +565,8 @@ export type WorkoutPlan = {
     unidade_carga: 'kg'
     bloco_semanas: number | null
     semanas: PlanWeekDescription[]
+    descanso_padrao_segundos_min: number | null
+    descanso_padrao_segundos_max: number | null
     treinos: Workout[]
 }
 
@@ -568,6 +594,8 @@ function normalizeV1Set(set: V1Set): WorkoutSet {
         alvo_min: set.repeticoes_min,
         alvo_max: set.repeticoes_max,
         carga_sugerida: set.carga_sugerida ?? null,
+        descanso_segundos_min: null,
+        descanso_segundos_max: null,
         quedas: [],
     }
 }
@@ -579,6 +607,8 @@ function normalizeV1Plan(document: WorkoutPlanV1Document): WorkoutPlan {
         unidade_carga: document.unidade_carga,
         bloco_semanas: null,
         semanas: [],
+        descanso_padrao_segundos_min: null,
+        descanso_padrao_segundos_max: null,
         treinos: document.treinos.map((workout) => ({
             id: workout.id,
             nome: workout.nome,
@@ -622,6 +652,8 @@ function normalizeV2Set(set: V2Set): WorkoutSet {
     return {
         ...readMetricTarget(set),
         carga_sugerida: set.carga_sugerida ?? null,
+        descanso_segundos_min: set.descanso_segundos_min ?? null,
+        descanso_segundos_max: set.descanso_segundos_max ?? null,
         quedas: (set.quedas ?? []).map(normalizeV2Drop),
     }
 }
@@ -672,6 +704,8 @@ export function intervalRoundSets(prescription: IntervalPrescription): WorkoutSe
         alvo_min: prescription.trabalho_segundos_min,
         alvo_max: prescription.trabalho_segundos_max,
         carga_sugerida: null,
+        descanso_segundos_min: null,
+        descanso_segundos_max: null,
         quedas: [],
     }))
 }
@@ -751,6 +785,8 @@ function normalizeV2Plan(document: WorkoutPlanV2Document): WorkoutPlan {
         unidade_carga: document.unidade_carga,
         bloco_semanas: document.bloco_semanas ?? null,
         semanas: document.semanas ?? [],
+        descanso_padrao_segundos_min: document.descanso_padrao_segundos_min ?? null,
+        descanso_padrao_segundos_max: document.descanso_padrao_segundos_max ?? null,
         treinos: document.treinos.map((workout) => ({
             id: workout.id,
             nome: workout.nome,

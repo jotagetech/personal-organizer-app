@@ -12,6 +12,8 @@ function planWithWorkouts(
         unidade_carga: 'kg',
         bloco_semanas: null,
         semanas: [],
+        descanso_padrao_segundos_min: null,
+        descanso_padrao_segundos_max: null,
         treinos: workouts.map((workout) => ({
             id: workout.id,
             nome: workout.id,
@@ -30,7 +32,17 @@ function planWithWorkouts(
                     rir_alvo_min: null,
                     rir_alvo_max: null,
                     observacoes: null,
-                    series: [{ metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, quedas: [] }],
+                    series: [
+                        {
+                            metrica: 'repeticoes',
+                            alvo_min: 8,
+                            alvo_max: 12,
+                            carga_sugerida: null,
+                            descanso_segundos_min: null,
+                            descanso_segundos_max: null,
+                            quedas: [],
+                        },
+                    ],
                     variacoes_semana: [],
                 },
             ],
