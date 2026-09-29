@@ -26,6 +26,25 @@ export function useTrainingMode(isTrainingActive: boolean) {
     }, [])
 }
 
+// Tela de edição dentro da aba Treino (o montador de plano) não é hora de
+// treinar: volta ao tema do sistema enquanto está aberta e devolve o modo
+// que estava ao fechar.
+export function useSuspendedTrainingMode() {
+    useEffect(() => {
+        const rootElement = document.documentElement
+        const previousMode = rootElement.dataset.mode
+        delete rootElement.dataset.mode
+        syncThemeColor()
+
+        return () => {
+            if (previousMode) {
+                rootElement.dataset.mode = previousMode
+            }
+            syncThemeColor()
+        }
+    }, [])
+}
+
 // O theme-color pinta a barra do navegador; acompanhar o fundo do cabeçalho
 // evita uma faixa de outra cor em cima do app ao trocar de tema ou de modo.
 function syncThemeColor() {

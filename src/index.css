@@ -3216,3 +3216,405 @@ h1, h2, h3, h4 {
         opacity: 0.4;
     }
 }
+
+/* Montador de plano: formulário longo usado no celular com uma mão. Cada
+   treino e exercício recolhe para a tela não virar uma lista sem fim, e
+   todo alvo de toque respeita o mínimo de 44px. */
+.plan-builder .card {
+    padding: 12px;
+}
+
+.builder-draft-notice {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-info-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-info-surface);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.builder-hint {
+    display: block;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-muted);
+}
+
+.builder-subtitle {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.builder-header-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.builder-collapse {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: var(--touch-target-large);
+    padding: 4px 6px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text);
+    text-align: left;
+}
+
+.builder-collapse:active {
+    background: var(--color-surface-pressed);
+}
+
+.builder-collapse__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.builder-collapse__title {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.builder-collapse__title--workout {
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.builder-collapse__meta {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.builder-issue-icon {
+    flex-shrink: 0;
+    color: var(--color-overdue-text);
+}
+
+.builder-workout--issue,
+.builder-exercise--issue {
+    border-color: var(--color-overdue-border);
+}
+
+.builder-workout__body {
+    padding-top: 8px;
+}
+
+.builder-workout__remove {
+    margin-top: 8px;
+}
+
+.builder-exercises {
+    margin-bottom: 10px;
+}
+
+.builder-exercise {
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+}
+
+.builder-exercise__body {
+    padding: 4px 10px 10px;
+}
+
+.builder-segmented {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-muted);
+}
+
+.builder-segmented--full {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.builder-segmented--full .builder-segmented__option {
+    flex: 1;
+}
+
+.builder-segmented__option {
+    min-height: var(--touch-target);
+    padding: 0 12px;
+    border: none;
+    border-radius: calc(var(--radius-sm) - 2px);
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.builder-segmented__option--selected {
+    background: var(--color-surface);
+    color: var(--color-accent-text);
+    box-shadow: var(--shadow-card);
+}
+
+.builder-segmented--small .builder-segmented__option {
+    padding: 0 10px;
+    font-size: 13px;
+}
+
+.builder-range__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.builder-range__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.builder-range__pair {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.builder-range__separator {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.builder-id-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.builder-id-note svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.builder-id-note__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.builder-id-note__action {
+    align-self: flex-start;
+    padding: 0 8px;
+    color: var(--color-accent-text);
+}
+
+.builder-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: var(--touch-target);
+    margin-bottom: 12px;
+    padding: 8px 0;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.builder-check input {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    accent-color: var(--color-accent);
+}
+
+.builder-progression {
+    padding-top: 4px;
+    border-top: 1px solid var(--color-divider);
+}
+
+.builder-sets {
+    margin-bottom: 12px;
+}
+
+.builder-set {
+    margin-bottom: 8px;
+    padding: 8px 10px 4px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-muted);
+}
+
+.builder-set .field input,
+.builder-set .field select {
+    background: var(--color-input-bg);
+}
+
+.builder-set__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.builder-set__title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.builder-set__metric {
+    min-height: var(--touch-target);
+    padding: 0 10px;
+    border: 1px solid var(--color-input-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-input-bg);
+    color: var(--color-text);
+    font-size: 16px;
+}
+
+/* Faixa e carga lado a lado só quando a faixa com dois campos ainda cabe. */
+@media (min-width: 480px) {
+    .builder-set__fields {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        column-gap: 8px;
+    }
+}
+
+.builder-drops {
+    margin: 4px 0 4px 8px;
+    padding-left: 10px;
+    border-left: 2px solid var(--color-border-strong);
+}
+
+.builder-drop__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.builder-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 4px;
+}
+
+.builder-row-actions--footer {
+    padding-top: 6px;
+    border-top: 1px solid var(--color-divider);
+}
+
+.builder-danger {
+    color: var(--color-overdue-text);
+}
+
+.builder-danger-button {
+    background: var(--color-overdue-text);
+}
+
+.builder-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--color-overdue-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-overdue-soft);
+    font-size: 14px;
+}
+
+.builder-variations {
+    margin-bottom: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-divider);
+}
+
+.builder-variations .builder-hint {
+    margin-bottom: 8px;
+}
+
+.builder-variation {
+    margin-bottom: 8px;
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius-sm);
+}
+
+.builder-variation__body {
+    padding: 4px 8px 8px;
+}
+
+.builder-week-chips {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.builder-add-workout {
+    margin-bottom: 12px;
+}
+
+.builder-finish {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scroll-margin-top: 12px;
+}
+
+.builder-finish .save-status {
+    margin: 0;
+}
+
+.builder-finish__hint {
+    text-align: center;
+}
+
+.builder-issues {
+    margin-bottom: 4px;
+}
+
+.builder-issues__list {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.builder-issues__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    min-height: var(--touch-target);
+    padding: 8px 4px;
+    border: none;
+    border-top: 1px solid var(--color-overdue-border);
+    background: transparent;
+    color: inherit;
+    text-align: left;
+}
+
+.builder-issues__item svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.builder-issues__where {
+    display: block;
+    font-weight: 600;
+}
+
+.builder-issues__message {
+    display: block;
+}

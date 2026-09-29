@@ -90,7 +90,15 @@ function normalizeFieldPath(path: PathSegment[]): PathSegment[] {
         typeof segment === 'string' ? (FIELD_ALIASES[segment] ?? segment) : segment,
     )
     const isPlanWeekDescription = normalized[0] === 'semanas'
-    const fieldPath = isPlanWeekDescription ? ['progressao'] : normalized
+    if (isPlanWeekDescription) {
+        return ['progressao']
+    }
+    // Problema na série ou na queda inteira é sempre de métrica (nenhuma ou
+    // duas ao mesmo tempo), e quem resolve é o campo do alvo.
+    const listName = normalized[normalized.length - 2]
+    const pointsAtSetOrDrop =
+        typeof normalized[normalized.length - 1] === 'number' && (listName === 'series' || listName === 'quedas')
+    const fieldPath = pointsAtSetOrDrop ? [...normalized, 'alvo'] : normalized
 
     return fieldPath
 }

@@ -309,8 +309,8 @@ describe('validação do montador', () => {
         )
         expect(result.issues).toContainEqual(
             expect.objectContaining({
-                fieldPath: ['treinos', 0, 'exercicios', 0, 'series', 0],
-                local: 'Treino "Treino A" › Exercício 1 › Série 1',
+                fieldPath: ['treinos', 0, 'exercicios', 0, 'series', 0, 'alvo'],
+                local: 'Treino "Treino A" › Exercício 1 › Série 1 › alvo',
                 mensagem: 'informe o alvo da série',
                 workoutUid: plan.treinos[0].uid,
                 exerciseUid: plan.treinos[0].exercicios[0].uid,

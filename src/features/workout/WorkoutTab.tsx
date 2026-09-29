@@ -1,4 +1,4 @@
-import { CalendarPlus, EllipsisVertical, FileUp } from 'lucide-react'
+import { CalendarPlus, EllipsisVertical, FilePen, FilePlus2, FileUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { getCurrentCycle } from '@/features/cycle/api'
@@ -6,12 +6,14 @@ import { CycleStatusBadge } from '@/features/cycle/CycleStatusBadge'
 import { StartCycleForm } from '@/features/cycle/StartCycleForm'
 import type { WorkoutCycleRow } from '@/features/cycle/types'
 import { getActivePlan, type ActivePlan } from '@/features/workout/api'
+import type { BuilderOrigin } from '@/features/workout/builder/builderDraft'
+import { PlanBuilder } from '@/features/workout/builder/PlanBuilder'
 import { ImportWorkoutPlan } from '@/features/workout/ImportWorkoutPlan'
 import { formatPlanWeekLabel, resolvePlanWeek } from '@/features/workout/planWeek'
 import { WorkoutSessionView } from '@/features/workout/WorkoutSessionView'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 
-type ActivePanel = 'import_plan' | 'start_cycle' | null
+type ActivePanel = 'import_plan' | 'start_cycle' | 'plan_builder' | null
 
 const MENU_ICON_SIZE = 22
 const MENU_ITEM_ICON_SIZE = 18
@@ -24,7 +26,16 @@ export function WorkoutTab() {
     const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [activePanel, setActivePanel] = useState<ActivePanel>(null)
+    const [builderOrigin, setBuilderOrigin] = useState<BuilderOrigin>('novo')
+    const [savedPlanMessage, setSavedPlanMessage] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
+
+    function openPlanBuilder(origin: BuilderOrigin) {
+        setBuilderOrigin(origin)
+        setActivePanel('plan_builder')
+        setIsMenuOpen(false)
+        setSavedPlanMessage(null)
+    }
 
     async function reloadActivePlan() {
         setIsLoadingPlan(true)
@@ -75,8 +86,36 @@ export function WorkoutTab() {
         )
     }
 
+    if (activePanel === 'plan_builder') {
+        return (
+            <PlanBuilder
+                origin={builderOrigin}
+                activePlan={activePlan?.plan ?? null}
+                onClose={() => setActivePanel(null)}
+                onSaved={(message) => {
+                    setSavedPlanMessage(message)
+                    void reloadActivePlan()
+                }}
+            />
+        )
+    }
+
     if (!activePlan) {
-        return <ImportWorkoutPlan onImported={reloadActivePlan} />
+        return (
+            <>
+                <div className="card">
+                    <h2 className="section-title">Montar plano no app</h2>
+                    <p className="text-small text-secondary import-plan__hint">
+                        Monte os treinos, exercícios e séries direto na tela, sem escrever JSON.
+                    </p>
+                    <button type="button" className="primary-button full-width" onClick={() => openPlanBuilder('novo')}>
+                        <FilePlus2 size={MENU_ITEM_ICON_SIZE} aria-hidden="true" />
+                        Criar plano
+                    </button>
+                </div>
+                <ImportWorkoutPlan onImported={reloadActivePlan} />
+            </>
+        )
     }
 
     if (activePanel === 'import_plan') {
@@ -110,6 +149,22 @@ export function WorkoutTab() {
                     </button>
                     {isMenuOpen && activePanel === null && (
                         <div className="overflow-menu__panel">
+                            <button
+                                type="button"
+                                className="overflow-menu__item"
+                                onClick={() => openPlanBuilder('edicao')}
+                            >
+                                <FilePen size={MENU_ITEM_ICON_SIZE} aria-hidden="true" />
+                                Editar plano atual
+                            </button>
+                            <button
+                                type="button"
+                                className="overflow-menu__item"
+                                onClick={() => openPlanBuilder('novo')}
+                            >
+                                <FilePlus2 size={MENU_ITEM_ICON_SIZE} aria-hidden="true" />
+                                Criar plano
+                            </button>
                             <button
                                 type="button"
                                 className="overflow-menu__item"
@@ -147,6 +202,7 @@ export function WorkoutTab() {
                     )}
                 </div>
             </div>
+            {savedPlanMessage && <p className="save-status">{savedPlanMessage}</p>}
             <WorkoutSessionView
                 key={`${selectedDate}:${planWeek?.semana ?? ''}`}
                 plan={activePlan.plan}
