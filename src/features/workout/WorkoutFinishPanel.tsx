@@ -1,15 +1,18 @@
-import { Check, Pencil } from 'lucide-react'
+import { Check, ChevronDown, Pencil } from 'lucide-react'
 import { useState } from 'react'
 
 import { CardioSection } from '@/features/cardio/CardioSection'
 import { FeelingScaleInput } from '@/features/cardio/FeelingScaleInput'
 import { feelingEmoji, feelingLabel } from '@/features/cardio/types'
+import { summarizeWorkoutSetsWithDrops } from '@/features/results/daySummary'
+import { WorkoutSummaryView } from '@/features/results/WorkoutSummaryView'
 import { updateSessionFeeling } from '@/features/workout/api'
 import { normalizeFeelingNote } from '@/features/workout/feelingDraft'
 import { formatDurationMinutes, resolveSessionDuration } from '@/features/workout/sessionDuration'
 import { countSetsByStatus } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSessionRow, type WorkoutSetRow } from '@/features/workout/types'
 import type { IsoDate } from '@/lib/dateUtils'
+import type { OutboxDropValues } from '@/lib/outbox/outboxQueue'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -21,15 +24,23 @@ type WorkoutFinishPanelProps = {
     session: WorkoutSessionRow
     sessionDate: IsoDate
     sets: WorkoutSetRow[]
+    dropsBySetKey: Map<string, OutboxDropValues[]>
     onSessionUpdated: (session: WorkoutSessionRow) => void
 }
 
-export function WorkoutFinishPanel({ session, sessionDate, sets, onSessionUpdated }: WorkoutFinishPanelProps) {
+export function WorkoutFinishPanel({
+    session,
+    sessionDate,
+    sets,
+    dropsBySetKey,
+    onSessionUpdated,
+}: WorkoutFinishPanelProps) {
     const hasSavedFeeling = session.feeling_scale !== null
     const [isEditing, setIsEditing] = useState(!hasSavedFeeling)
     const [draftScale, setDraftScale] = useState<number | null>(session.feeling_scale)
     const [draftNote, setDraftNote] = useState(session.feeling_note ?? '')
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+    const [isDetailOpen, setIsDetailOpen] = useState(false)
 
     function handleStartEditing() {
         setDraftScale(session.feeling_scale)
@@ -61,6 +72,7 @@ export function WorkoutFinishPanel({ session, sessionDate, sets, onSessionUpdate
     const activeWindow = resolveSessionDuration(session, sets)
     const setsByKey = new Map(sets.map((set) => [setKey(set.exercise_key, set.set_index), set]))
     const statusCounts = countSetsByStatus(session.workout_snapshot, setsByKey)
+    const workoutSummary = summarizeWorkoutSetsWithDrops(session.workout_snapshot, sets, dropsBySetKey)
     const isSaving = saveStatus === 'saving'
 
     return (
@@ -88,6 +100,24 @@ export function WorkoutFinishPanel({ session, sessionDate, sets, onSessionUpdate
                         </div>
                     )}
                 </dl>
+                <button
+                    type="button"
+                    className="secondary-button finish-card__toggle"
+                    aria-expanded={isDetailOpen}
+                    onClick={() => setIsDetailOpen((wasOpen) => !wasOpen)}
+                >
+                    {isDetailOpen ? 'Ocultar treino' : 'Ver treino'}
+                    <ChevronDown
+                        size={ACTION_ICON_SIZE}
+                        aria-hidden="true"
+                        className={isDetailOpen ? 'finish-card__chevron finish-card__chevron--open' : 'finish-card__chevron'}
+                    />
+                </button>
+                {isDetailOpen && (
+                    <div className="finish-card__detail">
+                        <WorkoutSummaryView summary={workoutSummary} />
+                    </div>
+                )}
                 {isEditing ? (
                     <>
                         <div className="field">

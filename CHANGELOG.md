@@ -28,6 +28,11 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   essas operações. Migração `20260929040000_workout_sessions_pause.sql`
   (colunas `paused_at` e `paused_seconds` em `workout_sessions`), que
   precisa ser aplicada no SQL Editor antes do deploy.
+- "Ver treino" no cartão de treino concluído (aba Treino): abre o detalhe do
+  que foi feito, exercício por exercício, com carga, repetições, RIR, séries
+  puladas, comentário de cada série e quedas de drop set, no mesmo formato
+  do detalhe do dia em Resultados (que passou a compartilhar o componente).
+  Usa as séries locais da sessão, então aparece certo antes de sincronizar.
 - Descanso padrão do plano e descanso por série. O plano aceita
   `descanso_padrao_segundos_min/max` na raiz, que vale para todo exercício de
   séries sem descanso próprio, e cada série aceita

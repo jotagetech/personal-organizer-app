@@ -829,6 +829,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                         session={withLocalSessionTimes(session, startedAt, effectiveFinishedAt, pauseState)}
                         sessionDate={sessionDate}
                         sets={Array.from(effectiveSetsByKey.values())}
+                        dropsBySetKey={effectiveDropsByKey}
                         onSessionUpdated={setSession}
                     />
                 ) : (

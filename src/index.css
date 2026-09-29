@@ -3057,6 +3057,25 @@ h1, h2, h3, h4 {
     flex-grow: 1.5;
 }
 
+.finish-card__toggle {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.finish-card__chevron {
+    transition: transform 120ms ease;
+}
+
+.finish-card__chevron--open {
+    transform: rotate(180deg);
+}
+
+.finish-card__detail {
+    margin: -4px 0 16px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--color-border);
+}
+
 .finish-card__actions {
     display: flex;
     gap: 8px;

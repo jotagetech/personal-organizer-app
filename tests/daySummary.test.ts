@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { summarizeWorkoutSets } from '@/features/results/daySummary'
+import { summarizeWorkoutSets, summarizeWorkoutSetsWithDrops } from '@/features/results/daySummary'
 import type { WorkoutSetDropRow, WorkoutSetRow } from '@/features/workout/types'
 import type { WorkoutSnapshot } from '@/lib/databaseTypes'
 import { EMPTY_SET_METRIC_COLUMNS, NO_SET_REST, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
@@ -194,5 +194,17 @@ describe('summarizeWorkoutSets', () => {
             { loadKg: null, reps: null, durationSeconds: null, distanceM: null },
             { loadKg: 20, reps: 6, durationSeconds: null, distanceM: null },
         ])
+    })
+})
+
+describe('summarizeWorkoutSetsWithDrops', () => {
+    it('usa as quedas já agrupadas por série', () => {
+        const sets = [buildSetRow({ exercise_key: 'supino', set_index: 0 })]
+        const drops = new Map([['supino:0', [{ loadKg: 30, reps: 8, durationSeconds: null, distanceM: null }]]])
+
+        const summary = summarizeWorkoutSetsWithDrops(SNAPSHOT, sets, drops)
+
+        expect(summary.exercises[0].sets[0].drops).toEqual(drops.get('supino:0'))
+        expect(summary.exercises[0].sets[1].drops).toEqual([])
     })
 })

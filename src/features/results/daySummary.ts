@@ -51,6 +51,17 @@ export function summarizeWorkoutSets(
     dropRows: WorkoutSetDropRow[] = [],
 ): WorkoutSummary {
     const dropsBySetKey = groupDropsBySetKey(sets, dropRows)
+
+    return summarizeWorkoutSetsWithDrops(snapshot, sets, dropsBySetKey)
+}
+
+// Variante para quem já tem as quedas agrupadas por série (a sessão em
+// andamento as mantém assim, com a fila local já aplicada).
+export function summarizeWorkoutSetsWithDrops(
+    snapshot: WorkoutSnapshot,
+    sets: WorkoutSetRow[],
+    dropsBySetKey: Map<string, OutboxDropValues[]>,
+): WorkoutSummary {
     const setsByKey = new Map(sets.map((set) => [setKey(set.exercise_key, set.set_index), set]))
     const knownKeys = new Set<string>()
 
