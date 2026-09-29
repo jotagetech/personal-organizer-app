@@ -69,7 +69,7 @@ export function DropSetStepRow({
     onSkipRemainingDrops,
     onLocalDropsSave,
 }: DropSetStepRowProps) {
-    const { enqueueUpsertSet, getOperationsForDate } = useOutbox()
+    const { enqueueUpsertSet, stageUpsertSet, syncNow, getOperationsForDate } = useOutbox()
     const metric = serie.metrica
     const formaCarga = exercicio.forma_carga
     const plannedDrop = serie.quedas[dropPosition]
@@ -89,11 +89,12 @@ export function DropSetStepRow({
     useEffect(() => {
         return () => {
             if (!debounceTimerRef.current) {
+                syncNow()
                 return
             }
             clearTimeout(debounceTimerRef.current)
             debounceTimerRef.current = null
-            saveDrop(fieldsRef.current, false)
+            saveDrop(enqueueUpsertSet, fieldsRef.current, false)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -105,13 +106,15 @@ export function DropSetStepRow({
         }
     }
 
-    function saveDrop(nextFields: DropFieldState, isConfirmed: boolean) {
+    // A digitação grava só no aparelho (stageUpsertSet); sair do campo,
+    // confirmar ou sair da queda é que manda para o servidor.
+    function saveDrop(write: typeof enqueueUpsertSet, nextFields: DropFieldState, isConfirmed: boolean) {
         const measuredValues = parseMeasuredValues(metric, nextFields.loadKgText, nextFields.resultText)
         const dropValues = isConfirmed ? withBodyweightDefault(measuredValues, formaCarga) : measuredValues
         const { parentSet: latestParentSet, drops: latestDrops } = latestPropsRef.current
         const nextDrops = replaceDropAt(latestDrops, dropPosition, dropValues)
 
-        enqueueUpsertSet({
+        write({
             sessionDate,
             planId,
             snapshot,
@@ -127,16 +130,17 @@ export function DropSetStepRow({
         clearPendingAutosave()
         debounceTimerRef.current = setTimeout(() => {
             debounceTimerRef.current = null
-            saveDrop(nextFields, false)
+            saveDrop(stageUpsertSet, nextFields, false)
         }, SAVE_DEBOUNCE_MS)
     }
 
     function handleFieldBlur() {
         if (!debounceTimerRef.current) {
+            syncNow()
             return
         }
         clearPendingAutosave()
-        saveDrop(fieldsRef.current, false)
+        saveDrop(enqueueUpsertSet, fieldsRef.current, false)
     }
 
     const canConfirm = canConfirmEntry(metric, formaCarga, fields.loadKgText, fields.resultText)
@@ -146,7 +150,7 @@ export function DropSetStepRow({
             return
         }
         clearPendingAutosave()
-        saveDrop(fieldsRef.current, true)
+        saveDrop(enqueueUpsertSet, fieldsRef.current, true)
         onConfirmed()
     }
 
@@ -154,8 +158,9 @@ export function DropSetStepRow({
         const hasUnsavedTyping = debounceTimerRef.current !== null
         clearPendingAutosave()
         if (hasUnsavedTyping) {
-            saveDrop(fieldsRef.current, false)
+            saveDrop(enqueueUpsertSet, fieldsRef.current, false)
         }
+        syncNow()
         onSkipRemainingDrops()
     }
 

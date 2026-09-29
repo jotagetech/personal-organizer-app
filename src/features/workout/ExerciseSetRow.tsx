@@ -75,7 +75,7 @@ export function ExerciseSetRow({
     onSkipExercise,
     onLocalSave,
 }: ExerciseSetRowProps) {
-    const { enqueueUpsertSet, getOperationsForDate } = useOutbox()
+    const { enqueueUpsertSet, stageUpsertSet, syncNow, getOperationsForDate } = useOutbox()
     const exerciseKey = exercicio.exercise_key
     const setIndex = serie.set_index
     const metric = serie.metrica
@@ -86,14 +86,37 @@ export function ExerciseSetRow({
     const [hasEverSaved, setHasEverSaved] = useState(() => Boolean(existingSet))
     const fieldsRef = useRef(fields)
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    // Digitação ainda não gravada nem no aparelho: enquanto houver, nada que
+    // chegue de fora (fila mudando de estado, recarga do servidor) pode
+    // reescrever os campos.
+    const hasUnsavedTypingRef = useRef(false)
 
     function updateFields(nextFields: SetFieldState) {
         fieldsRef.current = nextFields
         setFields(nextFields)
     }
 
+    function updateFieldsFromTyping(nextFields: SetFieldState) {
+        hasUnsavedTypingRef.current = true
+        updateFields(nextFields)
+        scheduleAutosave(nextFields)
+    }
+
+    // A linha da série muda de identidade a cada mudança da fila, mesmo com os
+    // mesmos valores; só um valor realmente diferente do que está na tela (a
+    // série alterada em outra aba, por exemplo) substitui os campos. Comparar
+    // já convertido evita trocar "22,50" digitado por "22,5" vindo do banco.
     useEffect(() => {
-        updateFields(toFieldState(existingSet, metric))
+        if (hasUnsavedTypingRef.current) {
+            return
+        }
+        const incomingFields = toFieldState(existingSet, metric)
+        const currentFieldsAsSaved = toFieldState(buildLocalRow(valuesFromFields(fieldsRef.current)), metric)
+        if (isSameFieldState(incomingFields, currentFieldsAsSaved)) {
+            return
+        }
+
+        updateFields(incomingFields)
         setIsNoteOpen(Boolean(existingSet?.note))
         setHasEverSaved(Boolean(existingSet))
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,6 +128,7 @@ export function ExerciseSetRow({
     useEffect(() => {
         return () => {
             if (!debounceTimerRef.current) {
+                syncNow()
                 return
             }
             clearTimeout(debounceTimerRef.current)
@@ -157,9 +181,30 @@ export function ExerciseSetRow({
     }
 
     function saveToOutbox(nextFields: SetFieldState, extraValues: Partial<OutboxSetValues> = {}): WorkoutSetRow {
-        const values = { ...valuesFromFields(nextFields), ...extraValues }
+        const savedRow = writeSet(enqueueUpsertSet, nextFields, extraValues)
 
-        enqueueUpsertSet({ sessionDate, planId, snapshot, exerciseKey, setIndex, values })
+        return savedRow
+    }
+
+    function saveOnDevice(nextFields: SetFieldState): WorkoutSetRow {
+        const savedRow = writeSet(stageUpsertSet, nextFields, {})
+
+        return savedRow
+    }
+
+    function writeSet(
+        write: typeof enqueueUpsertSet,
+        nextFields: SetFieldState,
+        extraValues: Partial<OutboxSetValues>,
+    ): WorkoutSetRow {
+        const values = { ...valuesFromFields(nextFields), ...extraValues }
+        const isSavingLatestFields = nextFields === fieldsRef.current
+
+        write({ sessionDate, planId, snapshot, exerciseKey, setIndex, values })
+        debounceTimerRef.current = null
+        if (isSavingLatestFields) {
+            hasUnsavedTypingRef.current = false
+        }
         setHasEverSaved(true)
 
         // Sincronizar com o servidor pode levar tempo (ou nunca terminar antes
@@ -175,43 +220,40 @@ export function ExerciseSetRow({
     function scheduleAutosave(nextFields: SetFieldState) {
         clearPendingAutosave()
         debounceTimerRef.current = setTimeout(() => {
-            saveToOutbox(nextFields)
+            saveOnDevice(nextFields)
         }, SAVE_DEBOUNCE_MS)
     }
 
     function handleLoadChange(rawValue: string) {
-        const nextFields = { ...fields, loadKgText: rawValue }
-        updateFields(nextFields)
-        scheduleAutosave(nextFields)
+        updateFieldsFromTyping({ ...fieldsRef.current, loadKgText: rawValue })
     }
 
     function handleResultChange(rawValue: string) {
-        const nextFields = { ...fields, resultText: rawValue }
-        updateFields(nextFields)
-        scheduleAutosave(nextFields)
+        updateFieldsFromTyping({ ...fieldsRef.current, resultText: rawValue })
     }
 
     function handleRirChange(rawValue: string) {
-        const nextFields = { ...fields, rirText: rawValue }
-        updateFields(nextFields)
-        scheduleAutosave(nextFields)
+        updateFieldsFromTyping({ ...fieldsRef.current, rirText: rawValue })
     }
 
     function handleNoteChange(rawValue: string) {
-        const nextFields = { ...fields, noteText: rawValue }
-        updateFields(nextFields)
-        scheduleAutosave(nextFields)
+        updateFieldsFromTyping({ ...fieldsRef.current, noteText: rawValue })
     }
 
     function handleStopwatchStop(seconds: number) {
-        const nextFields = { ...fieldsRef.current, resultText: String(seconds) }
-        updateFields(nextFields)
-        scheduleAutosave(nextFields)
+        updateFieldsFromTyping({ ...fieldsRef.current, resultText: String(seconds) })
     }
 
+    // Sair do campo é o momento de mandar pro servidor o que já está no
+    // aparelho. Só focar e sair, sem digitar, não cria escrita nova.
     function handleFieldBlur() {
+        const hasTypingToSave = hasUnsavedTypingRef.current || debounceTimerRef.current !== null
         clearPendingAutosave()
-        saveToOutbox(fields)
+        if (hasTypingToSave) {
+            saveToOutbox(fieldsRef.current)
+            return
+        }
+        syncNow()
     }
 
     const canConfirm = canConfirmEntry(metric, formaCarga, fields.loadKgText, fields.resultText)
@@ -461,6 +503,13 @@ export function SaveStatusLabel({
     }
 
     return <p className="save-status">Salvo</p>
+}
+
+function isSameFieldState(first: SetFieldState, second: SetFieldState): boolean {
+    const fieldNames = Object.keys(first) as (keyof SetFieldState)[]
+    const hasSameValues = fieldNames.every((fieldName) => first[fieldName] === second[fieldName])
+
+    return hasSameValues
 }
 
 function toFieldState(existingSet: WorkoutSetRow | undefined, metric: SetMetric): SetFieldState {

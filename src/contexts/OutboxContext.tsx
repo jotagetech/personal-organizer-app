@@ -18,12 +18,12 @@ import {
     enqueueOperation,
     enqueueOperations,
     markOperationAttempt,
-    naturalKeyOf,
     nextBackoffDelayMs,
     operationsForDate,
     operationsWithStatus,
     removeOperation,
-    replaceOperationInQueue,
+    removeSentOperation,
+    replaceSentOperation,
     type OutboxOperation,
     type OutboxSetValues,
     type UpsertSetOperation,
@@ -45,6 +45,12 @@ type OutboxContextValue = {
     isOnline: boolean
     getOperationsForDate: (sessionDate: string) => OutboxOperation[]
     enqueueUpsertSet: (input: EnqueueUpsertSetInput) => void
+    // Grava a série só no aparelho (a fila persiste no localStorage), sem
+    // disparar envio: é o que a digitação usa, para não mandar uma escrita ao
+    // servidor a cada pausa entre teclas. O envio acontece em syncNow, ao sair
+    // do campo, ou no próximo ciclo da fila.
+    stageUpsertSet: (input: EnqueueUpsertSetInput) => void
+    syncNow: () => void
     enqueueUpsertSets: (inputs: EnqueueUpsertSetInput[]) => void
     enqueueFinishSession: (sessionDate: string) => void
     discardOperation: (naturalKey: string) => void
@@ -171,12 +177,11 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                     }
 
                     madeProgress = true
-                    updateQueue(removeOperation(queueRef.current, naturalKeyOf(operation)))
+                    updateQueue(removeSentOperation(queueRef.current, operation))
                 } catch (sendError) {
                     const classification = classifyOutboxError(sendError)
-                    updateQueue(
-                        replaceOperationInQueue(queueRef.current, markOperationAttempt(operation, classification)),
-                    )
+                    const attemptedOperation = markOperationAttempt(operation, classification)
+                    updateQueue(replaceSentOperation(queueRef.current, operation, attemptedOperation))
                     if (classification === 'retry') {
                         blockedDates.add(operation.sessionDate)
                     }
@@ -260,6 +265,13 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
             enqueueUpsertSet: (input: EnqueueUpsertSetInput) => {
                 const operation = buildUpsertSetOperation(input, new Date().toISOString())
                 updateQueue(enqueueOperation(queueRef.current, operation))
+                void runFlushCycle()
+            },
+            stageUpsertSet: (input: EnqueueUpsertSetInput) => {
+                const operation = buildUpsertSetOperation(input, new Date().toISOString())
+                updateQueue(enqueueOperation(queueRef.current, operation))
+            },
+            syncNow: () => {
                 void runFlushCycle()
             },
             // Várias séries de uma vez (pular exercício) entram numa única

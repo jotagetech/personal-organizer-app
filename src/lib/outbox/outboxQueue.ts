@@ -115,12 +115,25 @@ export function removeOperation(queue: OutboxOperation[], naturalKey: string): O
     return queue.filter((operation) => naturalKeyOf(operation) !== naturalKey)
 }
 
-export function replaceOperationInQueue(
+// O envio é assíncrono e a fila continua aceitando escritas durante ele: uma
+// digitação nova da mesma série substitui a operação que está a caminho do
+// servidor. O resultado do envio só vale para a versão exata que foi enviada;
+// se ela já foi substituída, a versão nova fica na fila, intacta, para o
+// próximo ciclo.
+export function removeSentOperation(queue: OutboxOperation[], sentOperation: OutboxOperation): OutboxOperation[] {
+    const remainingQueue = queue.filter((operation) => operation !== sentOperation)
+
+    return remainingQueue
+}
+
+export function replaceSentOperation(
     queue: OutboxOperation[],
+    sentOperation: OutboxOperation,
     updatedOperation: OutboxOperation,
 ): OutboxOperation[] {
-    const naturalKey = naturalKeyOf(updatedOperation)
-    return queue.map((existing) => (naturalKeyOf(existing) === naturalKey ? updatedOperation : existing))
+    const nextQueue = queue.map((operation) => (operation === sentOperation ? updatedOperation : operation))
+
+    return nextQueue
 }
 
 // Erro classificado como "retry" mantém a operação pendente pro próximo ciclo;

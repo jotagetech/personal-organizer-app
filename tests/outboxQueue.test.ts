@@ -10,6 +10,8 @@ import {
     naturalKeyOf,
     nextBackoffDelayMs,
     overlayPendingSets,
+    removeSentOperation,
+    replaceSentOperation,
     type FinishSessionOperation,
     type OutboxOperation,
     type UpsertSetOperation,
@@ -487,5 +489,40 @@ describe('persistência da fila com séries puladas', () => {
         saveOutboxQueue(storage, [dropSetOperation])
 
         expect(loadOutboxQueue(storage)).toEqual([dropSetOperation])
+    })
+})
+
+describe('resultado de um envio com a série reescrita durante ele', () => {
+    it('remove a operação enviada quando ela continua na fila', () => {
+        const sentOperation = upsertSetOperation()
+
+        expect(removeSentOperation([sentOperation], sentOperation)).toEqual([])
+    })
+
+    it('mantém a digitação nova que substituiu a operação enviada', () => {
+        const sentOperation = upsertSetOperation()
+        const newerOperation = upsertSetOperation({
+            values: { ...sentOperation.values, loadKg: 62.5 },
+            enqueuedAt: '2026-09-28T12:00:01.000Z',
+        })
+        const queueAfterTyping = enqueueOperation([sentOperation], newerOperation)
+
+        expect(removeSentOperation(queueAfterTyping, sentOperation)).toEqual([newerOperation])
+    })
+
+    it('não troca a digitação nova pela tentativa falha da versão antiga', () => {
+        const sentOperation = upsertSetOperation()
+        const newerOperation = upsertSetOperation({ values: { ...sentOperation.values, reps: 12 } })
+        const queueAfterTyping = enqueueOperation([sentOperation], newerOperation)
+        const failedAttempt = { ...sentOperation, attempts: 1 }
+
+        expect(replaceSentOperation(queueAfterTyping, sentOperation, failedAttempt)).toEqual([newerOperation])
+    })
+
+    it('registra a tentativa quando a operação enviada continua na fila', () => {
+        const sentOperation = upsertSetOperation()
+        const failedAttempt = { ...sentOperation, attempts: 1 }
+
+        expect(replaceSentOperation([sentOperation], sentOperation, failedAttempt)).toEqual([failedAttempt])
     })
 })
