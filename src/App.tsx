@@ -9,6 +9,7 @@ import { BottomNav } from '@/features/shared/BottomNav'
 import { DateHeader } from '@/features/shared/DateHeader'
 import { UndoBar } from '@/features/shared/UndoBar'
 import { FoodTab } from '@/features/food/FoodTab'
+import { MenuTab } from '@/features/menu/MenuTab'
 import { ResultsTab } from '@/features/results/ResultsTab'
 import { RoutineTab } from '@/features/routine/RoutineTab'
 import { WorkoutTab } from '@/features/workout/WorkoutTab'
@@ -58,6 +59,7 @@ function AuthenticatedShell() {
                 {activeTab === 'treino' && <WorkoutTab />}
                 {activeTab === 'alimentacao' && <FoodTab />}
                 {activeTab === 'resultados' && <ResultsTab />}
+                {activeTab === 'menu' && <MenuTab />}
             </main>
             <UndoBar />
             <BottomNav activeTab={activeTab} onSelectTab={goToTab} />

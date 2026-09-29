@@ -1,13 +1,14 @@
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import type { TabIndicatorKind } from '@/features/shared/tabIndicators'
 
-export type AppTab = 'rotina' | 'treino' | 'alimentacao' | 'resultados'
+export type AppTab = 'rotina' | 'treino' | 'alimentacao' | 'resultados' | 'menu'
 
 const TABS: { key: AppTab; label: string }[] = [
     { key: 'rotina', label: 'Rotina' },
     { key: 'treino', label: 'Treino' },
-    { key: 'alimentacao', label: 'Alimentação' },
+    { key: 'alimentacao', label: 'Comida' },
     { key: 'resultados', label: 'Resultados' },
+    { key: 'menu', label: 'Menu' },
 ]
 
 type BottomNavProps = {

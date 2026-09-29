@@ -26,15 +26,16 @@ export const ROUTINE_LINK_KIND_LABELS: Record<RoutineLinkKind, string> = {
 }
 
 // Aba pra onde um item vinculado ainda pendente leva ao ser tocado: peso e
-// sono são registrados dentro de Resultados, não numa aba própria.
+// sono são registrados na seção "Registros do dia" do Menu, não numa aba
+// própria.
 export const ROUTINE_LINK_KIND_TARGET_TAB: Record<RoutineLinkKind, AppTab> = {
     workout_finished: 'treino',
     'meal:cafe_da_manha': 'alimentacao',
     'meal:almoco': 'alimentacao',
     'meal:lanche': 'alimentacao',
     'meal:jantar': 'alimentacao',
-    body_weight: 'resultados',
-    sleep: 'resultados',
+    body_weight: 'menu',
+    sleep: 'menu',
 }
 
 export type RoutineRowSource = 'linked' | 'manual' | 'adhoc'

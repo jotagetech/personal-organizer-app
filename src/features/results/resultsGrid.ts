@@ -75,3 +75,28 @@ export function buildWeeklyCompletionGrid(
 
     return weeks
 }
+
+export type VisibleWeeks = {
+    visible: WeekRow[]
+    hiddenCount: number
+}
+
+// Um ciclo longo (ou uma data selecionada distante) gera dezenas de semanas;
+// sem um teto, a grade ocupa a tela inteira no celular. A janela padrão são
+// as semanas mais recentes, mas se a data selecionada ficar fora dela a
+// janela passa a começar na semana dessa data, pra ela continuar visível.
+export function selectVisibleWeeks(weeks: WeekRow[], selectedDate: IsoDate, maxWeeks: number): VisibleWeeks {
+    if (weeks.length <= maxWeeks) {
+        return { visible: weeks, hiddenCount: 0 }
+    }
+
+    const defaultStartIndex = weeks.length - maxWeeks
+    const selectedWeekIndex = weeks.findIndex(
+        (week) => selectedDate >= week.weekStart && selectedDate <= shiftIsoDate(week.weekStart, 6),
+    )
+    const isSelectedWeekBeforeWindow = selectedWeekIndex !== -1 && selectedWeekIndex < defaultStartIndex
+    const startIndex = isSelectedWeekBeforeWindow ? selectedWeekIndex : defaultStartIndex
+    const visible = weeks.slice(startIndex, startIndex + maxWeeks)
+
+    return { visible, hiddenCount: weeks.length - visible.length }
+}

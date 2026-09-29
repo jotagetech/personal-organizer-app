@@ -19,7 +19,7 @@ describe('deriveTabIndicators', () => {
     it('não marca nenhuma aba quando o dia está inteiramente vazio e sem treino previsto', () => {
         const indicators = deriveTabIndicators(buildSignals(), false)
 
-        expect(indicators).toEqual({ treino: 'none', alimentacao: 'none', resultados: 'pending' })
+        expect(indicators).toEqual({ treino: 'none', alimentacao: 'none', resultados: 'none', menu: 'pending' })
     })
 
     it('marca tudo como concluído quando o dia está inteiramente preenchido', () => {
@@ -32,7 +32,7 @@ describe('deriveTabIndicators', () => {
 
         const indicators = deriveTabIndicators(signals, false)
 
-        expect(indicators).toEqual({ treino: 'done', alimentacao: 'done', resultados: 'none' })
+        expect(indicators).toEqual({ treino: 'done', alimentacao: 'done', resultados: 'none', menu: 'none' })
     })
 
     it('marca o treino como pendente (âmbar) quando a sessão está em andamento', () => {
@@ -65,24 +65,29 @@ describe('deriveTabIndicators', () => {
         expect(indicators.alimentacao).toBe('none')
     })
 
-    it('marca resultados como pendente quando só o peso está registrado', () => {
+    it('marca o menu como pendente quando só o peso está registrado', () => {
         const indicators = deriveTabIndicators(buildSignals({ bodyWeightLogged: true }), false)
 
-        expect(indicators.resultados).toBe('pending')
+        expect(indicators.menu).toBe('pending')
     })
 
-    it('marca resultados como pendente quando só o sono está registrado', () => {
+    it('marca o menu como pendente quando só o sono está registrado', () => {
         const indicators = deriveTabIndicators(buildSignals({ sleepLogged: true }), false)
 
-        expect(indicators.resultados).toBe('pending')
+        expect(indicators.menu).toBe('pending')
     })
 
-    it('não marca resultados como pendente quando peso e sono estão registrados', () => {
+    it('não marca o menu como pendente quando peso e sono estão registrados', () => {
         const indicators = deriveTabIndicators(
             buildSignals({ bodyWeightLogged: true, sleepLogged: true }),
             false,
         )
 
-        expect(indicators.resultados).toBe('none')
+        expect(indicators.menu).toBe('none')
+    })
+
+    it('nunca marca resultados, já que peso e sono não são mais registrados ali', () => {
+        expect(deriveTabIndicators(buildSignals(), false).resultados).toBe('none')
+        expect(deriveTabIndicators(buildSignals({ bodyWeightLogged: true }), false).resultados).toBe('none')
     })
 })

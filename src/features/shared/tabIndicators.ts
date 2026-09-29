@@ -5,12 +5,13 @@ export type TabIndicatorKind = 'none' | 'pending' | 'done'
 // A aba de rotina entra com o próprio indicador (calculado à parte, ver
 // features/routine/routineIndicator.ts) porque depende de dados que essa
 // aba não lê (os templates de rotina e os registros do dia), então não dá
-// pra derivar a partir só de DaySignals como as outras três.
+// pra derivar a partir só de DaySignals como as outras.
 export type TabIndicators = {
     rotina: TabIndicatorKind
     treino: TabIndicatorKind
     alimentacao: TabIndicatorKind
     resultados: TabIndicatorKind
+    menu: TabIndicatorKind
 }
 
 export const EMPTY_TAB_INDICATORS: TabIndicators = {
@@ -18,6 +19,7 @@ export const EMPTY_TAB_INDICATORS: TabIndicators = {
     treino: 'none',
     alimentacao: 'none',
     resultados: 'none',
+    menu: 'none',
 }
 
 // Lógica pura (sem chamada de rede), pra o indicador de cada aba refletir os
@@ -30,7 +32,8 @@ export function deriveTabIndicators(
     return {
         treino: deriveWorkoutIndicator(signals.workout, plannedWorkoutToday),
         alimentacao: signals.foodEntryCount > 0 ? 'done' : 'none',
-        resultados: signals.bodyWeightLogged && signals.sleepLogged ? 'none' : 'pending',
+        resultados: 'none',
+        menu: signals.bodyWeightLogged && signals.sleepLogged ? 'none' : 'pending',
     }
 }
 

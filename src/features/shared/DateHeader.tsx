@@ -85,7 +85,7 @@ export function DateHeader() {
     )
 }
 
-function formatDateLabel(isoDate: string): string {
+export function formatDateLabel(isoDate: string): string {
     const [, month, day] = isoDate.split('-')
     const weekday = weekdayOfIsoDate(isoDate)
     const formattedLabel = `${WEEKDAY_ABBREVIATION[weekday]} ${day}/${month}`

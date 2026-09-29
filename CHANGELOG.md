@@ -7,6 +7,16 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Corrigido
 
+- A grade semanal de Resultados podia ficar enorme no celular: com um ciclo
+  longo ou uma data selecionada distante ela crescia sem teto (dezenas de
+  semanas), e em paisagem ou tablet cada célula acompanhava a largura da
+  tela. A grade agora mostra no máximo as 6 semanas mais recentes (ou 6 a
+  partir da semana da data selecionada, quando ela é mais antiga), com
+  "Ver ciclo inteiro (N semanas)" e "Mostrar menos" pra alternar. A área de
+  conteúdo do app ganhou largura máxima de 560px e a grade de 420px, e as
+  colunas usam `minmax(0, 1fr)` pra texto ampliado não estourar as células.
+- O indicador de pendência de peso e sono não atualizava depois de salvar ou
+  excluir um registro; agora atualiza na hora.
 - "Criar rotina sugerida" duplicava itens quando nenhum item se aplicava ao
   dia selecionado (ex: um dia antes de `active_from`, ou fora dos dias da
   semana configurados): o botão aparecia de novo mesmo já existindo itens
@@ -17,6 +27,11 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Nova aba Menu, a última do menu inferior. A seção "Registros do dia" traz
+  os cards de peso corporal e sono empilhados em largura total, gravando na
+  data selecionada (mostrada logo abaixo do título). A seção "Ferramentas"
+  lista atalhos em largura total; o primeiro é o "Catálogo de alimentos",
+  que continua acessível também pelo ⋮ da aba de alimentação.
 - Série pulada como estado próprio, distinto de concluída e de não
   registrada (migração `20260928030000_workout_sets_skipped.sql`, coluna
   `skipped_at` em `workout_sets`). Cada série ganha "Pular série" e "Pular
@@ -133,6 +148,15 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- Peso corporal e sono saíram da aba Resultados e passaram pro Menu. O
+  detalhe do dia em Resultados continua mostrando os dois, só leitura. O
+  indicador de pendência de peso e sono passou de Resultados pro Menu, e
+  "Registrar agora" dos itens de rotina vinculados a peso ou sono leva ao
+  Menu.
+- Menu inferior com cinco abas: rótulos menores e o indicador de cada aba
+  virou um ponto no canto do botão, pra caber em telas de 320px. A aba de
+  alimentação passou a se chamar "Comida" no menu inferior, porque
+  "Alimentação" não cabia nessa largura.
 - Duração do treino agora é medida pelas próprias séries, da primeira à
   última concluída, em vez de ir da abertura da sessão até a finalização
   (que podia incluir horas antes de começar ou o tempo até a fila

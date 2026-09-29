@@ -15,6 +15,7 @@ type QuickMetricLogProps = {
     getEntryForDate: (entryDate: string) => Promise<MetricPoint | null>
     save: (entryDate: string, value: number) => Promise<MetricPoint>
     deleteEntry: (id: string) => Promise<void>
+    onChanged?: () => void
 }
 
 export function QuickMetricLog({
@@ -27,6 +28,7 @@ export function QuickMetricLog({
     getEntryForDate,
     save,
     deleteEntry,
+    onChanged,
 }: QuickMetricLogProps) {
     const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [recentPoints, setRecentPoints] = useState<MetricPoint[]>([])
@@ -94,6 +96,7 @@ export function QuickMetricLog({
                 const withoutSameDate = previous.filter((point) => point.entryDate !== savedPoint.entryDate)
                 return [savedPoint, ...withoutSameDate].sort((a, b) => (a.entryDate < b.entryDate ? 1 : -1))
             })
+            onChanged?.()
         } catch (submitError) {
             const message = submitError instanceof Error ? submitError.message : 'Falha ao salvar'
             setErrorMessage(message)
@@ -114,6 +117,7 @@ export function QuickMetricLog({
                     setExistingEntry(null)
                     setValueText('')
                 }
+                onChanged?.()
             },
             onRestored: () => setErrorMessage('Não foi possível excluir esse registro.'),
         })

@@ -4,6 +4,7 @@ import {
     buildWeeklyCompletionGrid,
     expandRangeToIncludeDate,
     mondayOnOrBefore,
+    selectVisibleWeeks,
 } from '@/features/results/resultsGrid'
 
 describe('mondayOnOrBefore', () => {
@@ -93,5 +94,56 @@ describe('expandRangeToIncludeDate', () => {
         const range = expandRangeToIncludeDate({ rangeStart: '2026-09-10', rangeEnd: '2026-09-28' }, '2026-09-20')
 
         expect(range).toEqual({ rangeStart: '2026-09-10', rangeEnd: '2026-09-28' })
+    })
+})
+
+describe('selectVisibleWeeks', () => {
+    // 10 semanas, de segunda 2026-07-27 até domingo 2026-10-04.
+    const tenWeeks = buildWeeklyCompletionGrid('2026-07-27', '2026-10-04', new Set())
+
+    it('mostra todas as semanas quando há menos que o teto', () => {
+        const weeks = buildWeeklyCompletionGrid('2026-09-14', '2026-10-04', new Set())
+
+        const result = selectVisibleWeeks(weeks, '2026-09-28', 6)
+
+        expect(result.visible).toHaveLength(3)
+        expect(result.hiddenCount).toBe(0)
+    })
+
+    it('mostra as últimas semanas quando a data selecionada já está dentro da janela', () => {
+        const result = selectVisibleWeeks(tenWeeks, '2026-09-30', 6)
+
+        expect(result.visible.map((week) => week.weekStart)).toEqual([
+            '2026-08-24',
+            '2026-08-31',
+            '2026-09-07',
+            '2026-09-14',
+            '2026-09-21',
+            '2026-09-28',
+        ])
+        expect(result.hiddenCount).toBe(4)
+    })
+
+    it('começa a janela na semana da data selecionada quando ela é antiga', () => {
+        const result = selectVisibleWeeks(tenWeeks, '2026-08-05', 6)
+
+        expect(result.visible).toHaveLength(6)
+        expect(result.visible[0].weekStart).toBe('2026-08-03')
+        expect(result.visible[5].weekStart).toBe('2026-09-07')
+        expect(result.hiddenCount).toBe(4)
+    })
+
+    it('não passa do fim da grade quando a semana selecionada está perto do fim', () => {
+        const result = selectVisibleWeeks(tenWeeks, '2026-08-26', 6)
+
+        expect(result.visible[0].weekStart).toBe('2026-08-24')
+        expect(result.visible[5].weekStart).toBe('2026-09-28')
+    })
+
+    it('conta como ocultas todas as semanas fora da janela', () => {
+        const result = selectVisibleWeeks(tenWeeks, '2026-10-01', 3)
+
+        expect(result.visible).toHaveLength(3)
+        expect(result.hiddenCount).toBe(7)
     })
 })

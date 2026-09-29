@@ -1,28 +1,17 @@
 import { useEffect, useState } from 'react'
 
-import {
-    deleteBodyWeightEntry,
-    deleteSleepEntry,
-    getBodyWeightForDate,
-    getSleepForDate,
-    listRecentBodyWeightEntries,
-    listRecentSleepEntries,
-    upsertBodyWeightEntry,
-    upsertSleepEntry,
-} from '@/features/bodyMetrics/api'
-import { QuickMetricLog } from '@/features/bodyMetrics/QuickMetricLog'
 import { getCurrentCycle } from '@/features/cycle/api'
 import type { WorkoutCycleRow } from '@/features/cycle/types'
 import { DayDetail } from '@/features/results/DayDetail'
 import { listFinishedSessionDates } from '@/features/results/api'
-import { buildWeeklyCompletionGrid } from '@/features/results/resultsGrid'
+import { buildWeeklyCompletionGrid, selectVisibleWeeks } from '@/features/results/resultsGrid'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { shiftIsoDate, todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 import { WEEKDAY_LABELS } from '@/lib/weekdayLabels'
 import type { Weekday } from '@/lib/workoutPlanSchema'
 
 const DEFAULT_LOOKBACK_DAYS = 27
-const SLEEP_MAX_HOURS = 24
+const MAX_COLLAPSED_WEEKS = 6
 
 type GridInputs = {
     rangeStart: IsoDate
@@ -35,6 +24,7 @@ export function ResultsTab() {
     const [gridInputs, setGridInputs] = useState<GridInputs | null>(null)
     const [cycle, setCycle] = useState<WorkoutCycleRow | null>(null)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
+    const [isShowingWholeCycle, setIsShowingWholeCycle] = useState(false)
 
     useEffect(() => {
         let isCancelled = false
@@ -95,61 +85,12 @@ export function ResultsTab() {
         selectedDate,
     )
 
+    const { visible: collapsedWeeks, hiddenCount } = selectVisibleWeeks(weeks, selectedDate, MAX_COLLAPSED_WEEKS)
+    const visibleWeeks = isShowingWholeCycle ? weeks : collapsedWeeks
+
     return (
         <div>
-            <h2 style={{ fontSize: 16, marginTop: 0 }}>Dia selecionado</h2>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-                <div style={{ flex: 1, minWidth: 160 }}>
-                    <QuickMetricLog
-                        title="Peso corporal"
-                        unitLabel="kg"
-                        placeholder="ex: 78.5"
-                        entryDate={selectedDate}
-                        listRecent={async () =>
-                            (await listRecentBodyWeightEntries()).map((entry) => ({
-                                id: entry.id,
-                                entryDate: entry.entry_date,
-                                value: entry.weight_kg,
-                            }))
-                        }
-                        getEntryForDate={async (entryDate) => {
-                            const entry = await getBodyWeightForDate(entryDate)
-                            return entry ? { id: entry.id, entryDate: entry.entry_date, value: entry.weight_kg } : null
-                        }}
-                        save={async (entryDate, value) => {
-                            const saved = await upsertBodyWeightEntry(entryDate, value)
-                            return { id: saved.id, entryDate: saved.entry_date, value: saved.weight_kg }
-                        }}
-                        deleteEntry={deleteBodyWeightEntry}
-                    />
-                </div>
-                <div style={{ flex: 1, minWidth: 160 }}>
-                    <QuickMetricLog
-                        title="Sono (horas)"
-                        unitLabel="horas"
-                        placeholder="ex: 7.5"
-                        entryDate={selectedDate}
-                        maxValue={SLEEP_MAX_HOURS}
-                        listRecent={async () =>
-                            (await listRecentSleepEntries()).map((entry) => ({
-                                id: entry.id,
-                                entryDate: entry.entry_date,
-                                value: entry.hours,
-                            }))
-                        }
-                        getEntryForDate={async (entryDate) => {
-                            const entry = await getSleepForDate(entryDate)
-                            return entry ? { id: entry.id, entryDate: entry.entry_date, value: entry.hours } : null
-                        }}
-                        save={async (entryDate, value) => {
-                            const saved = await upsertSleepEntry(entryDate, value)
-                            return { id: saved.id, entryDate: saved.entry_date, value: saved.hours }
-                        }}
-                        deleteEntry={deleteSleepEntry}
-                    />
-                </div>
-            </div>
-            <h2 style={{ fontSize: 16 }}>{gridTitle(cycle)}</h2>
+            <h2 style={{ fontSize: 16, marginTop: 0 }}>{gridTitle(cycle)}</h2>
             <div className="results-grid">
                 <div className="results-grid__row results-grid__row--header">
                     {(Object.keys(WEEKDAY_LABELS) as Weekday[]).map((weekday) => (
@@ -158,7 +99,7 @@ export function ResultsTab() {
                         </span>
                     ))}
                 </div>
-                {weeks.map((week) => (
+                {visibleWeeks.map((week) => (
                     <div key={week.weekStart} className="results-grid__row">
                         {week.days.map((day) => (
                             <button
@@ -176,6 +117,17 @@ export function ResultsTab() {
                     </div>
                 ))}
             </div>
+            {hiddenCount > 0 && (
+                <div className="results-grid__toggle">
+                    <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => setIsShowingWholeCycle((previous) => !previous)}
+                    >
+                        {isShowingWholeCycle ? 'Mostrar menos' : expandGridLabel(cycle, weeks.length)}
+                    </button>
+                </div>
+            )}
             <DayDetail selectedDate={selectedDate} />
         </div>
     )
@@ -190,6 +142,13 @@ function gridTitle(cycle: WorkoutCycleRow | null): string {
     const title = `Dias de treino concluídos · ciclo desde ${cycleStartLabel}`
 
     return title
+}
+
+function expandGridLabel(cycle: WorkoutCycleRow | null, totalWeeks: number): string {
+    const scopeLabel = cycle ? 'Ver ciclo inteiro' : 'Ver todas as semanas'
+    const label = `${scopeLabel} (${totalWeeks} semanas)`
+
+    return label
 }
 
 function formatDayMonth(isoDate: IsoDate): string {
