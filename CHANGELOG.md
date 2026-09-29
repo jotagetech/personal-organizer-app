@@ -76,6 +76,18 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   `20260929020000_workout_sets_rpe.sql` (coluna `rpe` em `workout_sets`),
   que precisa ser aplicada no SQL Editor antes do deploy. O cardio livre do
   fim do treino continua igual.
+- Montador de plano na aba Treino, para montar o plano sem escrever JSON:
+  "Criar plano" (tela vazia e menu de três pontos) e "Editar plano atual",
+  que carrega o plano ativo. Treinos com dias da semana, exercícios de
+  séries ou intervalados com reordenar, duplicar e remover, séries com
+  métrica, faixa (ou valor fixo), carga sugerida e drop set, e progressão
+  por semanas opcional com "Semana diferente" por exercício. O `id` sai do
+  nome e, num plano carregado, renomear não muda o id (histórico mantido),
+  com "Tratar como exercício novo" explícito. O plano é validado pelo
+  contrato antes de salvar, com a lista de problemas em português levando
+  ao campo, e é salvo pelo mesmo caminho da importação; "Baixar JSON" gera
+  o arquivo e o rascunho fica em localStorage até salvar ou descartar. A
+  tela fica no tema do sistema, fora do modo treino.
 
 ### Alterado
 

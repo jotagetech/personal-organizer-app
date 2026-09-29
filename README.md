@@ -105,7 +105,8 @@ npm run dev
   tela aceita tarefas avulsas para uma data escolhida (não só o dia
   selecionado no momento). O menu de três pontos abre o gerenciamento dos itens
   recorrentes (criar, editar dias da semana e vínculo, arquivar).
-- **Treino**: importa plano de treino via JSON, sugere o treino do dia,
+- **Treino**: importa plano de treino via JSON ou monta o plano direto na
+  tela (ver "Montar o plano no app"), sugere o treino do dia,
   registra um exercício/uma série por vez (carga, repetições, RIR opcional,
   comentário livre por série), com barra de progresso e opção de voltar.
   Séries podem ser de repetições, tempo ou distância, com drop set (cada
@@ -151,6 +152,41 @@ repetições, com `carga_sugerida`) continuam sendo aceitos sem nenhuma
 alteração, e planos e sessões já salvos com o formato antigo são lidos
 normalmente: o app normaliza tudo para o formato atual na leitura. Uma série
 antiga sem métrica gravada vale como repetições.
+
+### Montar o plano no app
+
+Quem não quer escrever JSON monta o plano na aba Treino: "Criar plano" na
+tela vazia ou no menu de três pontos, e "Editar plano atual" no mesmo menu,
+que carrega o plano ativo. O montador só compõe o mesmo JSON v2 deste
+contrato e salva pelo mesmo caminho da importação (mesma validação, mesmo
+hash, o plano salvo vira o ativo); nada muda na forma como o plano é lido.
+
+- Treinos com nome e dias da semana; exercícios com adicionar, remover,
+  subir, descer e duplicar, cada treino e cada exercício recolhível.
+- Exercício de séries (equipamento, forma de carga com explicação curta,
+  unilateral, descanso, RIR alvo, observações e a lista de séries com
+  métrica, alvo, carga sugerida, duplicar e drop set) ou cardio intervalado
+  (modalidade, rodadas, trabalho, recuperação, RPE alvo). Escolher o
+  equipamento sugere a forma de carga (halteres: por halter; barra: total;
+  máquina assistida, que no arquivo vira `maquina` com `assistencia`:
+  assistência; peso corporal: peso corporal), e dá para trocar.
+- Toda faixa tem o modo "Fixo", que grava o mesmo número no mínimo e no
+  máximo.
+- "Usar progressão por semanas" (desligado por padrão) pede as semanas do
+  bloco, uma descrição opcional por semana e, por exercício, "Semana
+  diferente", que copia a prescrição base para editar só o que muda. No
+  arquivo, a variação leva só o que difere da base. Sem a progressão ligada,
+  `bloco_semanas`, `semanas` e `variacoes_semana` não vão para o arquivo.
+- O `id` é gerado a partir do nome (sem acento, com hífen, único no treino e
+  no plano). Num plano carregado, renomear um exercício mantém o id (a tela
+  mostra "Histórico mantido"); "Tratar como exercício novo" troca o id e o
+  exercício começa sem histórico.
+- Antes de salvar ou de "Baixar JSON", o plano passa pelo contrato; cada
+  problema aparece em português com o treino, o exercício e a série, e
+  tocar nele abre a seção e leva ao campo.
+- O rascunho fica em localStorage enquanto você monta, então fechar o app
+  não perde nada; "Descartar rascunho" recomeça. Salvar com sucesso apaga o
+  rascunho.
 
 ### O que a versão 2 acrescenta
 
@@ -409,6 +445,7 @@ src/
     shared/         navegação inferior, cabeçalho de data
     routine/        checklist diário de hábitos (templates recorrentes, itens avulsos)
     workout/        importação de plano, sessão/séries, ciclo de progresso, finalização
+      builder/      montador de plano na tela (estado, conversão para o JSON v2, rascunho)
     cycle/          ciclo de treino (data de início, "Dia N do ciclo")
     cardio/         catálogo de atividades e registro de cardio
     food/           catálogo de alimentos (TACO + próprios), consumo por refeição
