@@ -3,10 +3,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAppNavigation } from '@/contexts/AppNavigationContext'
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
+import { useUndoableActions } from '@/contexts/UndoableActionContext'
+import { validateAdhocTaskInput } from '@/features/routine/adhocTaskInput'
 import {
     createAdhocRoutineEntry,
     deleteRoutineDayEntry,
-    listRoutineDayEntries,
+    listRoutineEntriesVisibleOn,
     listRoutineItems,
     markAdhocRoutineEntryDone,
     markRoutineItemDone,
@@ -19,12 +21,13 @@ import { deriveRoutineRowActions, type RoutineRowActions, type RoutineRowRemoval
 import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
 import type { RoutineDayEntryRow, RoutineItemRow, RoutineRow, RoutineRowState } from '@/features/routine/types'
 import { fetchDaySignals, type DaySignals } from '@/features/shared/daySignals'
-import { isValidIsoDate, type IsoDate } from '@/lib/dateUtils'
+import { shiftIsoDate, type IsoDate } from '@/lib/dateUtils'
 
 export function RoutineTab() {
     const { selectedDate } = useSelectedDate()
     const { goToTab } = useAppNavigation()
     const { refreshDayStatus } = useDayStatus()
+    const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [items, setItems] = useState<RoutineItemRow[]>([])
     const [dayEntries, setDayEntries] = useState<RoutineDayEntryRow[]>([])
     const [signals, setSignals] = useState<DaySignals | null>(null)
@@ -42,7 +45,7 @@ export function RoutineTab() {
         try {
             const [nextItems, nextDayEntries, nextSignals] = await Promise.all([
                 listRoutineItems(),
-                listRoutineDayEntries(selectedDate),
+                listRoutineEntriesVisibleOn(selectedDate),
                 fetchDaySignals(selectedDate),
             ])
             setItems(nextItems)
@@ -71,10 +74,11 @@ export function RoutineTab() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    const rows = useMemo(
+    const resolvedRows = useMemo(
         () => (signals ? resolveRoutineForDate(selectedDate, items, dayEntries, signals) : []),
         [selectedDate, items, dayEntries, signals],
     )
+    const rows = resolvedRows.filter((row) => !(row.source === 'adhoc' && isPendingDeletion(row.id)))
     const emptyState = useMemo(() => deriveRoutineEmptyState(items, rows), [items, rows])
     const activeItemIds = useMemo(
         () => new Set(items.filter((item) => item.archived_on === null).map((item) => item.id)),
@@ -100,7 +104,7 @@ export function RoutineTab() {
 
     async function handleConfirmDone(row: RoutineRow) {
         if (row.source === 'adhoc' && row.dayEntryId) {
-            await runRoutineAction(() => markAdhocRoutineEntryDone(row.dayEntryId!))
+            await runRoutineAction(() => markAdhocRoutineEntryDone(row.dayEntryId!, selectedDate))
             return
         }
         if (row.routineItemId) {
@@ -112,11 +116,31 @@ export function RoutineTab() {
         if (!row.dayEntryId || !removal) {
             return
         }
+        if (row.source === 'adhoc' && removal === 'delete_day_entry') {
+            scheduleAdhocDeletion(row, row.dayEntryId)
+            return
+        }
         await runRoutineAction(() =>
             removal === 'unmark_adhoc'
                 ? unmarkAdhocRoutineEntryDone(row.dayEntryId!)
                 : deleteRoutineDayEntry(row.dayEntryId!),
         )
+    }
+
+    // Descartar uma tarefa avulsa apaga a linha inteira (título e prazo
+    // inclusos), então passa pela janela de desfazer em vez de sumir na hora.
+    function scheduleAdhocDeletion(row: RoutineRow, dayEntryId: string) {
+        setActionErrorMessage(null)
+        scheduleDeletion({
+            id: dayEntryId,
+            label: `Rotina: ${row.title}`,
+            commit: () => deleteRoutineDayEntry(dayEntryId),
+            onCommitted: () => {
+                void reloadRoutine()
+                refreshDayStatus()
+            },
+            onRestored: () => setActionErrorMessage('Não foi possível remover essa tarefa.'),
+        })
     }
 
     async function handleCreateSuggested() {
@@ -301,9 +325,11 @@ function RoutineRowView({
     const isDone = row.state === 'done' || row.state === 'done_manual_override'
     const isTappable = actions.primary === 'confirm_done'
     const hasRowActions = actions.canEdit || actions.removal !== null
+    const deadlineHint = isDone ? null : describeDeadline(row)
+    const isOverdue = !isDone && row.deadline === 'overdue'
 
     return (
-        <div className="routine-row">
+        <div className={isOverdue ? 'routine-row routine-row--overdue' : 'routine-row'}>
             <button
                 type="button"
                 className="routine-row__toggle"
@@ -330,7 +356,7 @@ function RoutineRowView({
                             type="button"
                             className="routine-row__secondary-action"
                             disabled={isSubmitting}
-                            aria-label={actions.removal === 'unmark_adhoc' ? 'Remover conclusão' : 'Remover'}
+                            aria-label={removalAriaLabel(row, actions.removal)}
                             onClick={handleRemoveClick}
                         >
                             Remover
@@ -341,8 +367,42 @@ function RoutineRowView({
             {row.state === 'done_manual_override' && (
                 <p className="routine-row__hint">Marcado sem registro na aba de origem.</p>
             )}
+            {deadlineHint && <p className={deadlineHint.className}>{deadlineHint.text}</p>}
         </div>
     )
+}
+
+function removalAriaLabel(row: RoutineRow, removal: RoutineRowRemoval): string {
+    if (removal === 'unmark_adhoc') {
+        return 'Remover conclusão'
+    }
+
+    return row.source === 'adhoc' ? `Remover tarefa ${row.title}` : 'Remover'
+}
+
+// "Atrasada desde" aponta o primeiro dia depois do prazo, que é quando a
+// tarefa passou de fato a estar atrasada.
+function describeDeadline(row: RoutineRow): { text: string; className: string } | null {
+    if (row.dueDate === null || row.deadline === null) {
+        return null
+    }
+
+    switch (row.deadline) {
+        case 'on_time':
+            return {
+                text: `Prazo ${formatDayMonthLabel(row.dueDate)}`,
+                className: 'routine-row__hint routine-row__hint--muted',
+            }
+        case 'due_today':
+            return { text: 'Vence hoje', className: 'routine-row__hint' }
+        case 'overdue':
+            return {
+                text: `Atrasada desde ${formatDayMonthLabel(shiftIsoDate(row.dueDate, 1))}`,
+                className: 'routine-row__hint routine-row__hint--overdue',
+            }
+        default:
+            return null
+    }
 }
 
 function routineCheckClassName(state: RoutineRowState): string {
@@ -364,34 +424,38 @@ type NewAdhocTaskFieldProps = {
 function NewAdhocTaskField({ entryDate, onCreated }: NewAdhocTaskFieldProps) {
     const [title, setTitle] = useState('')
     const [targetDate, setTargetDate] = useState<string>(entryDate)
+    const [hasDueDate, setHasDueDate] = useState(false)
+    const [dueDate, setDueDate] = useState<string>(entryDate)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null)
 
     async function handleSubmit(event: React.FormEvent) {
         event.preventDefault()
-        const trimmedTitle = title.trim()
-        if (trimmedTitle === '') {
-            setErrorMessage('Informe a tarefa.')
+        const validation = validateAdhocTaskInput(title, targetDate, hasDueDate ? dueDate : null)
+        if (!validation.ok) {
+            setErrorMessage(validation.message)
             return
         }
-        if (!isValidIsoDate(targetDate)) {
-            setErrorMessage('Informe a data.')
-            return
-        }
+        const input = validation.value
 
         setErrorMessage(null)
         setConfirmationMessage(null)
         setIsSubmitting(true)
         try {
-            await createAdhocRoutineEntry(targetDate, trimmedTitle)
+            await createAdhocRoutineEntry(input.entryDate, input.title, input.dueDate)
             setTitle('')
-            if (targetDate === entryDate) {
+            setHasDueDate(false)
+            // Uma tarefa com prazo criada num dia anterior ao selecionado já
+            // aparece na lista aberta, carregada do dia de origem.
+            const isCarriedIntoSelectedDate = input.dueDate !== null && input.entryDate < entryDate
+            if (input.entryDate === entryDate || isCarriedIntoSelectedDate) {
                 await onCreated()
-            } else {
-                // Data diferente da selecionada na tela: a lista visível não
-                // muda, então uma confirmação local substitui o reload.
-                setConfirmationMessage(`Tarefa adicionada para ${formatDayMonthLabel(targetDate)}.`)
+            }
+            if (input.entryDate !== entryDate) {
+                // Data diferente da selecionada na tela: a confirmação local
+                // deixa claro pra qual dia a tarefa foi.
+                setConfirmationMessage(`Tarefa adicionada para ${formatDayMonthLabel(input.entryDate)}.`)
             }
         } catch (submitError) {
             const message = submitError instanceof Error ? submitError.message : 'Falha ao criar tarefa'
@@ -424,6 +488,30 @@ function NewAdhocTaskField({ entryDate, onCreated }: NewAdhocTaskFieldProps) {
                     className="routine-adhoc-input"
                     style={{ flex: '0 0 auto' }}
                 />
+                {hasDueDate && (
+                    <input
+                        type="date"
+                        value={dueDate}
+                        min={targetDate}
+                        onChange={(event) => setDueDate(event.target.value)}
+                        aria-label="Prazo da tarefa"
+                        className="routine-adhoc-input"
+                        style={{ flex: '0 0 auto' }}
+                    />
+                )}
+                <button
+                    type="button"
+                    className="secondary-button"
+                    aria-pressed={hasDueDate}
+                    onClick={() => {
+                        if (!hasDueDate) {
+                            setDueDate(targetDate)
+                        }
+                        setHasDueDate((previous) => !previous)
+                    }}
+                >
+                    {hasDueDate ? 'Sem prazo' : '+ Prazo'}
+                </button>
                 <button type="submit" className="secondary-button" disabled={isSubmitting}>
                     {isSubmitting ? 'Adicionando...' : 'Adicionar'}
                 </button>

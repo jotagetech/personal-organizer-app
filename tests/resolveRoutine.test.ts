@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { deriveRoutineEmptyState, resolveRoutineForDate } from '@/features/routine/resolveRoutine'
+import {
+    deriveDeadline,
+    deriveRoutineEmptyState,
+    isAdhocVisibleOnDate,
+    resolveRoutineForDate,
+} from '@/features/routine/resolveRoutine'
 import type { RoutineDayEntryRow, RoutineItemRow } from '@/features/routine/types'
 import type { DaySignals } from '@/features/shared/daySignals'
 
@@ -30,6 +35,8 @@ function buildEntry(overrides: Partial<RoutineDayEntryRow> = {}): RoutineDayEntr
         routine_item_id: null,
         title: null,
         completed_at: null,
+        due_date: null,
+        completed_on: null,
         sort_order: 0,
         created_at: '2026-09-28T00:00:00.000Z',
         updated_at: '2026-09-28T00:00:00.000Z',
@@ -165,5 +172,118 @@ describe('deriveRoutineEmptyState', () => {
         const rows = resolveRoutineForDate(REFERENCE_DATE, items, [], buildSignals())
 
         expect(deriveRoutineEmptyState(items, rows)).toBe('none')
+    })
+})
+
+describe('tarefa avulsa com prazo', () => {
+    const ENTRY_DATE = '2026-09-20'
+    const DUE_DATE = '2026-09-25'
+
+    function buildAdhoc(overrides: Partial<RoutineDayEntryRow> = {}): RoutineDayEntryRow {
+        return buildEntry({
+            id: 'adhoc-1',
+            title: 'Pagar boleto',
+            entry_date: ENTRY_DATE,
+            ...overrides,
+        })
+    }
+
+    function resolveAdhocOn(date: string, entry: RoutineDayEntryRow) {
+        return resolveRoutineForDate(date, [], [entry], buildSignals())
+    }
+
+    it('sem prazo aparece só no próprio entry_date', () => {
+        const entry = buildAdhoc()
+
+        expect(resolveAdhocOn(ENTRY_DATE, entry)).toHaveLength(1)
+        expect(resolveAdhocOn('2026-09-21', entry)).toHaveLength(0)
+        expect(resolveAdhocOn('2026-09-19', entry)).toHaveLength(0)
+        expect(resolveAdhocOn(ENTRY_DATE, entry)[0]).toMatchObject({ deadline: null, dueDate: null })
+    })
+
+    it('com prazo e não concluída aparece do entry_date em diante, com o estado do prazo', () => {
+        const entry = buildAdhoc({ due_date: DUE_DATE })
+
+        const onEntryDate = resolveAdhocOn(ENTRY_DATE, entry)
+        const inBetween = resolveAdhocOn('2026-09-22', entry)
+        const onDueDate = resolveAdhocOn(DUE_DATE, entry)
+        const afterDueDate = resolveAdhocOn('2026-10-10', entry)
+
+        expect(onEntryDate[0]).toMatchObject({ state: 'pending', deadline: 'on_time', carriedFromDate: null })
+        expect(inBetween[0]).toMatchObject({ state: 'pending', deadline: 'on_time', carriedFromDate: ENTRY_DATE })
+        expect(onDueDate[0]).toMatchObject({ state: 'pending', deadline: 'due_today' })
+        expect(afterDueDate[0]).toMatchObject({ state: 'pending', deadline: 'overdue', dueDate: DUE_DATE })
+    })
+
+    it('não aparece antes do entry_date, mesmo com prazo', () => {
+        const entry = buildAdhoc({ due_date: DUE_DATE })
+
+        expect(resolveAdhocOn('2026-09-19', entry)).toHaveLength(0)
+        expect(isAdhocVisibleOnDate(entry, '2026-09-19')).toBe(false)
+    })
+
+    it('concluída num dia X: feita em X, pendente antes, ausente depois', () => {
+        const entry = buildAdhoc({
+            due_date: DUE_DATE,
+            completed_at: '2026-09-27T12:00:00.000Z',
+            completed_on: '2026-09-27',
+        })
+
+        expect(resolveAdhocOn(ENTRY_DATE, entry)[0].state).toBe('pending')
+        expect(resolveAdhocOn('2026-09-26', entry)[0].state).toBe('pending')
+        expect(resolveAdhocOn('2026-09-27', entry)[0]).toMatchObject({ state: 'done', deadline: 'overdue' })
+        expect(resolveAdhocOn('2026-09-28', entry)).toHaveLength(0)
+    })
+
+    it('registro legado sem completed_on usa o entry_date como dia da conclusão', () => {
+        const entry = buildAdhoc({ completed_at: '2026-09-20T12:00:00.000Z', completed_on: null })
+        const entryWithDueDate = buildAdhoc({
+            due_date: DUE_DATE,
+            completed_at: '2026-09-20T12:00:00.000Z',
+            completed_on: null,
+        })
+
+        expect(resolveAdhocOn(ENTRY_DATE, entry)[0].state).toBe('done')
+        expect(resolveAdhocOn(ENTRY_DATE, entryWithDueDate)[0].state).toBe('done')
+        expect(resolveAdhocOn('2026-09-21', entryWithDueDate)).toHaveLength(0)
+    })
+
+    it('ignora registros trazidos a mais pela consulta', () => {
+        const staleEntry = buildAdhoc({ due_date: DUE_DATE, completed_on: '2026-09-21', completed_at: 'x' })
+
+        expect(resolveAdhocOn('2026-09-24', staleEntry)).toHaveLength(0)
+    })
+
+    it('ordena templates, depois as carregadas por prazo, depois as avulsas do dia', () => {
+        const template = buildItem({ id: 'item-1', title: 'Academia' })
+        const laterDue = buildAdhoc({ id: 'carried-2', title: 'Prazo depois', due_date: '2026-09-30' })
+        const earlierDue = buildAdhoc({
+            id: 'carried-1',
+            title: 'Prazo antes',
+            entry_date: '2026-09-22',
+            due_date: '2026-09-23',
+        })
+        const sameDay = buildEntry({ id: 'adhoc-today', title: 'Do dia', entry_date: REFERENCE_DATE, sort_order: 0 })
+
+        const rows = resolveRoutineForDate(
+            REFERENCE_DATE,
+            [template],
+            [sameDay, laterDue, earlierDue],
+            buildSignals(),
+        )
+
+        expect(rows.map((row) => row.title)).toEqual(['Academia', 'Prazo antes', 'Prazo depois', 'Do dia'])
+    })
+})
+
+describe('deriveDeadline', () => {
+    it('sem prazo não tem estado de prazo', () => {
+        expect(deriveDeadline(null, REFERENCE_DATE)).toBeNull()
+    })
+
+    it('distingue antes, no dia e depois do prazo', () => {
+        expect(deriveDeadline('2026-09-29', REFERENCE_DATE)).toBe('on_time')
+        expect(deriveDeadline(REFERENCE_DATE, REFERENCE_DATE)).toBe('due_today')
+        expect(deriveDeadline('2026-09-27', REFERENCE_DATE)).toBe('overdue')
     })
 })

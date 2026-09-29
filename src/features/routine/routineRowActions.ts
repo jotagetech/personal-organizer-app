@@ -21,7 +21,10 @@ export function deriveRoutineRowActions(row: RoutineRow, activeItemIds: Set<stri
 
     const isDone = row.state === 'done' || row.state === 'done_manual_override'
     if (!isDone) {
-        return { primary: 'confirm_done', canEdit: false, removal: null }
+        // Tarefa avulsa pendente pode ser descartada por inteiro: sem isso, uma
+        // tarefa com prazo abandonada seguiria aparecendo em todo dia seguinte.
+        const removal = row.source === 'adhoc' && row.dayEntryId !== null ? 'delete_day_entry' : null
+        return { primary: 'confirm_done', canEdit: false, removal }
     }
 
     if (row.source === 'adhoc') {

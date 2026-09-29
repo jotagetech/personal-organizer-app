@@ -31,7 +31,9 @@ export function buildDayReport(
     const routineDoneCount = routineRows.filter(
         (row) => row.state === 'done' || row.state === 'done_manual_override',
     ).length
-    const pendingTitles = routineRows.filter((row) => row.state === 'pending').map((row) => row.title)
+    const pendingTitles = routineRows
+        .filter((row) => row.state === 'pending')
+        .map((row) => (row.deadline === 'overdue' ? `${row.title} (atrasada)` : row.title))
     const band = deriveBand(routineDoneCount, routineTotalCount)
     const highlights = buildHighlights(summary)
     const headline = buildHeadline(band, { isToday, doneCount: routineDoneCount, totalCount: routineTotalCount }, date)

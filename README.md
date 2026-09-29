@@ -50,6 +50,9 @@ npm run dev
    8. `20260928030000_workout_sets_skipped.sql` (coluna `skipped_at` em
       `workout_sets` para série pulada, com check impedindo série concluída e
       pulada ao mesmo tempo, ver `CHANGELOG.md`)
+   9. `20260928040000_routine_adhoc_due_date.sql` (prazo opcional em tarefa
+      avulsa da rotina e coluna `completed_on` com o dia da conclusão, ver
+      `CHANGELOG.md`)
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie

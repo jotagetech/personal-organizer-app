@@ -92,6 +92,40 @@ export async function listRoutineDayEntries(entryDate: IsoDate): Promise<Routine
     return data ?? []
 }
 
+// Tarefas avulsas com prazo criadas em dias anteriores que ainda valem pra
+// data: não concluídas, ou concluídas nela ou depois. O filtro puro em
+// resolveRoutine decide a visibilidade final, então trazer a mais é inofensivo.
+async function listCarriedAdhocEntries(date: IsoDate): Promise<RoutineDayEntryRow[]> {
+    const { data, error } = await supabase
+        .from('routine_day_entries')
+        .select('*')
+        .is('routine_item_id', null)
+        .not('due_date', 'is', null)
+        .lt('entry_date', date)
+        .or(`completed_on.is.null,completed_on.gte.${date}`)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
+}
+
+// Tudo o que pode aparecer na rotina de uma data: os registros do próprio dia
+// mais as tarefas avulsas com prazo carregadas de dias anteriores.
+export async function listRoutineEntriesVisibleOn(date: IsoDate): Promise<RoutineDayEntryRow[]> {
+    const [dayEntries, carriedEntries] = await Promise.all([
+        listRoutineDayEntries(date),
+        listCarriedAdhocEntries(date),
+    ])
+    const entryById = new Map<string, RoutineDayEntryRow>()
+    for (const entry of [...dayEntries, ...carriedEntries]) {
+        entryById.set(entry.id, entry)
+    }
+
+    return Array.from(entryById.values())
+}
+
 // A unicidade de (user_id, routine_item_id, entry_date) é um índice parcial
 // (só quando routine_item_id não é nulo), então um upsert de verdade não tem
 // como inferir o índice como alvo de conflito; buscar antes de decidir entre
@@ -119,7 +153,7 @@ export async function markRoutineItemDone(routineItemId: string, entryDate: IsoD
     if (existingEntry) {
         const { data, error } = await supabase
             .from('routine_day_entries')
-            .update({ completed_at: completedAt })
+            .update({ completed_at: completedAt, completed_on: entryDate })
             .eq('id', existingEntry.id)
             .select('*')
             .single()
@@ -139,6 +173,7 @@ export async function markRoutineItemDone(routineItemId: string, entryDate: IsoD
             routine_item_id: routineItemId,
             title: null,
             completed_at: completedAt,
+            completed_on: entryDate,
             sort_order: 0,
         })
         .select('*')
@@ -165,7 +200,11 @@ export async function deleteRoutineDayEntry(dayEntryId: string): Promise<void> {
 // sort_order é calculado a partir da contagem de registros já existentes na
 // data de destino (não na data selecionada na tela), já que uma tarefa avulsa
 // pode ser criada pra uma data diferente da que está aberta no momento.
-export async function createAdhocRoutineEntry(entryDate: IsoDate, title: string): Promise<RoutineDayEntryRow> {
+export async function createAdhocRoutineEntry(
+    entryDate: IsoDate,
+    title: string,
+    dueDate: IsoDate | null,
+): Promise<RoutineDayEntryRow> {
     const { data: authData } = await supabase.auth.getUser()
     const currentUserId = authData.user?.id
     if (!currentUserId) {
@@ -189,6 +228,7 @@ export async function createAdhocRoutineEntry(entryDate: IsoDate, title: string)
             routine_item_id: null,
             title,
             completed_at: null,
+            due_date: dueDate,
             sort_order: count ?? 0,
         })
         .select('*')
@@ -201,10 +241,17 @@ export async function createAdhocRoutineEntry(entryDate: IsoDate, title: string)
     return data
 }
 
-export async function markAdhocRoutineEntryDone(dayEntryId: string): Promise<RoutineDayEntryRow> {
+// completedOn é o dia selecionado na tela, não necessariamente hoje: uma
+// tarefa com prazo pode ser dada como feita num dia qualquer em que aparece.
+// Sempre enviado explicitamente pra nunca herdar a data de uma conclusão
+// anterior da mesma linha.
+export async function markAdhocRoutineEntryDone(
+    dayEntryId: string,
+    completedOn: IsoDate,
+): Promise<RoutineDayEntryRow> {
     const { data, error } = await supabase
         .from('routine_day_entries')
-        .update({ completed_at: new Date().toISOString() })
+        .update({ completed_at: new Date().toISOString(), completed_on: completedOn })
         .eq('id', dayEntryId)
         .select('*')
         .single()
@@ -219,7 +266,7 @@ export async function markAdhocRoutineEntryDone(dayEntryId: string): Promise<Rou
 export async function unmarkAdhocRoutineEntryDone(dayEntryId: string): Promise<RoutineDayEntryRow> {
     const { data, error } = await supabase
         .from('routine_day_entries')
-        .update({ completed_at: null })
+        .update({ completed_at: null, completed_on: null })
         .eq('id', dayEntryId)
         .select('*')
         .single()

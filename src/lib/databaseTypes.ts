@@ -160,6 +160,8 @@ type RoutineDayEntryRow = {
     routine_item_id: string | null
     title: string | null
     completed_at: string | null
+    due_date: string | null
+    completed_on: string | null
     sort_order: number
     created_at: string
     updated_at: string
@@ -285,6 +287,8 @@ export type Database = {
                     routine_item_id?: string | null
                     title?: string | null
                     completed_at?: string | null
+                    due_date?: string | null
+                    completed_on?: string | null
                     sort_order?: number
                 },
                 Record<never, never>

@@ -1,5 +1,11 @@
 import type { DaySignals } from '@/features/shared/daySignals'
-import type { RoutineDayEntryRow, RoutineItemRow, RoutineLinkKind, RoutineRow } from '@/features/routine/types'
+import type {
+    RoutineDayEntryRow,
+    RoutineItemRow,
+    RoutineLinkKind,
+    RoutineRow,
+    RoutineRowDeadline,
+} from '@/features/routine/types'
 import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
 
 function isTemplateActiveOnDate(item: RoutineItemRow, date: IsoDate): boolean {
@@ -58,6 +64,9 @@ function resolveTemplateRow(
             linkKind: null,
             routineItemId: item.id,
             dayEntryId,
+            dueDate: null,
+            deadline: null,
+            carriedFromDate: null,
         }
     }
 
@@ -71,6 +80,9 @@ function resolveTemplateRow(
         linkKind,
         routineItemId: item.id,
         dayEntryId,
+        dueDate: null,
+        deadline: null,
+        carriedFromDate: null,
     }
 }
 
@@ -86,16 +98,67 @@ function resolveLinkedItemState(
     return isSignalSatisfied(linkKind, signals) ? 'done' : 'pending'
 }
 
-function resolveAdhocRow(entry: RoutineDayEntryRow): RoutineRow {
+// Uma tarefa avulsa sem prazo vive só no próprio entry_date. Com prazo, ela
+// segue aparecendo em todo dia seguinte até o dia em que foi concluída (e
+// indefinidamente, se nunca for).
+export function isAdhocVisibleOnDate(entry: RoutineDayEntryRow, date: IsoDate): boolean {
+    if (entry.entry_date === date) {
+        return true
+    }
+    if (entry.due_date === null || entry.entry_date > date) {
+        return false
+    }
+
+    const completedOn = resolveCompletedOn(entry)
+    return completedOn === null || completedOn >= date
+}
+
+// Registros anteriores à coluna completed_on só têm completed_at: nesse caso a
+// conclusão vale para o próprio entry_date.
+function resolveCompletedOn(entry: RoutineDayEntryRow): IsoDate | null {
+    if (entry.completed_on !== null) {
+        return entry.completed_on
+    }
+
+    return entry.completed_at !== null ? entry.entry_date : null
+}
+
+export function deriveDeadline(dueDate: IsoDate | null, date: IsoDate): RoutineRowDeadline | null {
+    if (dueDate === null) {
+        return null
+    }
+    if (date < dueDate) {
+        return 'on_time'
+    }
+
+    return date === dueDate ? 'due_today' : 'overdue'
+}
+
+export function resolveAdhocRow(entry: RoutineDayEntryRow, date: IsoDate): RoutineRow {
+    const isDoneOnDate = resolveCompletedOn(entry) === date
+
     return {
         id: entry.id,
         title: entry.title ?? '',
         source: 'adhoc',
-        state: entry.completed_at !== null ? 'done' : 'pending',
+        state: isDoneOnDate ? 'done' : 'pending',
         linkKind: null,
         routineItemId: null,
         dayEntryId: entry.id,
+        dueDate: entry.due_date,
+        deadline: deriveDeadline(entry.due_date, date),
+        carriedFromDate: entry.entry_date < date ? entry.entry_date : null,
     }
+}
+
+function byDueDateThenCreation(entryA: RoutineDayEntryRow, entryB: RoutineDayEntryRow): number {
+    const dueDateA = entryA.due_date ?? ''
+    const dueDateB = entryB.due_date ?? ''
+    if (dueDateA !== dueDateB) {
+        return dueDateA.localeCompare(dueDateB)
+    }
+
+    return entryA.created_at.localeCompare(entryB.created_at)
 }
 
 export type RoutineEmptyState = 'offer_suggested' | 'nothing_for_day' | 'none'
@@ -126,14 +189,24 @@ export function resolveRoutineForDate(
 ): RoutineRow[] {
     const applicableItems = items.filter((item) => isTemplateActiveOnDate(item, date)).sort(byOrderThenCreation)
     const manualEntryByItemId = new Map(
-        dayEntries.filter((entry) => entry.routine_item_id !== null).map((entry) => [entry.routine_item_id, entry]),
+        dayEntries
+            .filter((entry) => entry.routine_item_id !== null && entry.entry_date === date)
+            .map((entry) => [entry.routine_item_id, entry]),
     )
     const templateRows = applicableItems.map((item) =>
         resolveTemplateRow(item, manualEntryByItemId.get(item.id), signals),
     )
 
-    const adhocEntries = dayEntries.filter((entry) => entry.routine_item_id === null).sort(byOrderThenCreation)
-    const adhocRows = adhocEntries.map(resolveAdhocRow)
+    const visibleAdhocEntries = dayEntries.filter(
+        (entry) => entry.routine_item_id === null && isAdhocVisibleOnDate(entry, date),
+    )
+    const carriedEntries = visibleAdhocEntries
+        .filter((entry) => entry.entry_date < date)
+        .sort(byDueDateThenCreation)
+    const sameDayEntries = visibleAdhocEntries
+        .filter((entry) => entry.entry_date === date)
+        .sort(byOrderThenCreation)
+    const adhocRows = [...carriedEntries, ...sameDayEntries].map((entry) => resolveAdhocRow(entry, date))
 
     return [...templateRows, ...adhocRows]
 }

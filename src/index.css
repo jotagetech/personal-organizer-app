@@ -757,6 +757,24 @@ button, input, select {
     color: #b45309;
 }
 
+.routine-row__hint--muted {
+    color: #71717a;
+}
+
+.routine-row__hint--overdue {
+    color: #b91c1c;
+}
+
+.routine-row--overdue {
+    background: #fef2f2;
+    border-radius: 8px;
+    padding-inline: 6px;
+}
+
+.routine-row--overdue .routine-row__title {
+    color: #b91c1c;
+}
+
 .routine-row__linked-actions {
     flex-shrink: 0;
     display: flex;

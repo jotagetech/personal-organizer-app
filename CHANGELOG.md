@@ -27,6 +27,23 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Prazo opcional em tarefa avulsa da rotina (migração
+  `20260928040000_routine_adhoc_due_date.sql`, colunas `due_date` e
+  `completed_on` em `routine_day_entries`). O campo de nova tarefa ganha um
+  botão "+ Prazo" que revela uma terceira data, que não pode ser anterior à
+  data da tarefa. Sem prazo nada muda: a tarefa aparece só no próprio dia.
+  Com prazo, ela continua aparecendo em todos os dias seguintes até ser
+  concluída, com a dica "Prazo dd/mm", "Vence hoje" ou, depois do prazo,
+  fundo vermelho claro e "Atrasada desde dd/mm". Marcar como feita grava o
+  dia selecionado em `completed_on` (não necessariamente hoje): a tarefa
+  fica feita nesse dia, pendente nos dias anteriores e some dos seguintes.
+  Tarefas carregadas de dias anteriores aparecem depois dos itens da rotina
+  e antes das avulsas do dia, ordenadas pelo prazo, e contam na rotina e no
+  indicador de todo dia em que aparecem; no resumo de Resultados, a pendente
+  atrasada ganha o sufixo "(atrasada)". Uma tarefa avulsa pendente agora
+  tem "Remover", que apaga a tarefa com a barra de desfazer. Registros já
+  concluídos antes da mudança recebem o próprio `entry_date` como
+  `completed_on`.
 - Nova aba Menu, a última do menu inferior. A seção "Registros do dia" traz
   os cards de peso corporal e sono empilhados em largura total, gravando na
   data selecionada (mostrada logo abaixo do título). A seção "Ferramentas"

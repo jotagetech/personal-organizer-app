@@ -78,11 +78,25 @@ function buildRoutineRow(overrides: Partial<RoutineRow> = {}): RoutineRow {
         linkKind: null,
         routineItemId: 'item-1',
         dayEntryId: null,
+        dueDate: null,
+        deadline: null,
+        carriedFromDate: null,
     }
     return { ...baseRow, ...overrides }
 }
 
 describe('buildDayReport', () => {
+    it('marca como atrasada a tarefa pendente com prazo vencido', () => {
+        const rows = [
+            buildRoutineRow({ id: 'a', title: 'Pagar boleto', source: 'adhoc', deadline: 'overdue' }),
+            buildRoutineRow({ id: 'b', title: 'Ligar pro dentista', source: 'adhoc', deadline: 'due_today' }),
+        ]
+
+        const report = buildDayReport(buildSummary(), rows, TODAY, TODAY)
+
+        expect(report.pendingTitles).toEqual(['Pagar boleto (atrasada)', 'Ligar pro dentista'])
+    })
+
     it('classifica como no_routine quando não há nenhum item de rotina no dia', () => {
         const report = buildDayReport(buildSummary(), [], TODAY, TODAY)
 

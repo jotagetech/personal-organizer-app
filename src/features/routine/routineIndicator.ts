@@ -1,4 +1,4 @@
-import { listRoutineDayEntries, listRoutineItems } from '@/features/routine/api'
+import { listRoutineEntriesVisibleOn, listRoutineItems } from '@/features/routine/api'
 import { resolveRoutineForDate } from '@/features/routine/resolveRoutine'
 import type { RoutineRow } from '@/features/routine/types'
 import type { DaySignals } from '@/features/shared/daySignals'
@@ -18,7 +18,7 @@ export function deriveRoutineIndicatorKind(rows: RoutineRow[]): TabIndicatorKind
 }
 
 export async function fetchRoutineIndicatorForDate(date: IsoDate, signals: DaySignals): Promise<TabIndicatorKind> {
-    const [items, dayEntries] = await Promise.all([listRoutineItems(), listRoutineDayEntries(date)])
+    const [items, dayEntries] = await Promise.all([listRoutineItems(), listRoutineEntriesVisibleOn(date)])
     const rows = resolveRoutineForDate(date, items, dayEntries, signals)
 
     return deriveRoutineIndicatorKind(rows)

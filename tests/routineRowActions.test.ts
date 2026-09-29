@@ -12,6 +12,9 @@ function buildRow(overrides: Partial<RoutineRow> = {}): RoutineRow {
         linkKind: null,
         routineItemId: 'item-1',
         dayEntryId: null,
+        dueDate: null,
+        deadline: null,
+        carriedFromDate: null,
     }
     return { ...baseRow, ...overrides }
 }
@@ -33,12 +36,28 @@ describe('deriveRoutineRowActions', () => {
         expect(actions).toEqual({ primary: 'confirm_done', canEdit: false, removal: null })
     })
 
-    it('avulso pendente: pede confirmação, sem editar/remover', () => {
+    it('avulso pendente: pede confirmação e pode ser removido por inteiro', () => {
         const row = buildRow({ source: 'adhoc', state: 'pending', routineItemId: null, dayEntryId: 'entry-1' })
 
         const actions = deriveRoutineRowActions(row, new Set())
 
-        expect(actions).toEqual({ primary: 'confirm_done', canEdit: false, removal: null })
+        expect(actions).toEqual({ primary: 'confirm_done', canEdit: false, removal: 'delete_day_entry' })
+    })
+
+    it('avulso pendente atrasado: também pode ser removido', () => {
+        const row = buildRow({
+            source: 'adhoc',
+            state: 'pending',
+            routineItemId: null,
+            dayEntryId: 'entry-1',
+            dueDate: '2026-09-20',
+            deadline: 'overdue',
+            carriedFromDate: '2026-09-18',
+        })
+
+        const actions = deriveRoutineRowActions(row, new Set())
+
+        expect(actions.removal).toBe('delete_day_entry')
     })
 
     it('manual concluído com template ativo: pode editar e remover', () => {

@@ -1,5 +1,6 @@
 import type { AppTab } from '@/features/shared/BottomNav'
 import type { Database } from '@/lib/databaseTypes'
+import type { IsoDate } from '@/lib/dateUtils'
 
 export type RoutineItemRow = Database['public']['Tables']['routine_items']['Row']
 export type RoutineDayEntryRow = Database['public']['Tables']['routine_day_entries']['Row']
@@ -39,12 +40,15 @@ export const ROUTINE_LINK_KIND_TARGET_TAB: Record<RoutineLinkKind, AppTab> = {
 }
 
 export type RoutineRowSource = 'linked' | 'manual' | 'adhoc'
+export type RoutineRowDeadline = 'on_time' | 'due_today' | 'overdue'
 export type RoutineRowState = 'done' | 'done_manual_override' | 'pending'
 
 // O que a tela de rotina mostra por linha: dado já resolvido o bastante para
 // decidir a ação de tocar (marcar, desmarcar ou ir registrar em outra aba) e
 // para saber se o item por trás dela é editável/arquivável na tela de
 // gerenciamento (só os que vieram de um template, nunca os avulsos do dia).
+// carriedFromDate só é preenchido pra tarefa avulsa com prazo trazida de um
+// dia anterior ao exibido.
 export type RoutineRow = {
     id: string
     title: string
@@ -53,4 +57,7 @@ export type RoutineRow = {
     linkKind: RoutineLinkKind | null
     routineItemId: string | null
     dayEntryId: string | null
+    dueDate: IsoDate | null
+    deadline: RoutineRowDeadline | null
+    carriedFromDate: IsoDate | null
 }
