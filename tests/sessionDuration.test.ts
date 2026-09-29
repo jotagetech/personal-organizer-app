@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
+import {
+    deriveSessionActiveWindow,
+    durationInMinutes,
+    formatDurationMinutes,
+    resolveSessionDuration,
+} from '@/features/workout/sessionDuration'
 import type { WorkoutSetRow } from '@/features/workout/types'
 import { EMPTY_SET_METRIC_COLUMNS } from './workoutFixtures'
 
@@ -81,5 +86,60 @@ describe('formatDurationMinutes', () => {
 
     it('nunca devolve duração negativa', () => {
         expect(formatDurationMinutes('2026-09-28T13:00:00.000Z', '2026-09-28T12:00:00.000Z')).toBe('0 min')
+    })
+})
+
+describe('resolveSessionDuration', () => {
+    const sets = [
+        buildSetRow({ set_index: 0, completed_at: '2026-09-28T12:10:00.000Z' }),
+        buildSetRow({ set_index: 1, completed_at: '2026-09-28T12:40:00.000Z' }),
+    ]
+
+    it('usa o início marcado e o fim da sessão quando os dois existem', () => {
+        const session = { started_at: '2026-09-28T12:00:00.000Z', finished_at: '2026-09-28T12:55:00.000Z' }
+
+        expect(resolveSessionDuration(session, sets)).toEqual({
+            startIso: '2026-09-28T12:00:00.000Z',
+            endIso: '2026-09-28T12:55:00.000Z',
+        })
+    })
+
+    it('cai na janela das séries em sessão antiga, sem início', () => {
+        const withoutColumn = { finished_at: '2026-09-28T12:55:00.000Z' }
+        const withNullStart = { started_at: null, finished_at: '2026-09-28T12:55:00.000Z' }
+        const derivedWindow = { startIso: '2026-09-28T12:10:00.000Z', endIso: '2026-09-28T12:40:00.000Z' }
+
+        expect(resolveSessionDuration(withoutColumn, sets)).toEqual(derivedWindow)
+        expect(resolveSessionDuration(withNullStart, sets)).toEqual(derivedWindow)
+    })
+
+    it('cai na janela das séries enquanto a sessão não terminou', () => {
+        const session = { started_at: '2026-09-28T12:00:00.000Z', finished_at: null }
+
+        expect(resolveSessionDuration(session, sets)).toEqual({
+            startIso: '2026-09-28T12:10:00.000Z',
+            endIso: '2026-09-28T12:40:00.000Z',
+        })
+    })
+
+    it('ignora horários invertidos ou inválidos', () => {
+        const inverted = { started_at: '2026-09-28T13:00:00.000Z', finished_at: '2026-09-28T12:55:00.000Z' }
+        const invalid = { started_at: 'ontem', finished_at: '2026-09-28T12:55:00.000Z' }
+
+        expect(resolveSessionDuration(inverted, sets)?.startIso).toBe('2026-09-28T12:10:00.000Z')
+        expect(resolveSessionDuration(invalid, sets)?.startIso).toBe('2026-09-28T12:10:00.000Z')
+    })
+
+    it('mede um treino com início marcado mesmo sem nenhuma série concluída', () => {
+        const session = { started_at: '2026-09-28T12:00:00.000Z', finished_at: '2026-09-28T12:20:00.000Z' }
+
+        expect(resolveSessionDuration(session, [])).not.toBeNull()
+        expect(resolveSessionDuration({ started_at: null, finished_at: null }, [])).toBeNull()
+    })
+})
+
+describe('durationInMinutes', () => {
+    it('arredonda para o minuto mais próximo', () => {
+        expect(durationInMinutes({ startIso: '2026-09-28T12:00:00.000Z', endIso: '2026-09-28T12:44:40.000Z' })).toBe(45)
     })
 })

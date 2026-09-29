@@ -14,7 +14,7 @@ import { summarizeWorkoutSets, type WorkoutExerciseSummary, type WorkoutSetSumma
 import { formatDropResult, formatSetResult } from '@/features/results/setResultText'
 import { formatIntervalPrescription, formatIntervalResult } from '@/features/workout/intervalPresentation'
 import { formatPlanWeekLabel } from '@/features/workout/planWeek'
-import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
+import { formatDurationMinutes, resolveSessionDuration } from '@/features/workout/sessionDuration'
 import type { SetStatus } from '@/features/workout/sessionProgress'
 import type {
     WorkoutSessionRow,
@@ -200,7 +200,7 @@ type WorkoutSessionDetailProps = {
 
 function WorkoutSessionDetail({ session, sets, drops }: WorkoutSessionDetailProps) {
     const workoutSummary = summarizeWorkoutSets(session.workout_snapshot, sets, drops)
-    const activeWindow = deriveSessionActiveWindow(sets)
+    const activeWindow = resolveSessionDuration(session, sets)
     const { semana_bloco: blockWeek, bloco_semanas: blockWeeks } = session.workout_snapshot
     const finishedDetailParts = session.finished_at
         ? [

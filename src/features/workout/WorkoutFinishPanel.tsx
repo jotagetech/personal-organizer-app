@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { CardioSection } from '@/features/cardio/CardioSection'
 import { FeelingScaleInput } from '@/features/cardio/FeelingScaleInput'
 import { updateSessionFeeling } from '@/features/workout/api'
-import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
+import { formatDurationMinutes, resolveSessionDuration } from '@/features/workout/sessionDuration'
 import { countSetsByStatus } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSessionRow, type WorkoutSetRow } from '@/features/workout/types'
 import type { IsoDate } from '@/lib/dateUtils'
@@ -54,7 +54,7 @@ export function WorkoutFinishPanel({ session, sessionDate, sets, onSessionUpdate
         }
     }
 
-    const activeWindow = deriveSessionActiveWindow(sets)
+    const activeWindow = resolveSessionDuration(session, sets)
     const setsByKey = new Map(sets.map((set) => [setKey(set.exercise_key, set.set_index), set]))
     const statusCounts = countSetsByStatus(session.workout_snapshot, setsByKey)
 

@@ -2,7 +2,7 @@ import { computeDailyTotals } from '@/features/food/dailyTotals'
 import type { DaySummary } from '@/features/results/api'
 import { summarizeWorkoutSets } from '@/features/results/daySummary'
 import type { RoutineRow } from '@/features/routine/types'
-import { deriveSessionActiveWindow, formatDurationMinutes } from '@/features/workout/sessionDuration'
+import { formatDurationMinutes, resolveSessionDuration } from '@/features/workout/sessionDuration'
 import type { IsoDate } from '@/lib/dateUtils'
 
 export type DayReportBand = 'no_routine' | 'complete' | 'mostly' | 'partial' | 'none'
@@ -75,7 +75,7 @@ function buildHighlights(summary: DaySummary): string[] {
         const completedSets = allSets.filter((set) => set.status === 'completed').length
         const skippedSets = allSets.filter((set) => set.status === 'skipped').length
         const skippedText = skippedSets > 0 ? ` (${skippedSets} ${skippedSets === 1 ? 'pulada' : 'puladas'})` : ''
-        const activeWindow = deriveSessionActiveWindow(summary.workoutSets)
+        const activeWindow = resolveSessionDuration(summary.workoutSession, summary.workoutSets)
         const durationText = activeWindow
             ? `, ${formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}`
             : ''

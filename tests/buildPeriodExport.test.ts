@@ -637,6 +637,19 @@ describe('buildPeriodExport', () => {
         expect(workoutWithoutBlock).toMatchObject({ block_week: null, block_weeks: null })
     })
 
+    it('exporta o início marcado e mede a duração entre ele e o fim da sessão', () => {
+        const startedSession = buildSession({ started_at: '2026-09-28T09:50:00.000Z' })
+        const [startedWorkout] = buildPeriodExport(buildRawData({ workoutSessions: [startedSession] }), PERIOD, META).workouts
+        const [oldWorkout] = buildPeriodExport(buildRawData(), PERIOD, META).workouts
+
+        expect(startedWorkout).toMatchObject({
+            started_at: '2026-09-28T09:50:00.000Z',
+            first_set_completed_at: '2026-09-28T10:00:00.000Z',
+            duration_minutes: 100,
+        })
+        expect(oldWorkout).toMatchObject({ started_at: null, duration_minutes: 40 })
+    })
+
     it('não expõe user_id em nenhum ponto do resultado', () => {
         const serialized = JSON.stringify(buildPeriodExport(buildRawData(), PERIOD, META))
 

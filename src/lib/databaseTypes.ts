@@ -34,6 +34,9 @@ type WorkoutSessionRow = {
     // Pode vir no formato antigo; a camada de API normaliza antes de entregar
     // a sessão para o resto do app.
     workout_snapshot: StoredWorkoutSnapshot
+    // Início do treino. Opcional no tipo porque a coluna só existe depois da
+    // migração que a cria; ausente ou null, a duração sai das séries.
+    started_at?: string | null
     finished_at: string | null
     feeling_scale: number | null
     feeling_note: string | null
@@ -203,6 +206,7 @@ export type Database = {
                     id?: string
                     created_at?: string
                     updated_at?: string
+                    started_at?: string | null
                     finished_at?: string | null
                     feeling_scale?: number | null
                     feeling_note?: string | null

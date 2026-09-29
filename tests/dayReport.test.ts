@@ -352,6 +352,30 @@ describe('buildDayReport', () => {
         expect(report.highlights[0]).toBe('Treino: 1 de 2 séries')
     })
 
+    it('mede a duração do início marcado até o fim quando a sessão tem início', () => {
+        const summary = buildSummary({
+            workoutSession: {
+                id: 'session-1',
+                user_id: 'user-1',
+                session_date: TODAY,
+                plan_id: 'plan-1',
+                workout_key: 'treino_a',
+                workout_snapshot: SNAPSHOT,
+                started_at: '2026-09-28T11:55:00.000Z',
+                finished_at: '2026-09-28T13:00:00.000Z',
+                feeling_scale: null,
+                feeling_note: null,
+                created_at: '2026-09-28T11:00:00.000Z',
+                updated_at: '2026-09-28T13:00:00.000Z',
+            },
+            workoutSets: [buildWorkoutSet({ set_index: 0, completed_at: '2026-09-28T12:10:00.000Z' })],
+        })
+
+        const report = buildDayReport(summary, [], TODAY, TODAY)
+
+        expect(report.highlights[0]).toBe('Treino: 1 de 2 séries, 1h 5min')
+    })
+
     it('trata dia passado com "não foi feito" em vez de "ainda falta"', () => {
         const rows = [buildRoutineRow({ id: 'a', title: 'Academia', state: 'pending' })]
 

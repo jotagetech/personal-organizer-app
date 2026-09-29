@@ -1,6 +1,8 @@
-import type { WorkoutSetRow } from '@/features/workout/types'
+import type { WorkoutSessionRow, WorkoutSetRow } from '@/features/workout/types'
 
 export type SessionActiveWindow = { startIso: string; endIso: string }
+
+const MS_PER_MINUTE = 60_000
 
 // A sessão é criada quando o treino é aberto (às vezes horas antes de
 // começar) e finished_at depende de quando a fila conseguiu sincronizar, então
@@ -26,8 +28,41 @@ export function deriveSessionActiveWindow(sets: WorkoutSetRow[]): SessionActiveW
     return { startIso: earliest.iso, endIso: latest.iso }
 }
 
+export type SessionTimes = Pick<WorkoutSessionRow, 'started_at' | 'finished_at'>
+
+function isForwardWindow(startIso: string, endIso: string): boolean {
+    const startTime = new Date(startIso).getTime()
+    const endTime = new Date(endIso).getTime()
+    const isForward = Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime
+
+    return isForward
+}
+
+// Fonte única da duração do treino. Com o início marcado (botão "Iniciar
+// treino" ou a primeira série confirmada) e o fim registrado, a duração é o
+// intervalo entre os dois; sessões gravadas antes de existir o início, ou
+// com horários inconsistentes, continuam medidas pela janela das séries.
+export function resolveSessionDuration(session: SessionTimes, sets: WorkoutSetRow[]): SessionActiveWindow | null {
+    const { started_at: startedAt, finished_at: finishedAt } = session
+    if (startedAt && finishedAt && isForwardWindow(startedAt, finishedAt)) {
+        const recordedWindow: SessionActiveWindow = { startIso: startedAt, endIso: finishedAt }
+        return recordedWindow
+    }
+
+    const derivedWindow = deriveSessionActiveWindow(sets)
+
+    return derivedWindow
+}
+
+export function durationInMinutes(window: SessionActiveWindow): number {
+    const elapsedMs = new Date(window.endIso).getTime() - new Date(window.startIso).getTime()
+    const totalMinutes = Math.max(0, Math.round(elapsedMs / MS_PER_MINUTE))
+
+    return totalMinutes
+}
+
 export function formatDurationMinutes(startIso: string, endIso: string): string {
-    const totalMinutes = Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000))
+    const totalMinutes = durationInMinutes({ startIso, endIso })
     const hours = Math.floor(totalMinutes / 60)
     const minutes = totalMinutes % 60
 

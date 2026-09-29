@@ -6,7 +6,11 @@ import type { FoodEntryRow } from '@/features/food/types'
 import { resolveRoutineForDate } from '@/features/routine/resolveRoutine'
 import type { RoutineDayEntryRow, RoutineItemRow, RoutineRowSource, RoutineRowState } from '@/features/routine/types'
 import { deriveDaySignals } from '@/features/shared/deriveDaySignals'
-import { deriveSessionActiveWindow } from '@/features/workout/sessionDuration'
+import {
+    deriveSessionActiveWindow,
+    durationInMinutes,
+    resolveSessionDuration,
+} from '@/features/workout/sessionDuration'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSessionRow, type WorkoutSetDropRow, type WorkoutSetRow } from '@/features/workout/types'
@@ -117,7 +121,10 @@ export type ExportedExercise = {
 
 // block_week é a semana do bloco de progressão em que a sessão foi feita
 // (a partir de 1) e block_weeks a duração do bloco; ambos nulos quando o
-// plano não tinha bloco ou não havia ciclo em andamento.
+// plano não tinha bloco ou não havia ciclo em andamento. started_at é o
+// início marcado do treino (nulo em sessões anteriores a ele); com ele e
+// finished_at, duration_minutes é o intervalo entre os dois, senão continua
+// sendo a janela da primeira à última série concluída.
 export type ExportedWorkout = {
     date: IsoDate
     workout_name: string
@@ -126,6 +133,7 @@ export type ExportedWorkout = {
     block_weeks: number | null
     first_set_completed_at: string | null
     last_set_completed_at: string | null
+    started_at: string | null
     finished_at: string | null
     duration_minutes: number | null
     feeling_scale: number | null
@@ -220,10 +228,6 @@ function groupBy<T>(rows: T[], keyOf: (row: T) => string): Map<string, T[]> {
     return groups
 }
 
-function durationInMinutes(startIso: string, endIso: string): number {
-    return Math.max(0, Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000))
-}
-
 // Séries seguem a ordem da ficha congelada na sessão, então uma série ainda
 // não registrada aparece como pendente em vez de sumir do exercício.
 function buildWorkout(
@@ -234,6 +238,7 @@ function buildWorkout(
     const setsByKey = new Map(sets.map((set) => [setKey(set.exercise_key, set.set_index), set]))
     const dropsBySetKey = groupDropsBySetKey(sets, dropRows)
     const activeWindow = deriveSessionActiveWindow(sets)
+    const durationWindow = resolveSessionDuration(session, sets)
 
     const exercises = session.workout_snapshot.exercicios.map((exercicio): ExportedExercise => ({
         exercise_key: exercicio.exercise_key,
@@ -313,8 +318,9 @@ function buildWorkout(
         block_weeks: session.workout_snapshot.bloco_semanas,
         first_set_completed_at: activeWindow?.startIso ?? null,
         last_set_completed_at: activeWindow?.endIso ?? null,
+        started_at: session.started_at ?? null,
         finished_at: session.finished_at,
-        duration_minutes: activeWindow ? durationInMinutes(activeWindow.startIso, activeWindow.endIso) : null,
+        duration_minutes: durationWindow ? durationInMinutes(durationWindow) : null,
         feeling_scale: session.feeling_scale,
         feeling_note: session.feeling_note,
         exercises,
