@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { useUndoableActions } from '@/contexts/UndoableActionContext'
 import { FoodEntryForm } from '@/features/food/FoodEntryForm'
+import { lacksNutrition } from '@/features/food/dailyTotals'
 import {
     MEAL_CATEGORIES,
     MEAL_CATEGORY_LABELS,
@@ -65,7 +66,12 @@ export function FoodEntryList({ entryDate, entries, onUpdate, onDelete }: FoodEn
                     <div key={mealCategory} style={{ marginBottom: 16 }}>
                         <h3 style={{ fontSize: 14, marginBottom: 6 }}>{MEAL_CATEGORY_LABELS[mealCategory]}</h3>
                         {entriesForMeal.map((entry) => (
-                            <div key={entry.id} className="card">
+                            <div
+                                key={entry.id}
+                                className={
+                                    lacksNutrition(entry) && editingEntryId !== entry.id ? 'card card--no-nutrition' : 'card'
+                                }
+                            >
                                 {editingEntryId === entry.id ? (
                                     <FoodEntryForm
                                         entryDate={entryDate}

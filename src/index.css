@@ -149,6 +149,12 @@ button, input, select {
     background: #fffbeb;
 }
 
+/* Azul, e não amarelo: âmbar já significa "pendente" no resto do app. */
+.card--no-nutrition {
+    border-color: #dbeafe;
+    background: #eff6ff;
+}
+
 .quick-metric-log__recent {
     margin: 8px 0 0;
     font-size: 12px;

@@ -6,6 +6,7 @@ import {
     searchFoodItems,
     updateFoodItemNutrition,
 } from '@/features/food/api'
+import { lacksNutrition } from '@/features/food/dailyTotals'
 import { FOOD_UNITS, FOOD_UNIT_LABELS, type FoodItemRow, type FoodUnit } from '@/features/food/types'
 
 type FoodItemsCatalogProps = {
@@ -88,7 +89,10 @@ export function FoodItemsCatalog({ onClose }: FoodItemsCatalogProps) {
                         }}
                     />
                 ) : (
-                    <div key={item.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div
+                        key={item.id}
+                        className={lacksNutrition(item) ? 'card card--no-nutrition' : 'card'}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                             <strong>{item.name}</strong>
                             <p style={{ margin: '2px 0 0', fontSize: 13, color: '#52525b' }}>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { computeDailyTotals } from '@/features/food/dailyTotals'
+import { computeDailyTotals, lacksNutrition } from '@/features/food/dailyTotals'
 import type { FoodEntryRow } from '@/features/food/types'
 
 let entryCounter = 0
@@ -90,5 +90,25 @@ describe('computeDailyTotals', () => {
             fatG: 10,
             entriesWithoutNutrition: 0,
         })
+    })
+})
+
+describe('lacksNutrition', () => {
+    it('é verdadeiro só quando os quatro valores estão ausentes', () => {
+        expect(lacksNutrition(buildEntry())).toBe(true)
+    })
+
+    it('é falso quando existe algum valor parcial', () => {
+        expect(lacksNutrition(buildEntry({ protein_g: 12 }))).toBe(false)
+    })
+
+    it('é falso quando todos os valores estão preenchidos', () => {
+        expect(lacksNutrition(buildEntry({ kcal: 130, protein_g: 2.5, carbs_g: 28, fat_g: 0.2 }))).toBe(false)
+    })
+
+    it('não conta item com nutrição parcial como sem dado no total do dia', () => {
+        const totals = computeDailyTotals([buildEntry(), buildEntry({ protein_g: 10 })])
+
+        expect(totals.entriesWithoutNutrition).toBe(1)
     })
 })

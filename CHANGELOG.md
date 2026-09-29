@@ -32,6 +32,11 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   data selecionada (mostrada logo abaixo do título). A seção "Ferramentas"
   lista atalhos em largura total; o primeiro é o "Catálogo de alimentos",
   que continua acessível também pelo ⋮ da aba de alimentação.
+- Consumo de alimento e item do catálogo sem nenhum dado nutricional (kcal,
+  proteína, carboidrato e gordura todos ausentes) ganham um fundo azul bem
+  claro. A dica "N itens sem dado nutricional" do total do dia passa a usar o
+  mesmo critério, então item com nutrição parcial não conta mais como sem
+  dado.
 - Série pulada como estado próprio, distinto de concluída e de não
   registrada (migração `20260928030000_workout_sets_skipped.sql`, coluna
   `skipped_at` em `workout_sets`). Cada série ganha "Pular série" e "Pular
