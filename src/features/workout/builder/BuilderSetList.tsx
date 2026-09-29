@@ -1,4 +1,4 @@
-import { Copy, CornerDownRight, Plus, Trash2 } from 'lucide-react'
+import { Copy, CornerDownRight, Plus, Timer, Trash2 } from 'lucide-react'
 
 import { BuilderRangeField } from '@/features/workout/builder/BuilderRangeField'
 import { builderFieldId } from '@/features/workout/builder/builderValidation'
@@ -6,12 +6,13 @@ import {
     copySet,
     createDrop,
     createSet,
+    emptyRange,
     insertAfter,
     removeAt,
     replaceAt,
     SET_METRIC_OPTIONS,
 } from '@/features/workout/builder/builderState'
-import type { BuilderDrop, BuilderSet } from '@/features/workout/builder/builderTypes'
+import type { BuilderDrop, BuilderRange, BuilderSet } from '@/features/workout/builder/builderTypes'
 import type { SetMetric } from '@/lib/workoutPlanSchema'
 
 const ACTION_ICON_SIZE = 18
@@ -122,6 +123,15 @@ function BuilderSetRow({ fieldPath, position, set, canRemove, onChange, onDuplic
                     />
                 </div>
             </div>
+            {set.descanso && (
+                <BuilderSetRest
+                    fieldPath={fieldPath}
+                    position={position}
+                    range={set.descanso}
+                    onChange={(descanso) => onChange({ ...set, descanso })}
+                    onRemove={() => onChange({ ...set, descanso: null })}
+                />
+            )}
             {set.quedas.length > 0 && (
                 <div className="builder-drops" id={builderFieldId(dropsPath)}>
                     {set.quedas.map((drop, dropIndex) => (
@@ -150,6 +160,16 @@ function BuilderSetRow({ fieldPath, position, set, canRemove, onChange, onDuplic
                     <CornerDownRight size={ACTION_ICON_SIZE} aria-hidden="true" />
                     {set.quedas.length > 0 ? 'Mais uma queda' : 'Drop set'}
                 </button>
+                {!set.descanso && (
+                    <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={() => onChange({ ...set, descanso: emptyRange(true) })}
+                    >
+                        <Timer size={ACTION_ICON_SIZE} aria-hidden="true" />
+                        Descanso próprio
+                    </button>
+                )}
                 {canRemove && (
                     <button type="button" className="ghost-button builder-danger" onClick={onRemove}>
                         <Trash2 size={ACTION_ICON_SIZE} aria-hidden="true" />
@@ -157,6 +177,45 @@ function BuilderSetRow({ fieldPath, position, set, canRemove, onChange, onDuplic
                     </button>
                 )}
             </div>
+        </div>
+    )
+}
+
+type BuilderSetRestProps = {
+    fieldPath: FieldPath
+    position: number
+    range: BuilderRange
+    onChange: (range: BuilderRange) => void
+    onRemove: () => void
+}
+
+// Fica escondido até ser pedido: a maioria das séries usa o descanso do
+// exercício (ou o padrão do plano), e o campo sempre à mostra só poluiria.
+function BuilderSetRest({ fieldPath, position, range, onChange, onRemove }: BuilderSetRestProps) {
+    return (
+        <div className="builder-set-rest">
+            <div className="builder-set__header">
+                <span className="builder-drop__title">
+                    <Timer size={ACTION_ICON_SIZE} aria-hidden="true" />
+                    Descanso depois desta série
+                </span>
+                <button
+                    type="button"
+                    className="icon-button builder-danger"
+                    aria-label={`Remover descanso próprio da série ${position}`}
+                    onClick={onRemove}
+                >
+                    <Trash2 size={ACTION_ICON_SIZE} aria-hidden="true" />
+                </button>
+            </div>
+            <BuilderRangeField
+                id={builderFieldId([...fieldPath, 'descanso'])}
+                label="Descanso"
+                unit="s"
+                range={range}
+                onChange={onChange}
+                hint="Vence o descanso do exercício só nesta série."
+            />
         </div>
     )
 }

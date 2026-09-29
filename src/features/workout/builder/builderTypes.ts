@@ -18,11 +18,14 @@ export type BuilderDrop = {
     carga: string
 }
 
+// `descanso` nulo é "igual ao exercício": a série só ganha o campo quando a
+// pessoa pede um descanso próprio para ela.
 export type BuilderSet = {
     uid: string
     metrica: SetMetric
     alvo: BuilderRange
     carga: string
+    descanso: BuilderRange | null
     quedas: BuilderDrop[]
 }
 
@@ -86,5 +89,6 @@ export type BuilderPlan = {
     usaProgressao: boolean
     blocoSemanas: string
     descricoesSemana: Record<string, string>
+    descansoPadrao: BuilderRange
     treinos: BuilderWorkout[]
 }

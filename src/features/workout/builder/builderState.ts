@@ -69,7 +69,7 @@ export function createDrop(): BuilderDrop {
 }
 
 export function createSet(): BuilderSet {
-    return { uid: createUid(), metrica: 'repeticoes', alvo: emptyRange(false), carga: '', quedas: [] }
+    return { uid: createUid(), metrica: 'repeticoes', alvo: emptyRange(false), carga: '', descanso: null, quedas: [] }
 }
 
 function emptyPrescription(): BuilderPrescription {
@@ -123,6 +123,7 @@ export function createEmptyPlan(): BuilderPlan {
         usaProgressao: false,
         blocoSemanas: DEFAULT_BLOCK_WEEKS_TEXT,
         descricoesSemana: {},
+        descansoPadrao: emptyRange(true),
         treinos: [createWorkout(0)],
     }
 }
@@ -137,6 +138,7 @@ export function copySet(set: BuilderSet): BuilderSet {
         metrica: set.metrica,
         alvo: copyRange(set.alvo),
         carga: set.carga,
+        descanso: set.descanso ? copyRange(set.descanso) : null,
         quedas: set.quedas.map((drop) => ({ uid: createUid(), alvo: copyRange(drop.alvo), carga: drop.carga })),
     }
 }

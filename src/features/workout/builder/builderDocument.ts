@@ -79,12 +79,19 @@ function dropToJson(drop: BuilderDrop, metric: SetMetric): JsonObject {
     return dropJson
 }
 
+function restFields(range: BuilderRange | null): JsonObject {
+    const fields = range ? rangeFields(range, 'descanso_segundos_min', 'descanso_segundos_max') : {}
+
+    return fields
+}
+
 function setToJson(set: BuilderSet): JsonObject {
     const fields = METRIC_FIELDS[set.metrica]
     const quedas = set.quedas.map((drop) => dropToJson(drop, set.metrica))
     const setJson = {
         ...rangeFields(set.alvo, fields.min, fields.max),
         ...definedFields({ carga_sugerida: parseBuilderNumber(set.carga) }),
+        ...restFields(set.descanso),
         ...(quedas.length > 0 ? { quedas } : {}),
     }
 
@@ -94,7 +101,7 @@ function setToJson(set: BuilderSet): JsonObject {
 function seriesPrescriptionFields(prescription: BuilderPrescription): Record<string, JsonObject> {
     return {
         series: { series: prescription.series.map(setToJson) },
-        descanso: rangeFields(prescription.descanso, 'descanso_segundos_min', 'descanso_segundos_max'),
+        descanso: restFields(prescription.descanso),
         rir: rangeFields(prescription.rir, 'rir_alvo_min', 'rir_alvo_max'),
     }
 }
@@ -234,6 +241,7 @@ export function builderPlanToDocument(plan: BuilderPlan): JsonObject {
         nome: plan.nome.trim(),
         unidade_carga: 'kg',
         ...progressionFields(plan),
+        ...rangeFields(plan.descansoPadrao, 'descanso_padrao_segundos_min', 'descanso_padrao_segundos_max'),
         treinos: plan.treinos.map((workout, index) => workoutToJson(workout, workoutIds[index], plan.usaProgressao)),
     }
 
@@ -257,6 +265,12 @@ function rangeFromValues(min: number | null, max: number | null, fixoWhenEmpty: 
     return range
 }
 
+function optionalRangeFromValues(min: number | null, max: number | null): BuilderRange | null {
+    const range = min === null && max === null ? null : rangeFromValues(min, max, true)
+
+    return range
+}
+
 function dropFromPlan(drop: PlannedDrop): BuilderDrop {
     return {
         uid: createUid(),
@@ -271,6 +285,7 @@ function setFromPlan(set: WorkoutSet): BuilderSet {
         metrica: set.metrica,
         alvo: rangeFromValues(set.alvo_min, set.alvo_max, false),
         carga: numberText(set.carga_sugerida),
+        descanso: optionalRangeFromValues(set.descanso_segundos_min, set.descanso_segundos_max),
         quedas: set.quedas.map(dropFromPlan),
     }
 }
@@ -377,6 +392,7 @@ export function builderPlanFromWorkoutPlan(plan: WorkoutPlan): BuilderPlan {
         usaProgressao: plan.bloco_semanas !== null,
         blocoSemanas: plan.bloco_semanas === null ? DEFAULT_BLOCK_WEEKS_TEXT : String(plan.bloco_semanas),
         descricoesSemana: descriptions,
+        descansoPadrao: rangeFromValues(plan.descanso_padrao_segundos_min, plan.descanso_padrao_segundos_max, true),
         treinos: plan.treinos.map(workoutFromPlan),
     }
 }

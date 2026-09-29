@@ -458,3 +458,106 @@ describe('rascunho do montador', () => {
         ).toBeNull()
     })
 })
+
+describe('descanso padrão e descanso por série no montador', () => {
+    it('editar o plano e preencher só o padrão gera o mesmo arquivo com o padrão a mais', () => {
+        const plan = builderFromExample()
+        plan.descansoPadrao = setRangeValue(plan.descansoPadrao, 'min', '90')
+        const result = validateBuilderPlan(plan)
+
+        expect(result.success).toBe(true)
+        expect(builderPlanToDocument(plan)).toEqual({
+            ...(readExampleDocument() as Record<string, unknown>),
+            descanso_padrao_segundos_min: 90,
+            descanso_padrao_segundos_max: 90,
+        })
+    })
+
+    it('o padrão salvo volta para o montador como faixa e vai de novo para o arquivo', () => {
+        const plan = builderFromExample()
+        plan.descansoPadrao = { min: '60', max: '90', fixo: false }
+        const reloaded = builderPlanFromWorkoutPlan(normalizedPlanOf(builderPlanToDocument(plan)))
+
+        expect(reloaded.descansoPadrao).toEqual({ min: '60', max: '90', fixo: false })
+        expect(builderPlanToDocument(reloaded)).toMatchObject({
+            descanso_padrao_segundos_min: 60,
+            descanso_padrao_segundos_max: 90,
+        })
+    })
+
+    it('série só leva descanso quando ganha um próprio, e ele volta ao recarregar', () => {
+        const exercise = filledExercise('Supino')
+        exercise.series.push({ ...exercise.series[0], uid: 'segunda', descanso: { min: '180', max: '180', fixo: true } })
+        const document = builderPlanToDocument(planWithExercises([exercise]))
+        const [firstSet, secondSet] = (document.treinos as { exercicios: { series: Record<string, unknown>[] }[] }[])[0]
+            .exercicios[0].series
+
+        expect(firstSet).not.toHaveProperty('descanso_segundos_min')
+        expect(secondSet).toMatchObject({ descanso_segundos_min: 180, descanso_segundos_max: 180 })
+
+        const reloaded = builderPlanFromWorkoutPlan(normalizedPlanOf(document))
+        const [reloadedFirst, reloadedSecond] = reloaded.treinos[0].exercicios[0].series
+        expect(reloadedFirst.descanso).toBeNull()
+        expect(reloadedSecond.descanso).toEqual({ min: '180', max: '180', fixo: true })
+    })
+
+    it('pedir descanso próprio e deixar vazio não muda o arquivo', () => {
+        const exercise = filledExercise('Supino')
+        const untouched = builderPlanToDocument(planWithExercises([exercise]))
+        exercise.series[0].descanso = { min: '', max: '', fixo: true }
+
+        expect(builderPlanToDocument(planWithExercises([exercise]))).toEqual(untouched)
+    })
+
+    it('aponta o padrão invertido no campo do plano', () => {
+        const plan = planWithExercises([filledExercise('Supino')])
+        plan.descansoPadrao = { min: '90', max: '60', fixo: false }
+        const result = validateBuilderPlan(plan)
+
+        expect(result.success).toBe(false)
+        if (!result.success) {
+            expect(result.issues).toContainEqual(
+                expect.objectContaining({
+                    fieldPath: ['descanso_padrao'],
+                    local: 'Plano › descanso padrão',
+                    mensagem: 'o máximo não pode ser menor que o mínimo',
+                }),
+            )
+        }
+    })
+
+    it('aponta a faixa pela metade no descanso da série', () => {
+        const exercise = filledExercise('Supino')
+        exercise.series[0].descanso = { min: '60', max: '', fixo: false }
+        const result = validateBuilderPlan(planWithExercises([exercise]))
+
+        expect(result.success).toBe(false)
+        if (!result.success) {
+            expect(result.issues).toContainEqual(
+                expect.objectContaining({
+                    fieldPath: ['treinos', 0, 'exercicios', 0, 'series', 0, 'descanso'],
+                    mensagem: 'preencha o mínimo e o máximo',
+                }),
+            )
+        }
+    })
+
+    it('duplicar o exercício copia o descanso próprio das séries sem compartilhar o objeto', () => {
+        const exercise = filledExercise('Supino')
+        exercise.series[0].descanso = { min: '120', max: '120', fixo: true }
+        const copy = duplicateExercise(exercise)
+
+        expect(copy.series[0].descanso).toEqual(exercise.series[0].descanso)
+        expect(copy.series[0].descanso).not.toBe(exercise.series[0].descanso)
+    })
+
+    it('rascunho gravado antes do descanso padrão abre com o padrão vazio', () => {
+        const plan = planWithExercises([filledExercise('Supino')]) as Partial<BuilderPlan>
+        delete plan.descansoPadrao
+        const rawDraft = JSON.stringify({ formato: 1, origem: 'novo', salvoEm: '2026-09-01T10:00:00.000Z', plano: plan })
+        const draft = parseBuilderDraft(rawDraft)
+
+        expect(draft?.plano.descansoPadrao).toEqual({ min: '', max: '', fixo: true })
+        expect(validateBuilderPlan(draft?.plano as BuilderPlan).success).toBe(true)
+    })
+})

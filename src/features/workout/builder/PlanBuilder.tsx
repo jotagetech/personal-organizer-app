@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useSuspendedTrainingMode } from '@/features/shared/useTrainingMode'
 import { importWorkoutPlanFromText } from '@/features/workout/api'
+import { BuilderRangeField } from '@/features/workout/builder/BuilderRangeField'
 import { BuilderWorkoutSection } from '@/features/workout/builder/BuilderWorkoutSection'
 import { builderPlanFromWorkoutPlan } from '@/features/workout/builder/builderDocument'
 import {
@@ -282,6 +283,14 @@ export function PlanBuilder({ origin: requestedOrigin, activePlan, onClose, onSa
                         onChange={(event) => updatePlan({ ...plan, nome: event.target.value })}
                     />
                 </div>
+                <BuilderRangeField
+                    id={builderFieldId(['descanso_padrao'])}
+                    label="Descanso padrão"
+                    unit="s, opcional"
+                    range={plan.descansoPadrao}
+                    onChange={(descansoPadrao) => updatePlan({ ...plan, descansoPadrao })}
+                    hint="Vale para os exercícios sem descanso próprio. Intervalado usa a recuperação dele."
+                />
                 <label className="builder-check" htmlFor={progressionToggleId}>
                     <input
                         id={progressionToggleId}

@@ -1,6 +1,7 @@
 // Rascunho do montador em localStorage: fechar o app (ou o iPhone descartar
 // a aba) no meio da montagem não perde o que já foi digitado.
 
+import { emptyRange } from '@/features/workout/builder/builderState'
 import type { BuilderPlan } from '@/features/workout/builder/builderTypes'
 
 const DRAFT_KEY = 'workout-plan-builder:rascunho'
@@ -30,6 +31,15 @@ function looksLikePlan(value: unknown): value is BuilderPlan {
     return hasWorkoutShape && typeof value.usaProgressao === 'boolean' && isRecord(value.descricoesSemana)
 }
 
+// Rascunho gravado antes do descanso padrão não tem o campo; ele entra vazio
+// para o rascunho continuar valendo. Série de rascunho antigo também não tem
+// `descanso`, e a conversão trata ausente igual a nulo (sem descanso próprio).
+function withDefaultRest(plan: BuilderPlan): BuilderPlan {
+    const upgradedPlan = plan.descansoPadrao ? plan : { ...plan, descansoPadrao: emptyRange(true) }
+
+    return upgradedPlan
+}
+
 // Rascunho de outro formato (versão antiga do app) ou corrompido é
 // descartado: montar a tela com um estado de forma desconhecida quebraria.
 export function parseBuilderDraft(rawText: string | null): BuilderDraft | null {
@@ -50,7 +60,11 @@ export function parseBuilderDraft(rawText: string | null): BuilderDraft | null {
         (parsed.origem === 'novo' || parsed.origem === 'edicao') &&
         typeof parsed.salvoEm === 'string' &&
         looksLikePlan(parsed.plano)
-    const draft = isValidDraft ? (parsed as BuilderDraft) : null
+    if (!isValidDraft) {
+        return null
+    }
+    const storedDraft = parsed as BuilderDraft
+    const draft = { ...storedDraft, plano: withDefaultRest(storedDraft.plano) }
 
     return draft
 }
