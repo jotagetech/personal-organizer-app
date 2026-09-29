@@ -1,9 +1,11 @@
-import { Check } from 'lucide-react'
+import { Check, Pencil } from 'lucide-react'
 import { useState } from 'react'
 
 import { CardioSection } from '@/features/cardio/CardioSection'
 import { FeelingScaleInput } from '@/features/cardio/FeelingScaleInput'
+import { feelingEmoji, feelingLabel } from '@/features/cardio/types'
 import { updateSessionFeeling } from '@/features/workout/api'
+import { normalizeFeelingNote } from '@/features/workout/feelingDraft'
 import { formatDurationMinutes, resolveSessionDuration } from '@/features/workout/sessionDuration'
 import { countSetsByStatus } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSessionRow, type WorkoutSetRow } from '@/features/workout/types'
@@ -13,6 +15,7 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const BADGE_ICON_SIZE = 18
 const BADGE_ICON_STROKE = 3
+const ACTION_ICON_SIZE = 18
 
 type WorkoutFinishPanelProps = {
     session: WorkoutSessionRow
@@ -22,33 +25,34 @@ type WorkoutFinishPanelProps = {
 }
 
 export function WorkoutFinishPanel({ session, sessionDate, sets, onSessionUpdated }: WorkoutFinishPanelProps) {
-    const [feelingNote, setFeelingNote] = useState(session.feeling_note ?? '')
+    const hasSavedFeeling = session.feeling_scale !== null
+    const [isEditing, setIsEditing] = useState(!hasSavedFeeling)
+    const [draftScale, setDraftScale] = useState<number | null>(session.feeling_scale)
+    const [draftNote, setDraftNote] = useState(session.feeling_note ?? '')
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
 
-    async function handleFeelingScaleChange(feelingScale: number) {
-        setSaveStatus('saving')
-        try {
-            const updatedSession = await updateSessionFeeling(session.id, feelingScale, feelingNote || null)
-            onSessionUpdated(updatedSession)
-            setSaveStatus('saved')
-        } catch {
-            setSaveStatus('error')
-        }
+    function handleStartEditing() {
+        setDraftScale(session.feeling_scale)
+        setDraftNote(session.feeling_note ?? '')
+        setSaveStatus('idle')
+        setIsEditing(true)
     }
 
-    async function handleFeelingNoteBlur() {
-        if (session.feeling_scale === null) {
+    function handleCancelEditing() {
+        setSaveStatus('idle')
+        setIsEditing(false)
+    }
+
+    async function handleSaveFeeling() {
+        if (draftScale === null) {
             return
         }
         setSaveStatus('saving')
         try {
-            const updatedSession = await updateSessionFeeling(
-                session.id,
-                session.feeling_scale,
-                feelingNote.trim() === '' ? null : feelingNote.trim(),
-            )
+            const updatedSession = await updateSessionFeeling(session.id, draftScale, normalizeFeelingNote(draftNote))
             onSessionUpdated(updatedSession)
             setSaveStatus('saved')
+            setIsEditing(false)
         } catch {
             setSaveStatus('error')
         }
@@ -57,6 +61,7 @@ export function WorkoutFinishPanel({ session, sessionDate, sets, onSessionUpdate
     const activeWindow = resolveSessionDuration(session, sets)
     const setsByKey = new Map(sets.map((set) => [setKey(set.exercise_key, set.set_index), set]))
     const statusCounts = countSetsByStatus(session.workout_snapshot, setsByKey)
+    const isSaving = saveStatus === 'saving'
 
     return (
         <div>
@@ -83,20 +88,58 @@ export function WorkoutFinishPanel({ session, sessionDate, sets, onSessionUpdate
                         </div>
                     )}
                 </dl>
-                <div className="field">
-                    <label>Como foi o treino?</label>
-                    <FeelingScaleInput value={session.feeling_scale} onChange={handleFeelingScaleChange} />
-                </div>
-                <div className="field field--last">
-                    <label htmlFor="workout-feeling-note">Detalhar (opcional)</label>
-                    <input
-                        id="workout-feeling-note"
-                        type="text"
-                        value={feelingNote}
-                        onChange={(event) => setFeelingNote(event.target.value)}
-                        onBlur={handleFeelingNoteBlur}
-                    />
-                </div>
+                {isEditing ? (
+                    <>
+                        <div className="field">
+                            <label>Como foi o treino?</label>
+                            <FeelingScaleInput value={draftScale} onChange={setDraftScale} />
+                        </div>
+                        <div className="field field--last">
+                            <label htmlFor="workout-feeling-note">Detalhar (opcional)</label>
+                            <input
+                                id="workout-feeling-note"
+                                type="text"
+                                value={draftNote}
+                                onChange={(event) => setDraftNote(event.target.value)}
+                            />
+                        </div>
+                        <div className="finish-card__actions">
+                            <button
+                                type="button"
+                                className="primary-button"
+                                disabled={draftScale === null || isSaving}
+                                onClick={handleSaveFeeling}
+                            >
+                                Salvar avaliação
+                            </button>
+                            {hasSavedFeeling && (
+                                <button
+                                    type="button"
+                                    className="secondary-button"
+                                    disabled={isSaving}
+                                    onClick={handleCancelEditing}
+                                >
+                                    Cancelar
+                                </button>
+                            )}
+                        </div>
+                    </>
+                ) : (
+                    <div className="finish-feeling">
+                        <p className="finish-feeling__title">Como foi o treino?</p>
+                        {session.feeling_scale !== null && (
+                            <p className="finish-feeling__value">
+                                <span aria-hidden="true">{feelingEmoji(session.feeling_scale)}</span>{' '}
+                                {session.feeling_scale} · {feelingLabel(session.feeling_scale)}
+                            </p>
+                        )}
+                        {session.feeling_note && <p className="day-workout__note">{session.feeling_note}</p>}
+                        <button type="button" className="secondary-button" onClick={handleStartEditing}>
+                            <Pencil size={ACTION_ICON_SIZE} aria-hidden="true" />
+                            Editar
+                        </button>
+                    </div>
+                )}
                 <SaveStatusLabel status={saveStatus} />
             </div>
             <CardioSection sessionDate={sessionDate} />
@@ -114,7 +157,7 @@ function SaveStatusLabel({ status }: { status: SaveStatus }) {
     }
 
     if (status === 'error') {
-        return <p className="save-status save-status--error">Falha ao salvar. Toque no sentimento de novo.</p>
+        return <p className="save-status save-status--error">Falha ao salvar a avaliação. Toque em Salvar avaliação de novo.</p>
     }
 
     return <p className="save-status">Salvo</p>

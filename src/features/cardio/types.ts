@@ -20,6 +20,13 @@ export function feelingEmoji(feelingScale: number): string {
     return emoji
 }
 
+export function feelingLabel(feelingScale: number): string {
+    const matchingOption = FEELING_SCALE_OPTIONS.find((option) => option.value === feelingScale)
+    const label = matchingOption?.label ?? ''
+
+    return label
+}
+
 export function activityTypeName(activityTypes: CardioActivityTypeRow[], activityTypeId: string): string {
     const matchingType = activityTypes.find((activityType) => activityType.id === activityTypeId)
     const name = matchingType?.name ?? 'Atividade'

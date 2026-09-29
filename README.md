@@ -149,7 +149,9 @@ npm run dev
   série da navegação livre e a queda do drop set em que estava.
   Finalizar o treino para o relógio, mostra o tempo total, registra a
   duração (do início ao fim, sem o tempo pausado; em sessões anteriores ao
-  início marcado, da primeira à última série concluída), o sentimento (escala 1-5) e abre o
+  início marcado, da primeira à última série concluída), a avaliação
+  (sentimento de 1 a 5 e texto, salvos pelo botão "Salvar avaliação" e
+  editáveis depois) e abre o
   registro de cardio do dia.
 - **Ciclo**: marca a data de início de um ciclo de treino (menu de três pontos
   na aba Treino) e mostra "Dia N do ciclo", independente de trocas no plano.

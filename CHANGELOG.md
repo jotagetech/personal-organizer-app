@@ -150,6 +150,13 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- Avaliação do treino concluído com modo leitura. Sem avaliação salva, a
+  escala de sentimento e o "Detalhar" ficam abertos e nada é gravado até
+  tocar em "Salvar avaliação" (desabilitado sem nota escolhida; texto em
+  branco vira vazio). Com avaliação salva, o painel mostra a nota e o texto
+  e um botão "Editar" reabre os campos preenchidos, com "Cancelar" para
+  descartar as mudanças. Antes, tocar na nota salvava na hora e o texto
+  salvava ao sair do campo.
 - A duração do treino (painel de finalização, detalhe do dia e relatório
   em Resultados, exportação) passa a descontar o tempo pausado; sessões sem
   pausa continuam iguais. A exportação acrescenta `paused_seconds` por
