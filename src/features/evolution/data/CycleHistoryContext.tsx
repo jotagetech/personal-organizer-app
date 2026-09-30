@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { loadCycleHistory, type CycleHistory } from '@/features/evolution/data/cycleHistory'
 
-type CycleHistoryContextValue = {
+export type CycleHistoryContextValue = {
     // Continua com o valor anterior enquanto recarrega, para a tela não piscar.
     history: CycleHistory | null
     isLoading: boolean

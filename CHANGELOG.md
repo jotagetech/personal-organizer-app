@@ -7,6 +7,14 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Seção Exercícios em Resultados, abaixo de Ciclos, com filtro "Ciclo" ou
+  "Tudo": cada exercício com número de sessões, data da última e recorde
+  principal. Tocar abre os recordes com data e o histórico por sessão, com o
+  feito ao lado da meta e da carga sugerida, incluindo as quedas. Os recordes
+  seguem a forma de carga: maior carga, 1RM estimado e volume em carga total,
+  por lado ou por halter; mais repetições e maior lastro em peso corporal;
+  menor assistência em assistência. Avisa quando o exercício teve outro nome
+  ou outra forma de carga.
 - "Última vez" no card da série: carga, repetições, tempo ou distância da
   série equivalente na sessão anterior com o mesmo exercício, com a data. O
   exercício é reconhecido pela chave dele, também entre planos diferentes.

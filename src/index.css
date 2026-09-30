@@ -4379,6 +4379,85 @@ h1, h2, h3, h4 {
     background: var(--color-surface-pressed);
 }
 
+.exercises-section {
+    margin-top: 24px;
+}
+
+.exercises-section__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    min-height: var(--touch-target);
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.exercises-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.exercise-filter {
+    display: flex;
+    gap: 8px;
+}
+
+.exercise-filter__chip {
+    flex: 1;
+    min-height: var(--touch-target);
+    padding: 0 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.exercise-filter__chip:active:not(:disabled) {
+    background: var(--color-surface-pressed);
+}
+
+.exercise-filter__chip:disabled {
+    background: var(--color-surface-muted);
+    color: var(--color-text-muted);
+    opacity: 0.6;
+}
+
+.exercise-filter__chip--selected,
+.exercise-filter__chip--selected:active:not(:disabled) {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-text);
+}
+
+.exercise-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.exercise-detail__records {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.exercise-detail__plan {
+    font-weight: 400;
+    color: var(--color-text-muted);
+}
+
 .stored-plans__actions {
     display: flex;
     gap: 8px;
