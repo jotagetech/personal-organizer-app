@@ -74,6 +74,15 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 - Trocar o treino do dia antes de a sessão existir só fecha o descanso na
   tela quando ele é da própria data.
 
+### Corrigido
+
+- A nutrição de um consumo já registrado não é mais recalculada pelo
+  catálogo atual quando só a refeição, a data ou o nome mudam. Só uma
+  quantidade, unidade ou alimento diferente refaz a conta; um consumo ainda
+  sem nenhum dado continua sendo preenchido quando o alimento ganha
+  nutrição no catálogo. Apagar um alimento do catálogo também deixou de
+  zerar a nutrição dos consumos dele.
+
 ## 2026-09-30
 
 ### Adicionado
