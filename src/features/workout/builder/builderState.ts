@@ -96,6 +96,7 @@ export function createExercise(): BuilderExercise {
         por_lado: false,
         modalidade: '',
         observacoes: '',
+        grupo: null,
         variacoes: [],
         ...emptyPrescription(),
     }

@@ -162,6 +162,7 @@ function seriesExerciseToJson(exercise: BuilderExercise, id: string, includeVari
         ...prescription.descanso,
         ...prescription.rir,
         ...definedFields({ observacoes: optionalText(exercise.observacoes) }),
+        ...definedFields({ grupo: exercise.grupo ?? undefined }),
         ...prescription.series,
         ...variationsFields(exercise, includeVariations),
     }
@@ -369,6 +370,7 @@ function exerciseFromPlan(exercise: Exercise): BuilderExercise {
         por_lado: isInterval ? false : exercise.por_lado,
         modalidade: exercise.intervalado?.modalidade ?? '',
         observacoes: exercise.observacoes ?? '',
+        grupo: exercise.grupo,
         variacoes: exercise.variacoes_semana.map((variation) => variationFromPlan(variation, prescription)),
         ...prescription,
     }

@@ -66,6 +66,7 @@
           "forma_carga": "por_halter",
           "descanso_segundos_min": 90,
           "descanso_segundos_max": 90,
+          "grupo": "peito-triceps",
           "series": [
             { "repeticoes_min": 10, "repeticoes_max": 10 },
             { "repeticoes_min": 10, "repeticoes_max": 10 }
@@ -82,6 +83,7 @@
           "rir_alvo_min": 0,
           "rir_alvo_max": 0,
           "observacoes": "Última série em drop set: reduza a carga sem descanso entre as quedas.",
+          "grupo": "peito-triceps",
           "series": [
             {
               "repeticoes_min": 10,

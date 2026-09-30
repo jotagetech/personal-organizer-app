@@ -40,6 +40,16 @@ function withDefaultRest(plan: BuilderPlan): BuilderPlan {
     return upgradedPlan
 }
 
+// Exercício de rascunho antigo não tem `grupo`; ausente vale como sem grupo.
+function withDefaultGroups(plan: BuilderPlan): BuilderPlan {
+    const treinos = plan.treinos.map((workout) => ({
+        ...workout,
+        exercicios: workout.exercicios.map((exercise) => ({ ...exercise, grupo: exercise.grupo ?? null })),
+    }))
+
+    return { ...plan, treinos }
+}
+
 // Rascunho de outro formato (versão antiga do app) ou corrompido é
 // descartado: montar a tela com um estado de forma desconhecida quebraria.
 export function parseBuilderDraft(rawText: string | null): BuilderDraft | null {
@@ -64,7 +74,7 @@ export function parseBuilderDraft(rawText: string | null): BuilderDraft | null {
         return null
     }
     const storedDraft = parsed as BuilderDraft
-    const draft = { ...storedDraft, plano: withDefaultRest(storedDraft.plano) }
+    const draft = { ...storedDraft, plano: withDefaultGroups(withDefaultRest(storedDraft.plano)) }
 
     return draft
 }

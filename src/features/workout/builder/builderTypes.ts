@@ -73,6 +73,9 @@ export type BuilderExercise = BuilderPrescription & {
     por_lado: boolean
     modalidade: string
     observacoes: string
+    // Bi-set, tri-set ou circuito: vizinhos com o mesmo rótulo. Gerado pela
+    // tela (nunca digitado) e sempre passado por `normalizeGroups`.
+    grupo: string | null
     variacoes: BuilderVariation[]
 }
 

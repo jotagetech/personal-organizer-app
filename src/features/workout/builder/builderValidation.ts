@@ -66,6 +66,7 @@ const FIELD_LABELS: Record<string, string> = {
     dias_semana: 'dias da semana',
     forma_carga: 'forma de carga',
     equipamento: 'equipamento',
+    grupo: 'grupo',
 }
 
 const EMPTY_LIST_MESSAGES: Record<string, string> = {
@@ -85,6 +86,8 @@ const CUSTOM_MESSAGE_REWRITES: [RegExp, string][] = [
     [/^informe o que muda na semana.*$/, 'mude pelo menos um valor nesta semana'],
     [/^obrigatório quando o plano usa.*$/, 'informe quantas semanas tem o bloco'],
     [/^a semana (\d+) já tem variação neste exercício/, 'a semana $1 já está em outra variação deste exercício'],
+    [/^os exercícios do grupo .* devem ficar em sequência.*$/, 'os exercícios do grupo precisam ficar um depois do outro'],
+    [/^o grupo .* precisa de pelo menos.*$/, 'um grupo precisa de pelo menos 2 exercícios'],
     [/ \(bloco_semanas\)$/, ''],
 ]
 
