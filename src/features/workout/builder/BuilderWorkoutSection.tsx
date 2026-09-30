@@ -1,7 +1,16 @@
 import { AlertCircle, ArrowDown, ArrowUp, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
+import { GroupBox } from '@/features/workout/GroupBlocks'
 import { BuilderExerciseCard } from '@/features/workout/builder/BuilderExerciseCard'
+import {
+    canGroupWithNext,
+    groupLabelOfRun,
+    groupRunsOf,
+    groupWithNext,
+    normalizeGroups,
+    ungroupAt,
+} from '@/features/workout/builder/builderGroups'
 import { resolveExerciseIds } from '@/features/workout/builder/builderIds'
 import {
     createExercise,
@@ -11,7 +20,7 @@ import {
     removeAt,
     replaceAt,
 } from '@/features/workout/builder/builderState'
-import type { BuilderWorkout } from '@/features/workout/builder/builderTypes'
+import type { BuilderExercise, BuilderWorkout } from '@/features/workout/builder/builderTypes'
 import { builderFieldId } from '@/features/workout/builder/builderValidation'
 import { WEEKDAY_LABELS } from '@/lib/weekdayLabels'
 import { WEEKDAYS, type Weekday } from '@/lib/workoutPlanSchema'
@@ -62,16 +71,48 @@ export function BuilderWorkoutSection(props: BuilderWorkoutSectionProps) {
         onChange({ ...workout, dias_semana: weekdays })
     }
 
+    // Toda mudança na lista passa pela normalização dos grupos: subir, descer,
+    // remover ou trocar o tipo nunca deixa grupo quebrado ou de um só.
+    function changeExercises(exercises: BuilderExercise[]) {
+        onChange({ ...workout, exercicios: normalizeGroups(exercises) })
+    }
+
     function addExercise() {
         const exercise = createExercise()
-        onChange({ ...workout, exercicios: [...workout.exercicios, exercise] })
+        changeExercises([...workout.exercicios, exercise])
         onExpand(exercise.uid)
     }
 
     function duplicateAt(index: number) {
         const copy = duplicateExercise(workout.exercicios[index])
-        onChange({ ...workout, exercicios: insertAfter(workout.exercicios, index, copy) })
+        changeExercises(insertAfter(workout.exercicios, index, copy))
         onExpand(copy.uid)
+    }
+
+    function renderCard(exercise: BuilderExercise, index: number) {
+        return (
+            <BuilderExerciseCard
+                key={exercise.uid}
+                fieldPath={[...fieldPath, 'exercicios', index]}
+                position={index + 1}
+                exercise={exercise}
+                resolvedId={exerciseIds[index]}
+                isFirst={index === 0}
+                isLast={index === workout.exercicios.length - 1}
+                hasIssue={issueOwnerUids.has(exercise.uid)}
+                usaProgressao={props.usaProgressao}
+                blockWeeks={props.blockWeeks}
+                canGroupWithNext={canGroupWithNext(workout.exercicios, index)}
+                isExpanded={isExpanded}
+                onToggleExpanded={onToggleExpanded}
+                onChange={(nextExercise) => changeExercises(replaceAt(workout.exercicios, index, nextExercise))}
+                onMove={(offset) => changeExercises(moveItem(workout.exercicios, index, offset))}
+                onDuplicate={() => duplicateAt(index)}
+                onRemove={() => changeExercises(removeAt(workout.exercicios, index))}
+                onGroupWithNext={() => changeExercises(groupWithNext(workout.exercicios, index))}
+                onUngroup={() => changeExercises(ungroupAt(workout.exercicios, index))}
+            />
+        )
     }
 
     return (
@@ -151,30 +192,19 @@ export function BuilderWorkoutSection(props: BuilderWorkoutSectionProps) {
                         {workout.exercicios.length === 0 && (
                             <p className="builder-hint">Nenhum exercício ainda.</p>
                         )}
-                        {workout.exercicios.map((exercise, index) => (
-                            <BuilderExerciseCard
-                                key={exercise.uid}
-                                fieldPath={[...fieldPath, 'exercicios', index]}
-                                position={index + 1}
-                                exercise={exercise}
-                                resolvedId={exerciseIds[index]}
-                                isFirst={index === 0}
-                                isLast={index === workout.exercicios.length - 1}
-                                hasIssue={issueOwnerUids.has(exercise.uid)}
-                                usaProgressao={props.usaProgressao}
-                                blockWeeks={props.blockWeeks}
-                                isExpanded={isExpanded}
-                                onToggleExpanded={onToggleExpanded}
-                                onChange={(nextExercise) =>
-                                    onChange({ ...workout, exercicios: replaceAt(workout.exercicios, index, nextExercise) })
-                                }
-                                onMove={(offset) =>
-                                    onChange({ ...workout, exercicios: moveItem(workout.exercicios, index, offset) })
-                                }
-                                onDuplicate={() => duplicateAt(index)}
-                                onRemove={() => onChange({ ...workout, exercicios: removeAt(workout.exercicios, index) })}
-                            />
-                        ))}
+                        {groupRunsOf(workout.exercicios).map((run) => {
+                            const cards = workout.exercicios.slice(run.start, run.end + 1).map((exercise, offset) =>
+                                renderCard(exercise, run.start + offset),
+                            )
+
+                            return run.grupo === null ? (
+                                cards
+                            ) : (
+                                <GroupBox key={run.grupo} label={groupLabelOfRun(run)}>
+                                    <div className="builder-group-members">{cards}</div>
+                                </GroupBox>
+                            )
+                        })}
                     </div>
                     <button type="button" className="secondary-button full-width" onClick={addExercise}>
                         <Plus size={ACTION_ICON_SIZE} aria-hidden="true" />

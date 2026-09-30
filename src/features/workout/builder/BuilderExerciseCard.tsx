@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowDown, ArrowUp, ChevronDown, ChevronUp, Copy, History, Trash2 } from 'lucide-react'
+import { AlertCircle, ArrowDown, ArrowUp, ChevronDown, ChevronUp, Copy, History, Link2, Link2Off, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { BuilderPrescriptionFields } from '@/features/workout/builder/BuilderPrescriptionFields'
@@ -23,12 +23,15 @@ export type BuilderExerciseCardProps = {
     hasIssue: boolean
     usaProgressao: boolean
     blockWeeks: number | null
+    canGroupWithNext: boolean
     isExpanded: (uid: string) => boolean
     onToggleExpanded: (uid: string) => void
     onChange: (exercise: BuilderExercise) => void
     onMove: (offset: number) => void
     onDuplicate: () => void
     onRemove: () => void
+    onGroupWithNext: () => void
+    onUngroup: () => void
 }
 
 function exerciseSummary(exercise: BuilderExercise): string {
@@ -91,6 +94,7 @@ export function BuilderExerciseCard(props: BuilderExerciseCardProps) {
                         onChange={(changes) => onChange({ ...exercise, ...changes })}
                     />
                     <ObservationsField {...props} />
+                    {exercise.tipo === 'series' && <GroupActions {...props} />}
                     {props.usaProgressao && (
                         <BuilderVariations
                             fieldPath={fieldPath}
@@ -279,6 +283,35 @@ function ObservationsField({ fieldPath, exercise, onChange }: BuilderExerciseCar
                 value={exercise.observacoes}
                 onChange={(event) => onChange({ ...exercise, observacoes: event.target.value })}
             />
+        </div>
+    )
+}
+
+// Bi-set, tri-set e circuito: o rótulo do grupo nunca aparece aqui, a tela
+// só junta ou separa vizinhos (o caixa em volta dos cartões mostra o grupo).
+function GroupActions({ fieldPath, exercise, canGroupWithNext, onGroupWithNext, onUngroup }: BuilderExerciseCardProps) {
+    const isGrouped = exercise.grupo != null
+
+    return (
+        <div className="field builder-group-actions" id={builderFieldId([...fieldPath, 'grupo'])}>
+            <span className="builder-range__label">Bi-set, tri-set ou circuito</span>
+            <div className="builder-row-actions">
+                <button type="button" className="ghost-button" disabled={!canGroupWithNext} onClick={onGroupWithNext}>
+                    <Link2 size={ACTION_ICON_SIZE} aria-hidden="true" />
+                    Agrupar com o próximo
+                </button>
+                {isGrouped && (
+                    <button type="button" className="ghost-button" onClick={onUngroup}>
+                        <Link2Off size={ACTION_ICON_SIZE} aria-hidden="true" />
+                        Desagrupar
+                    </button>
+                )}
+            </div>
+            <span className="builder-hint">
+                {isGrouped
+                    ? 'Os exercícios do grupo alternam uma série de cada, e o descanso vem só no fim da rodada.'
+                    : 'Junta este exercício com o de baixo para alternar as séries, sem descanso entre eles.'}
+            </span>
         </div>
     )
 }

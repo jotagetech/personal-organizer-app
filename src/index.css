@@ -4137,3 +4137,15 @@ h1, h2, h3, h4 {
 .day-workout__exercises .group-box {
     margin: 6px 0;
 }
+
+.builder-group-members {
+    padding: 0 8px;
+}
+
+.builder-group-members .builder-exercise {
+    background: var(--color-surface);
+}
+
+.builder-group-actions .builder-row-actions {
+    margin-top: 4px;
+}
