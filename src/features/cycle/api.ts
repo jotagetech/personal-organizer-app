@@ -17,6 +17,23 @@ export async function getCurrentCycle(): Promise<WorkoutCycleRow | null> {
     return data
 }
 
+// Ordem cronológica: pelo início do ciclo e, no empate, pelo momento em que
+// foi criado. A posição nessa lista é o número do ciclo.
+export async function listCycles(): Promise<WorkoutCycleRow[]> {
+    const { data, error } = await supabase
+        .from('workout_cycles')
+        .select('*')
+        .order('start_date', { ascending: true })
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    const cycles = data ?? []
+    return cycles
+}
+
 export async function startNewCycle(startDate: IsoDate): Promise<WorkoutCycleRow> {
     const { data: authData } = await supabase.auth.getUser()
     const currentUserId = authData.user?.id

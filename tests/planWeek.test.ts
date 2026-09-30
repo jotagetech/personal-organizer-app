@@ -85,18 +85,29 @@ describe('resolvePlanWeek', () => {
         expect(resolvePlanWeek(plan, CYCLE_START, '2026-09-07')).toEqual({
             semana: 1,
             totalSemanas: 4,
+            volta: 1,
             descricao: 'Calibração',
         })
-        expect(resolvePlanWeek(plan, CYCLE_START, '2026-09-21')).toEqual({ semana: 3, totalSemanas: 4, descricao: null })
+        expect(resolvePlanWeek(plan, CYCLE_START, '2026-09-21')).toEqual({
+            semana: 3,
+            totalSemanas: 4,
+            volta: 1,
+            descricao: null,
+        })
         expect(resolvePlanWeek(plan, CYCLE_START, '2026-10-04')).toMatchObject({ semana: 4 })
     })
 
     it('recomeça o bloco na semana 1 quando o ciclo passa da duração dele', () => {
         const plan = parseBlockPlan()
 
-        expect(resolvePlanWeek(plan, CYCLE_START, '2026-10-05')).toMatchObject({ semana: 1, descricao: 'Calibração' })
-        expect(resolvePlanWeek(plan, CYCLE_START, '2026-10-12')).toMatchObject({ semana: 2 })
-        expect(resolvePlanWeek(plan, CYCLE_START, '2026-11-02')).toMatchObject({ semana: 1 })
+        expect(resolvePlanWeek(plan, CYCLE_START, '2026-10-04')).toMatchObject({ semana: 4, volta: 1 })
+        expect(resolvePlanWeek(plan, CYCLE_START, '2026-10-05')).toMatchObject({
+            semana: 1,
+            volta: 2,
+            descricao: 'Calibração',
+        })
+        expect(resolvePlanWeek(plan, CYCLE_START, '2026-10-12')).toMatchObject({ semana: 2, volta: 2 })
+        expect(resolvePlanWeek(plan, CYCLE_START, '2026-11-02')).toMatchObject({ semana: 1, volta: 3 })
     })
 
     it('não tem semana sem ciclo, antes do início do ciclo ou com plano sem bloco', () => {

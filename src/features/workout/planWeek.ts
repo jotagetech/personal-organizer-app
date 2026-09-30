@@ -12,6 +12,8 @@ import {
 export type PlanWeek = {
     semana: number
     totalSemanas: number
+    // Quantas vezes o bloco já recomeçou no ciclo: 1 na primeira passada.
+    volta: number
     descricao: string | null
 }
 
@@ -33,9 +35,10 @@ export function resolvePlanWeek(
     }
 
     const semana = ((cycleWeek - 1) % plan.bloco_semanas) + 1
+    const volta = Math.floor((cycleWeek - 1) / plan.bloco_semanas) + 1
     const description = plan.semanas.find((week) => week.semana === semana)
 
-    return { semana, totalSemanas: plan.bloco_semanas, descricao: description?.descricao ?? null }
+    return { semana, totalSemanas: plan.bloco_semanas, volta, descricao: description?.descricao ?? null }
 }
 
 export function formatPlanWeekLabel(semana: number, totalSemanas: number): string {

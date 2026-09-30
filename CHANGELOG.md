@@ -7,6 +7,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Cabeçalho da aba Treino com o ciclo da data aberta: "Ciclo N · Dia D", a
+  semana do bloco com "volta V" a partir da segunda passada, e "próximo em
+  N dias" quando já existe um ciclo marcado para depois.
+- Descrição da semana do bloco no detalhe do dia em Resultados.
 - Planos de treino, na aba Menu: lista todos os planos já importados ou
   salvos pelo montador, com a data de importação, o ativo marcado e as
   versões de um mesmo nome numeradas. "Usar este plano" volta para um plano
@@ -54,6 +58,9 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- A grade de Resultados segue o ciclo da data selecionada, com número do
+  ciclo e o último dia quando ele já terminou, em vez de sempre o ciclo mais
+  recente.
 - Descanso entre séries passou a ocupar o lugar do card da série. Enquanto
   ele corre, o card, a lista de exercícios e o "Voltar" somem, e a tela
   mostra só o relógio grande, uma barra de progresso, o próximo passo ("A
@@ -76,6 +83,9 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Corrigido
 
+- Treino lançado com data passada grava a semana do bloco do ciclo daquela
+  data, e não a do ciclo mais recente. O cabeçalho numa data passada também
+  deixou de mostrar o ciclo atual.
 - A nutrição de um consumo já registrado não é mais recalculada pelo
   catálogo atual quando só a refeição, a data ou o nome mudam. Só uma
   quantidade, unidade ou alimento diferente refaz a conta; um consumo ainda

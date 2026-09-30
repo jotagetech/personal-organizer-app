@@ -282,7 +282,7 @@ describe('intervalado por semana do bloco', () => {
 
     it('o snapshot grava o intervalado já resolvido e sobrevive à releitura', () => {
         const plan = parsedPlan(planWith([sprintExercise()]))
-        const snapshot = buildWorkoutSnapshot(plan.treinos[0], { semana: 2, totalSemanas: 4, descricao: null })
+        const snapshot = buildWorkoutSnapshot(plan.treinos[0], { semana: 2, totalSemanas: 4, volta: 1, descricao: null })
         const intervalSnapshot = snapshot.exercicios[1]
 
         expect(intervalSnapshot.tipo).toBe('intervalado')

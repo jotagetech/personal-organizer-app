@@ -194,7 +194,8 @@ type WorkoutSessionDetailProps = {
 function WorkoutSessionDetail({ session, sets, drops }: WorkoutSessionDetailProps) {
     const workoutSummary = summarizeWorkoutSets(session.workout_snapshot, sets, drops)
     const activeWindow = resolveSessionDuration(session, sets)
-    const { semana_bloco: blockWeek, bloco_semanas: blockWeeks } = session.workout_snapshot
+    const { semana_bloco: blockWeek, bloco_semanas: blockWeeks, descricao_semana: weekDescription } =
+        session.workout_snapshot
     const finishedDetailParts = session.finished_at
         ? [
               activeWindow ? `Duração: ${formatDurationMinutes(activeWindow.startIso, activeWindow.endIso)}` : null,
@@ -203,6 +204,7 @@ function WorkoutSessionDetail({ session, sets, drops }: WorkoutSessionDetailProp
         : []
     const sessionDetailParts = [
         blockWeek !== null && blockWeeks !== null ? formatPlanWeekLabel(blockWeek, blockWeeks) : null,
+        weekDescription,
         ...finishedDetailParts,
     ].filter((part): part is string => part !== null)
 

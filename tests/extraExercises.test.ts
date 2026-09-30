@@ -141,7 +141,7 @@ describe('collectExtraSuggestions', () => {
     })
 
     it('copia a prescrição resolvida para a semana e o descanso, marcando como extra', () => {
-        const sources = { ...sourcesFor(), planWeek: { semana: 2, totalSemanas: 4, descricao: null } }
+        const sources = { ...sourcesFor(), planWeek: { semana: 2, totalSemanas: 4, volta: 1, descricao: null } }
         const [agachamento] = collectExtraSuggestions(sources)
 
         expect(agachamento.exercise.extra).toBe(true)

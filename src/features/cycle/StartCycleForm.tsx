@@ -1,11 +1,10 @@
 import { useState } from 'react'
 
 import { startNewCycle } from '@/features/cycle/api'
-import type { WorkoutCycleRow } from '@/features/cycle/types'
 import { todayInTimezone } from '@/lib/dateUtils'
 
 type StartCycleFormProps = {
-    onStarted: (cycle: WorkoutCycleRow) => void
+    onStarted: () => void
     onCancel: () => void
 }
 
@@ -20,8 +19,8 @@ export function StartCycleForm({ onStarted, onCancel }: StartCycleFormProps) {
         setErrorMessage(null)
 
         try {
-            const createdCycle = await startNewCycle(startDate)
-            onStarted(createdCycle)
+            await startNewCycle(startDate)
+            onStarted()
         } catch (submitError) {
             const message = submitError instanceof Error ? submitError.message : 'Falha ao iniciar ciclo'
             setErrorMessage(message)

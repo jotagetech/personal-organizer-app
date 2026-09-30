@@ -1,15 +1,17 @@
 import { CalendarPlus, EllipsisVertical, FilePen, FilePlus2, FileUp, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { getCurrentCycle } from '@/features/cycle/api'
+import { listCycles } from '@/features/cycle/api'
 import { CycleStatusBadge } from '@/features/cycle/CycleStatusBadge'
+import { buildPlanWeekText } from '@/features/cycle/cycleStatusText'
+import { cycleForDate } from '@/features/cycle/cycleTimeline'
 import { StartCycleForm } from '@/features/cycle/StartCycleForm'
 import type { WorkoutCycleRow } from '@/features/cycle/types'
 import { getActivePlan, type ActivePlan } from '@/features/workout/api'
 import type { BuilderOrigin } from '@/features/workout/builder/builderDraft'
 import { PlanBuilder } from '@/features/workout/builder/PlanBuilder'
 import { ImportWorkoutPlan } from '@/features/workout/ImportWorkoutPlan'
-import { formatPlanWeekLabel, resolvePlanWeek } from '@/features/workout/planWeek'
+import { resolvePlanWeek } from '@/features/workout/planWeek'
 import { resolveRecordingLock } from '@/features/workout/recordableDate'
 import {
     commitWorkoutDayDeletion,
@@ -34,7 +36,7 @@ export function WorkoutTab() {
     const { refreshDayStatus } = useDayStatus()
     const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [activePlan, setActivePlan] = useState<ActivePlan | null>(null)
-    const [cycle, setCycle] = useState<WorkoutCycleRow | null>(null)
+    const [cycles, setCycles] = useState<WorkoutCycleRow[]>([])
     const [isLoadingPlan, setIsLoadingPlan] = useState(true)
     const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -71,13 +73,22 @@ export function WorkoutTab() {
         })
     }
 
+    async function reloadCycles() {
+        try {
+            setCycles(await listCycles())
+        } catch (loadError) {
+            const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar o ciclo'
+            setLoadErrorMessage(message)
+        }
+    }
+
     async function reloadActivePlan() {
         setIsLoadingPlan(true)
         setLoadErrorMessage(null)
         try {
-            const [nextActivePlan, nextCycle] = await Promise.all([getActivePlan(), getCurrentCycle()])
+            const [nextActivePlan, nextCycles] = await Promise.all([getActivePlan(), listCycles()])
             setActivePlan(nextActivePlan)
-            setCycle(nextCycle)
+            setCycles(nextCycles)
             setActivePanel(null)
         } catch (loadError) {
             const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar o plano'
@@ -165,19 +176,17 @@ export function WorkoutTab() {
 
     // A semana também entra na chave da sessão: iniciar um ciclo novo refaz o
     // treino ainda não gravado com as séries da semana certa.
-    const planWeek = resolvePlanWeek(activePlan.plan, cycle?.start_date ?? null, selectedDate)
+    const cycleOnDate = cycleForDate(cycles, selectedDate)
+    const planWeek = resolvePlanWeek(activePlan.plan, cycleOnDate?.cycle.start_date ?? null, selectedDate)
     const recordingLock = resolveRecordingLock(selectedDate, todayInTimezone(), isWorkoutDayDeletionPending)
 
     return (
         <div>
             <div className="page-header page-header--compact">
                 <div className="cycle-status">
-                    <CycleStatusBadge cycle={cycle} referenceDate={selectedDate} />
+                    <CycleStatusBadge cycles={cycles} referenceDate={selectedDate} />
                     {planWeek && (
-                        <span className="cycle-status__week">
-                            {formatPlanWeekLabel(planWeek.semana, planWeek.totalSemanas)}
-                            {planWeek.descricao && ` · ${planWeek.descricao}`}
-                        </span>
+                        <span className="cycle-status__week">{buildPlanWeekText(planWeek)}</span>
                     )}
                 </div>
                 <div className="overflow-menu" ref={menuRef}>
@@ -268,8 +277,8 @@ export function WorkoutTab() {
                         <div className="overflow-menu__panel">
                             <div className="overflow-menu__form">
                                 <StartCycleForm
-                                    onStarted={(newCycle) => {
-                                        setCycle(newCycle)
+                                    onStarted={() => {
+                                        void reloadCycles()
                                         setActivePanel(null)
                                         setIsMenuOpen(false)
                                     }}

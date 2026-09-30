@@ -90,7 +90,7 @@ function planDocument(planFields: LooseObject = {}): LooseObject {
 const WITH_PLAN_DEFAULT = { descanso_padrao_segundos_min: 60, descanso_padrao_segundos_max: 90 }
 
 function snapshotFor(plan: WorkoutPlan, semana: number | null) {
-    const planWeek = semana === null ? null : { semana, totalSemanas: 4, descricao: null }
+    const planWeek = semana === null ? null : { semana, totalSemanas: 4, volta: 1, descricao: null }
     const snapshot = buildWorkoutSnapshot(plan.treinos[0], planWeek, planDefaultRest(plan))
 
     return snapshot
