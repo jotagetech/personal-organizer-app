@@ -29,7 +29,7 @@ import {
 } from '@/features/workout/groupPresentation'
 import { IntervalStep } from '@/features/workout/IntervalStep'
 import { recordingLockNotice, type RecordingLock } from '@/features/workout/recordableDate'
-import { RestTimerBar } from '@/features/workout/RestTimerBar'
+import { RestPanel } from '@/features/workout/RestPanel'
 import { decideRestPushAction, planRestPush, type RestPushPlan } from '@/features/workout/restPush'
 import { SessionClock } from '@/features/workout/SessionClock'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
@@ -1061,6 +1061,7 @@ export function WorkoutSessionView({
         isLastDropStep,
         findNextUnresolvedPosition(snapshot, effectiveSetsByKey, position) === null,
     )
+    const nextStepLabel = `${currentExercicio.nome} · ${setCountLabel(currentExercicio, position, currentStep.dropPosition)}`
     const segmentStatuses = snapshot.exercicios.flatMap((exercicio) =>
         exercicio.series.map((serie) =>
             setStatusOf(effectiveSetsByKey.get(setKey(exercicio.exercise_key, serie.set_index))),
@@ -1089,129 +1090,133 @@ export function WorkoutSessionView({
                     onCancelStart={handleCancelStart}
                 />
             </fieldset>
-            <ExercisePicker
-                progress={summarizeExerciseProgress(snapshot, effectiveSetsByKey)}
-                blocks={exerciseBlocksOf(snapshot)}
-                currentExerciseIndex={position.exerciseIndex}
-                isOpen={isExercisePickerOpen}
-                onToggle={() => {
-                    setIsExercisePickerOpen((isOpen) => !isOpen)
-                    setIsAddingExercise(false)
-                }}
-                onSelect={handleSelectExercise}
-                canAddExercise={canRecord}
-                onRequestAddExercise={() => setIsAddingExercise(true)}
-                addExercisePanel={
-                    isAddingExercise && canRecord ? (
-                        <AddExtraExercisePanel
-                            plan={plan}
-                            planWeek={planWeek}
-                            sessionDate={sessionDate}
-                            todaySnapshot={snapshot}
-                            onAdd={handleAddExtraExercise}
-                            onCancel={() => setIsAddingExercise(false)}
-                        />
-                    ) : null
-                }
-            />
-            {restTimer && (
-                <RestTimerBar
+            {restTimer ? (
+                <RestPanel
                     timer={restTimer}
+                    nextStepLabel={nextStepLabel}
                     onExtend={() => updateRestTimer(extendRestTimer(restTimer, REST_EXTENSION_SECONDS))}
-                    onDismiss={() => updateRestTimer(null)}
+                    onFinish={() => updateRestTimer(null)}
                 />
-            )}
-            <div className="visually-hidden" role="status" aria-live="polite">
-                {activeHandoff ? handoffAnnouncement(activeHandoff) : ''}
-            </div>
-            {activeHandoff ? (
-                <GroupHandoffPanel handoff={activeHandoff} onDismiss={() => setHandoff(null)} />
             ) : (
-                <fieldset className="workout-lock" disabled={!canRecord}>
-                    <section className="card set-card">
-                        {groupContext && <GroupBanner context={groupContext} />}
-                        <div className="set-card__eyebrow">
-                            <span>
-                                Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length}
-                            </span>
-                            <span className={isOnDropStep ? 'set-card__set-count set-card__set-count--drop' : 'set-card__set-count'}>
-                                {setCountLabel(currentExercicio, position, isOnDropStep ? currentStep.dropPosition : null)}
-                            </span>
-                        </div>
-                        <h3 className="set-card__exercise-name">{currentExercicio.nome}</h3>
-                        <ExerciseDetails exercicio={currentExercicio} />
-                        <div className="progress-track">
-                            {segmentStatuses.map((status, segmentIndex) => (
-                                <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
-                            ))}
-                        </div>
-                        {currentInterval ? (
-                            <IntervalStep
-                                key={currentExercicio.exercise_key}
+                <>
+                <ExercisePicker
+                    progress={summarizeExerciseProgress(snapshot, effectiveSetsByKey)}
+                    blocks={exerciseBlocksOf(snapshot)}
+                    currentExerciseIndex={position.exerciseIndex}
+                    isOpen={isExercisePickerOpen}
+                    onToggle={() => {
+                        setIsExercisePickerOpen((isOpen) => !isOpen)
+                        setIsAddingExercise(false)
+                    }}
+                    onSelect={handleSelectExercise}
+                    canAddExercise={canRecord}
+                    onRequestAddExercise={() => setIsAddingExercise(true)}
+                    addExercisePanel={
+                        isAddingExercise && canRecord ? (
+                            <AddExtraExercisePanel
+                                plan={plan}
+                                planWeek={planWeek}
                                 sessionDate={sessionDate}
-                                planId={planId}
-                                snapshot={snapshot}
-                                exercicio={currentExercicio}
-                                interval={currentInterval}
-                                setsByKey={effectiveSetsByKey}
-                                confirmLabel={
-                                    isOnlyUnresolvedExercise(snapshot, effectiveSetsByKey, position.exerciseIndex)
-                                        ? FINISH_WORKOUT_LABEL
-                                        : 'Confirmar rodadas'
-                                }
-                                onConfirmed={handleIntervalConfirmed}
-                                onSkipExercise={handleSkipIntervalExercise}
+                                todaySnapshot={snapshot}
+                                onAdd={handleAddExtraExercise}
+                                onCancel={() => setIsAddingExercise(false)}
                             />
-                        ) : isOnDropStep && currentSetRow && currentStep.dropPosition !== null ? (
-                            <DropSetStepRow
-                                key={`${currentSetKey}:queda:${currentStep.dropPosition}`}
-                                sessionDate={sessionDate}
-                                planId={planId}
-                                snapshot={snapshot}
-                                exercicio={currentExercicio}
-                                serie={currentSet}
-                                dropPosition={currentStep.dropPosition}
-                                parentSet={currentSetRow}
-                                drops={effectiveDropsByKey.get(currentSetKey) ?? []}
-                                confirmLabel={
-                                    isLastDropStep
-                                        ? groupConfirmLabel(groupContext, dropLabel)
-                                        : dropLabel
-                                }
-                                groupHint={isLastDropStep ? groupHint : null}
-                                onConfirmed={handleDropConfirmed}
-                                onSkipRemainingDrops={handleSkipRemainingDrops}
-                                onLocalDropsSave={(drops) => handleLocalDropsSaved(currentSetKey, drops)}
-                            />
-                        ) : (
-                            <ExerciseSetRow
-                                key={currentSetKey}
-                                sessionDate={sessionDate}
-                                planId={planId}
-                                snapshot={snapshot}
-                                exercicio={currentExercicio}
-                                serie={currentSet}
-                                existingSet={currentSetRow}
-                                confirmLabel={
-                                    currentSet.quedas.length === 0
-                                        ? groupConfirmLabel(groupContext, setConfirmLabel)
-                                        : setConfirmLabel
-                                }
-                                groupHint={currentSet.quedas.length === 0 ? groupHint : null}
-                                onConfirmed={handleSetConfirmed}
-                                onSkipped={handleSetSkipped}
-                                onSkipExercise={handleSkipExercise}
-                                onLocalSave={handleLocalSetSaved}
-                            />
-                        )}
-                    </section>
-                </fieldset>
-            )}
-            {!isFirstStep(currentStep) && (
-                <button type="button" className="ghost-button" onClick={handleGoBack}>
-                    <ChevronLeft size={BUTTON_ICON_SIZE} aria-hidden="true" />
-                    Voltar
-                </button>
+                        ) : null
+                    }
+                />
+                <div className="visually-hidden" role="status" aria-live="polite">
+                    {activeHandoff ? handoffAnnouncement(activeHandoff) : ''}
+                </div>
+                {activeHandoff ? (
+                    <GroupHandoffPanel handoff={activeHandoff} onDismiss={() => setHandoff(null)} />
+                ) : (
+                    <fieldset className="workout-lock" disabled={!canRecord}>
+                        <section className="card set-card">
+                            {groupContext && <GroupBanner context={groupContext} />}
+                            <div className="set-card__eyebrow">
+                                <span>
+                                    Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length}
+                                </span>
+                                <span className={isOnDropStep ? 'set-card__set-count set-card__set-count--drop' : 'set-card__set-count'}>
+                                    {setCountLabel(currentExercicio, position, isOnDropStep ? currentStep.dropPosition : null)}
+                                </span>
+                            </div>
+                            <h3 className="set-card__exercise-name">{currentExercicio.nome}</h3>
+                            <ExerciseDetails exercicio={currentExercicio} />
+                            <div className="progress-track">
+                                {segmentStatuses.map((status, segmentIndex) => (
+                                    <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
+                                ))}
+                            </div>
+                            {currentInterval ? (
+                                <IntervalStep
+                                    key={currentExercicio.exercise_key}
+                                    sessionDate={sessionDate}
+                                    planId={planId}
+                                    snapshot={snapshot}
+                                    exercicio={currentExercicio}
+                                    interval={currentInterval}
+                                    setsByKey={effectiveSetsByKey}
+                                    confirmLabel={
+                                        isOnlyUnresolvedExercise(snapshot, effectiveSetsByKey, position.exerciseIndex)
+                                            ? FINISH_WORKOUT_LABEL
+                                            : 'Confirmar rodadas'
+                                    }
+                                    onConfirmed={handleIntervalConfirmed}
+                                    onSkipExercise={handleSkipIntervalExercise}
+                                />
+                            ) : isOnDropStep && currentSetRow && currentStep.dropPosition !== null ? (
+                                <DropSetStepRow
+                                    key={`${currentSetKey}:queda:${currentStep.dropPosition}`}
+                                    sessionDate={sessionDate}
+                                    planId={planId}
+                                    snapshot={snapshot}
+                                    exercicio={currentExercicio}
+                                    serie={currentSet}
+                                    dropPosition={currentStep.dropPosition}
+                                    parentSet={currentSetRow}
+                                    drops={effectiveDropsByKey.get(currentSetKey) ?? []}
+                                    confirmLabel={
+                                        isLastDropStep
+                                            ? groupConfirmLabel(groupContext, dropLabel)
+                                            : dropLabel
+                                    }
+                                    groupHint={isLastDropStep ? groupHint : null}
+                                    onConfirmed={handleDropConfirmed}
+                                    onSkipRemainingDrops={handleSkipRemainingDrops}
+                                    onLocalDropsSave={(drops) => handleLocalDropsSaved(currentSetKey, drops)}
+                                />
+                            ) : (
+                                <ExerciseSetRow
+                                    key={currentSetKey}
+                                    sessionDate={sessionDate}
+                                    planId={planId}
+                                    snapshot={snapshot}
+                                    exercicio={currentExercicio}
+                                    serie={currentSet}
+                                    existingSet={currentSetRow}
+                                    confirmLabel={
+                                        currentSet.quedas.length === 0
+                                            ? groupConfirmLabel(groupContext, setConfirmLabel)
+                                            : setConfirmLabel
+                                    }
+                                    groupHint={currentSet.quedas.length === 0 ? groupHint : null}
+                                    onConfirmed={handleSetConfirmed}
+                                    onSkipped={handleSetSkipped}
+                                    onSkipExercise={handleSkipExercise}
+                                    onLocalSave={handleLocalSetSaved}
+                                />
+                            )}
+                        </section>
+                    </fieldset>
+                )}
+                {!isFirstStep(currentStep) && (
+                    <button type="button" className="ghost-button" onClick={handleGoBack}>
+                        <ChevronLeft size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                        Voltar
+                    </button>
+                )}
+                </>
             )}
         </div>
     )

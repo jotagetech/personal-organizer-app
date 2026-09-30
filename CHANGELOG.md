@@ -37,6 +37,13 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- Descanso entre séries passou a ocupar o lugar do card da série. Enquanto
+  ele corre, o card, a lista de exercícios e o "Voltar" somem, e a tela
+  mostra só o relógio grande, uma barra de progresso, o próximo passo ("A
+  seguir") e dois botões grandes, "+15 s" e "Pular". A próxima série só
+  aparece quando o descanso acaba (com o bipe de sempre, e o painel fecha
+  sozinho) ou quando ele é pulado, o que impede confirmar a série seguinte
+  sem querer no meio do descanso.
 - Treino em data futura fica só para consulta. Com a data selecionada
   depois de hoje, a aba Treino continua mostrando o treino sugerido, a lista
   de exercícios e as séries, mas "Iniciar treino", confirmar, pular, os

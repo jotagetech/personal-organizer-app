@@ -221,7 +221,8 @@ os logs da função no painel.
   (contrato)").
   Série de tempo tem cronômetro (bipe e aviso ao atingir o mínimo e o
   máximo da meta), e o descanso prescrito vira uma contagem regressiva
-  compacta depois de cada série.
+  em tela cheia no lugar do card depois de cada série, com "+15 s" e
+  "Pular"; a próxima série só aparece quando ela acaba ou é pulada.
   Cardio intervalado (bike, esteira, remo, corrida) é um exercício do
   treino: um passo com timer guiado que alterna trabalho e recuperação,
   mostra "Rodada 3 de 8" e grava cada rodada feita, com o RPE do bloco.
