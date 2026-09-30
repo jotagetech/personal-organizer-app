@@ -32,6 +32,7 @@ function planWithWorkouts(
                     rir_alvo_min: null,
                     rir_alvo_max: null,
                     observacoes: null,
+                    grupo: null,
                     series: [
                         {
                             metrica: 'repeticoes',

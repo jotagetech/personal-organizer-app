@@ -154,6 +154,12 @@
                           "minLength": 1,
                           "maxLength": 2000
                         },
+                        "grupo": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 40,
+                          "description": "Bi-set, tri-set ou circuito: exercícios em sequência no treino com o mesmo grupo são feitos alternando uma série de cada, e o descanso vem só depois da rodada."
+                        },
                         "series": {
                           "type": "array",
                           "items": {
@@ -532,6 +538,9 @@
                           "not": {}
                         },
                         "rir_alvo_max": {
+                          "not": {}
+                        },
+                        "grupo": {
                           "not": {}
                         }
                       },

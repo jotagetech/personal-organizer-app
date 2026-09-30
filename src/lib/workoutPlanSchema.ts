@@ -51,6 +51,8 @@ const MAX_OBSERVATION_LENGTH = 2000
 const MAX_WEEK_DESCRIPTION_LENGTH = 120
 export const MAX_INTERVAL_ROUNDS = 50
 const MAX_MODALITY_LENGTH = 60
+export const MAX_GROUP_LABEL_LENGTH = 40
+export const MIN_GROUP_MEMBERS = 2
 export const MIN_RPE = 1
 export const MAX_RPE = 10
 
@@ -303,6 +305,12 @@ const seriesExerciseV2Schema = z
             .describe('Repetições, tempo ou distância prescritos para cada lado (perna, braço). Não muda a forma de registrar a carga.'),
         ...restAndRirShape,
         observacoes: nonEmptyText.max(MAX_OBSERVATION_LENGTH).optional(),
+        grupo: nonEmptyText
+            .max(MAX_GROUP_LABEL_LENGTH)
+            .optional()
+            .describe(
+                'Bi-set, tri-set ou circuito: exercícios em sequência no treino com o mesmo grupo são feitos alternando uma série de cada, e o descanso vem só depois da rodada.',
+            ),
         series: z.array(workoutSetV2Schema).min(1),
         variacoes_semana: z
             .array(weekVariationV2Schema)
@@ -404,6 +412,7 @@ const intervalExerciseV2Schema = z
         descanso_segundos_max: notApplicableToInterval('a pausa entre rodadas é recuperacao_segundos_min/max'),
         rir_alvo_min: notApplicableToInterval('use rpe_alvo_min/rpe_alvo_max'),
         rir_alvo_max: notApplicableToInterval('use rpe_alvo_min/rpe_alvo_max'),
+        grupo: notApplicableToInterval('bi-set, tri-set e circuito são só entre exercícios de séries'),
     })
     .strict()
     .describe('Cardio intervalado: rodadas de trabalho em segundos alternadas com recuperação.')
@@ -432,7 +441,10 @@ const workoutV2Schema = z
         exercicios: z.array(exerciseV2Schema).min(1),
     })
     .strict()
-    .superRefine((workout, ctx) => refineWorkoutUniqueness(workout, ctx))
+    .superRefine((workout, ctx) => {
+        refineWorkoutUniqueness(workout, ctx)
+        refineSupersetGroups(workout.exercicios, ctx)
+    })
 
 export const workoutPlanV2Schema = z
     .object({
@@ -548,6 +560,7 @@ export type Exercise = {
     rir_alvo_min: number | null
     rir_alvo_max: number | null
     observacoes: string | null
+    grupo: string | null
     series: WorkoutSet[]
     variacoes_semana: ExerciseWeekVariation[]
 }
@@ -626,6 +639,7 @@ function normalizeV1Plan(document: WorkoutPlanV1Document): WorkoutPlan {
                 rir_alvo_min: null,
                 rir_alvo_max: null,
                 observacoes: null,
+                grupo: null,
                 series: exercise.series.map(normalizeV1Set),
                 variacoes_semana: [],
             })),
@@ -729,6 +743,7 @@ export function buildIntervalExercise(
         rir_alvo_min: null,
         rir_alvo_max: null,
         observacoes: base.observacoes,
+        grupo: null,
         series: intervalRoundSets(prescription),
         variacoes_semana: base.variacoes_semana,
     }
@@ -773,6 +788,7 @@ function normalizeV2Exercise(exercise: V2Exercise): Exercise {
         rir_alvo_min: exercise.rir_alvo_min ?? null,
         rir_alvo_max: exercise.rir_alvo_max ?? null,
         observacoes: exercise.observacoes ?? null,
+        grupo: exercise.grupo ?? null,
         series: exercise.series.map(normalizeV2Set),
         variacoes_semana: (exercise.variacoes_semana ?? []).map(normalizeV2WeekVariation),
     }
@@ -848,6 +864,43 @@ function refinePlanUniqueness(plan: { treinos: { id: string }[] }, ctx: z.Refine
             path: ['treinos'],
         })
     }
+}
+
+// O grupo é alternado rodada a rodada, então os membros precisam estar lado a
+// lado na ficha: um exercício de fora no meio quebraria a alternância. Um
+// grupo de um exercício só não alterna com nada e é quase sempre erro de
+// digitação no rótulo.
+function refineSupersetGroups(exercises: { grupo?: string }[], ctx: z.RefinementCtx): void {
+    const indexesByGroup = new Map<string, number[]>()
+    exercises.forEach((exercise, exerciseIndex) => {
+        if (exercise.grupo === undefined) {
+            return
+        }
+        const indexes = indexesByGroup.get(exercise.grupo) ?? []
+        indexes.push(exerciseIndex)
+        indexesByGroup.set(exercise.grupo, indexes)
+    })
+
+    indexesByGroup.forEach((indexes, grupo) => {
+        const breakIndex = indexes.findIndex(
+            (exerciseIndex, position) => position > 0 && exerciseIndex !== indexes[position - 1] + 1,
+        )
+        if (breakIndex !== -1) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `os exercícios do grupo "${grupo}" devem ficar em sequência no treino`,
+                path: ['exercicios', indexes[breakIndex], 'grupo'],
+            })
+            return
+        }
+        if (indexes.length < MIN_GROUP_MEMBERS) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `o grupo "${grupo}" precisa de pelo menos ${MIN_GROUP_MEMBERS} exercícios`,
+                path: ['exercicios', indexes[0], 'grupo'],
+            })
+        }
+    })
 }
 
 // Uma semana só pode ter uma variação por exercício; senão não haveria como

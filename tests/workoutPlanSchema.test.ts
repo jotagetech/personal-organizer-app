@@ -141,6 +141,7 @@ describe('parseWorkoutPlanJson com versao 1 (normalização)', () => {
             rir_alvo_min: null,
             rir_alvo_max: null,
             observacoes: null,
+            grupo: null,
             series: [
                 { metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: 60, ...NO_OWN_REST, quedas: [] },
                 { metrica: 'repeticoes', alvo_min: 8, alvo_max: 12, carga_sugerida: null, ...NO_OWN_REST, quedas: [] },
