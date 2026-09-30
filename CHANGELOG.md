@@ -9,8 +9,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 - Excluir treino do dia, no menu de três pontos da aba Treino, quando a data
   tem sessão registrada (no servidor ou só na fila do aparelho), em qualquer
-  data e com o treino em andamento ou concluído. Usa a mesma barra de
-  desfazer das outras exclusões, sem confirmação: enquanto ela está aberta a
+  data e com o treino em andamento ou concluído. O item do menu pede um
+  segundo toque: o menu vira uma caixa "Excluir o treino deste dia?" com
+  Cancelar e Excluir, e tocar fora dele cancela. Confirmada, usa a mesma
+  barra de desfazer das outras exclusões: enquanto ela está aberta a
   tela mostra o dia sem treino e sem deixar registrar, e desfazer volta
   exatamente ao estado anterior, porque nada é mexido até a exclusão ser
   efetivada (fim do prazo ou app minimizado). Efetivada, a fila troca todas

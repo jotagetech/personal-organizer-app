@@ -891,6 +891,22 @@ h1, h2, h3, h4 {
     padding: 10px 4px 4px;
 }
 
+/* Segundo toque obrigatório antes de uma ação destrutiva do menu. */
+.overflow-menu__confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--color-overdue-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-overdue-soft);
+    font-size: 14px;
+}
+
+.overflow-menu__confirm-danger {
+    background: var(--color-overdue-text);
+}
+
 .progress-track {
     display: flex;
     gap: 4px;

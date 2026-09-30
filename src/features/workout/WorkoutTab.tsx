@@ -38,6 +38,7 @@ export function WorkoutTab() {
     const [isLoadingPlan, setIsLoadingPlan] = useState(true)
     const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const [isConfirmingDayDeletion, setIsConfirmingDayDeletion] = useState(false)
     const [activePanel, setActivePanel] = useState<ActivePanel>(null)
     const [builderOrigin, setBuilderOrigin] = useState<BuilderOrigin>('novo')
     const [savedPlanMessage, setSavedPlanMessage] = useState<string | null>(null)
@@ -58,6 +59,7 @@ export function WorkoutTab() {
     function handleDeleteWorkoutDay() {
         const sessionDate = selectedDate
         setIsMenuOpen(false)
+        setIsConfirmingDayDeletion(false)
         scheduleDeletion({
             id: workoutDayDeletionId(sessionDate),
             label: WORKOUT_DAY_DELETION_LABEL,
@@ -93,6 +95,7 @@ export function WorkoutTab() {
         function handleClickOutside(event: MouseEvent) {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setIsMenuOpen(false)
+                setIsConfirmingDayDeletion(false)
             }
         }
         document.addEventListener('mousedown', handleClickOutside)
@@ -176,11 +179,37 @@ export function WorkoutTab() {
                         type="button"
                         className="icon-button"
                         aria-label="Mais ações"
-                        onClick={() => setIsMenuOpen((previous) => !previous)}
+                        onClick={() => {
+                            setIsMenuOpen((previous) => !previous)
+                            setIsConfirmingDayDeletion(false)
+                        }}
                     >
                         <EllipsisVertical size={MENU_ICON_SIZE} aria-hidden="true" />
                     </button>
-                    {isMenuOpen && activePanel === null && (
+                    {isMenuOpen && activePanel === null && isConfirmingDayDeletion && (
+                        <div className="overflow-menu__panel">
+                            <div className="overflow-menu__confirm">
+                                <span>Excluir o treino deste dia? Séries, exercícios extras e avaliação são apagados.</span>
+                                <div className="form-actions">
+                                    <button
+                                        type="button"
+                                        className="secondary-button"
+                                        onClick={() => setIsConfirmingDayDeletion(false)}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="primary-button overflow-menu__confirm-danger"
+                                        onClick={handleDeleteWorkoutDay}
+                                    >
+                                        Excluir
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {isMenuOpen && activePanel === null && !isConfirmingDayDeletion && (
                         <div className="overflow-menu__panel">
                             <button
                                 type="button"
@@ -221,7 +250,7 @@ export function WorkoutTab() {
                                 <button
                                     type="button"
                                     className="overflow-menu__item overflow-menu__item--danger"
-                                    onClick={handleDeleteWorkoutDay}
+                                    onClick={() => setIsConfirmingDayDeletion(true)}
                                 >
                                     <Trash2 size={MENU_ITEM_ICON_SIZE} aria-hidden="true" />
                                     Excluir treino do dia
