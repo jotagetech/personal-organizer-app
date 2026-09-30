@@ -13,6 +13,7 @@ import {
     appendSessionExercise,
     clearSessionStart,
     createSession,
+    deleteSessionForDate,
     finishSession,
     getSessionForDate,
     recordSessionPause,
@@ -20,23 +21,20 @@ import {
     upsertSet,
 } from '@/features/workout/api'
 import type { WorkoutSnapshot, WorkoutSnapshotExercise } from '@/features/workout/types'
+import { isRecordableSessionDate } from '@/features/workout/recordableDate'
+import { todayInTimezone } from '@/lib/dateUtils'
 import {
-    buildSendPlan,
     cancelSessionStart,
-    classifyOutboxError,
     countByStatus,
-    enqueueOperation,
+    deleteSessionFromQueue,
     enqueueOperations,
-    isSessionCreatingOperation,
-    markOperationAttempt,
-    naturalKeyOf,
+    hasSessionDeletion,
+    isEnqueueableOperation,
     nextBackoffDelayMs,
     operationsForDate,
     operationsWithStatus,
     removeOperation,
     removePendingExtraExercises,
-    removeSentOperation,
-    replaceSentOperation,
     type AddExtraExerciseOperation,
     type OutboxOperation,
     type OutboxSetValues,
@@ -44,6 +42,7 @@ import {
     type StartSessionOperation,
     type UpsertSetOperation,
 } from '@/lib/outbox/outboxQueue'
+import { runSendPass, type OutboxTransport } from '@/lib/outbox/outboxSender'
 import { loadOutboxQueue, saveOutboxQueue } from '@/lib/outbox/outboxStorage'
 
 type EnqueueUpsertSetInput = {
@@ -94,6 +93,11 @@ type OutboxContextValue = {
     enqueuePauseSession: (sessionDate: string, pause: SessionPauseValues, pausedAt: string) => void
     enqueueResumeSession: (sessionDate: string, pause: SessionPauseValues, resumedAt: string) => void
     cancelSessionStart: (sessionDate: string, cancelledAt: string) => void
+    // Troca tudo o que a data tem na fila pela exclusão da sessão dela.
+    deleteSession: (sessionDate: string) => void
+    // Lê a fila atual, não a da última renderização: quem chama pode estar no
+    // meio de uma leitura assíncrona que começou antes da exclusão.
+    hasPendingSessionDeletion: (sessionDate: string) => boolean
     discardOperation: (naturalKey: string) => void
     listFailedOperations: () => OutboxOperation[]
 }
@@ -140,45 +144,47 @@ function buildAddExtraExerciseOperation(input: EnqueueAddExtraExerciseInput): Ad
     }
 }
 
-// Nem toda finalização de sessão está acompanhada de uma série pendente na
-// mesma leva de envio (a última série pode ter sido confirmada numa leva
-// anterior); nesse caso a sessão já existe e só falta descobrir o id dela.
-async function resolveSessionId(sessionDate: string, sessionIdByDate: Map<string, string>): Promise<string> {
-    const cachedSessionId = sessionIdByDate.get(sessionDate)
-    if (cachedSessionId) {
-        return cachedSessionId
-    }
-
-    const existingSession = await getSessionForDate(sessionDate)
-    if (!existingSession) {
-        throw new Error('Sessão não encontrada para finalizar')
-    }
-
-    sessionIdByDate.set(sessionDate, existingSession.session.id)
-    return existingSession.session.id
-}
-
-// Sem sessão no servidor não há início para desfazer: o cancelamento conta
-// como enviado em vez de virar falha.
-async function sendStartCancellation(sessionDate: string, sessionIdByDate: Map<string, string>): Promise<void> {
-    const cachedSessionId = sessionIdByDate.get(sessionDate)
-    const sessionId = cachedSessionId ?? (await getSessionForDate(sessionDate))?.session.id
-    if (!sessionId) {
-        return
-    }
-
-    sessionIdByDate.set(sessionDate, sessionId)
-    await clearSessionStart(sessionId)
-}
-
-function isStillQueued(queue: OutboxOperation[], operation: OutboxOperation): boolean {
-    const naturalKey = naturalKeyOf(operation)
-
-    return queue.some((queuedOperation) => naturalKeyOf(queuedOperation) === naturalKey)
-}
-
-function hasSessionCreatingOperationFor(queue: OutboxOperation[], sessionDate: string): boolean {
-    return queue.some((operation) => isSessionCreatingOperation(operation) && operation.sessionDate === sessionDate)
+// As chamadas do envio ao servidor; a passada em si (ordem, corrida com a
+// fila, bloqueio por data) mora em outboxSender.ts.
+const SUPABASE_TRANSPORT: OutboxTransport = {
+    ensureSession: async (step) => {
+        const ensuredSession = await createSession({
+            sessionDate: step.sessionDate,
+            planId: step.planId,
+            snapshot: step.snapshot,
+        })
+        return ensuredSession.id
+    },
+    findSessionId: async (sessionDate) => {
+        const existingSession = await getSessionForDate(sessionDate)
+        return existingSession?.session.id ?? null
+    },
+    upsertSet: async (sessionId, operation) => {
+        await upsertSet({
+            sessionId,
+            exerciseKey: operation.exerciseKey,
+            setIndex: operation.setIndex,
+            loadKg: operation.values.loadKg,
+            reps: operation.values.reps,
+            rir: operation.values.rir,
+            note: operation.values.note,
+            completedAt: operation.values.completedAt,
+            skippedAt: operation.values.skippedAt,
+            metric: operation.values.metric,
+            durationSeconds: operation.values.durationSeconds,
+            distanceM: operation.values.distanceM,
+            drops: operation.values.drops,
+            rpe: operation.values.rpe,
+        })
+    },
+    recordSessionStart,
+    appendSessionExercise,
+    recordSessionPause,
+    clearSessionStart,
+    finishSession: async (sessionId, finishedAt) => {
+        await finishSession(sessionId, finishedAt)
+    },
+    deleteSession: deleteSessionForDate,
 }
 
 export function OutboxProvider({ children }: { children: ReactNode }) {
@@ -208,6 +214,21 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
         setQueue(nextQueue)
     }, [])
 
+    // Nenhum caminho (retomada, finalização automática, efeito ao abrir a
+    // tela) registra treino em data futura, mesmo que a tela deixe passar.
+    const enqueueRecordable = useCallback(
+        (operations: OutboxOperation[]): boolean => {
+            const today = todayInTimezone()
+            const recordableOperations = operations.filter((operation) => isEnqueueableOperation(operation, today))
+            if (recordableOperations.length === 0) {
+                return false
+            }
+            updateQueue(enqueueOperations(queueRef.current, recordableOperations))
+            return true
+        },
+        [updateQueue],
+    )
+
     const flushOnce = useCallback(async () => {
         if (isFlushingRef.current) {
             return
@@ -215,93 +236,16 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
         isFlushingRef.current = true
 
         try {
-            const sessionIdByDate = new Map<string, string>()
-            const blockedDates = new Set<string>()
-            let madeProgress = false
-
-            // O plano é montado uma vez por passada, mas a fila continua mudando
-            // durante o envio: o que saiu dela nesse meio tempo (início
-            // cancelado, falha descartada) não é mais enviado.
-            const sendPlan = buildSendPlan(queueRef.current)
-            for (const step of sendPlan) {
-                if (step.type === 'ensure_session') {
-                    if (blockedDates.has(step.sessionDate)) {
-                        continue
-                    }
-                    if (!hasSessionCreatingOperationFor(queueRef.current, step.sessionDate)) {
-                        continue
-                    }
-                    try {
-                        const ensuredSession = await createSession({
-                            sessionDate: step.sessionDate,
-                            planId: step.planId,
-                            snapshot: step.snapshot,
-                        })
-                        sessionIdByDate.set(step.sessionDate, ensuredSession.id)
-                    } catch {
-                        blockedDates.add(step.sessionDate)
-                    }
-                    continue
-                }
-
-                const { operation } = step
-                if (blockedDates.has(operation.sessionDate) || !isStillQueued(queueRef.current, operation)) {
-                    continue
-                }
-
-                inFlightOperationRef.current = operation
-                try {
-                    if (operation.kind === 'cancel_session_start') {
-                        await sendStartCancellation(operation.sessionDate, sessionIdByDate)
-                        madeProgress = true
-                        updateQueue(removeSentOperation(queueRef.current, operation))
-                        continue
-                    }
-
-                    const sessionId = await resolveSessionId(operation.sessionDate, sessionIdByDate)
-                    if (operation.kind === 'upsert_set') {
-                        await upsertSet({
-                            sessionId,
-                            exerciseKey: operation.exerciseKey,
-                            setIndex: operation.setIndex,
-                            loadKg: operation.values.loadKg,
-                            reps: operation.values.reps,
-                            rir: operation.values.rir,
-                            note: operation.values.note,
-                            completedAt: operation.values.completedAt,
-                            skippedAt: operation.values.skippedAt,
-                            metric: operation.values.metric,
-                            durationSeconds: operation.values.durationSeconds,
-                            distanceM: operation.values.distanceM,
-                            drops: operation.values.drops,
-                            rpe: operation.values.rpe,
-                        })
-                    } else if (operation.kind === 'start_session') {
-                        await recordSessionStart(sessionId, operation.enqueuedAt)
-                    } else if (operation.kind === 'add_extra_exercise') {
-                        await appendSessionExercise(sessionId, operation.exercise)
-                    } else if (operation.kind === 'pause_session' || operation.kind === 'resume_session') {
-                        await recordSessionPause(sessionId, operation.pause)
-                    } else {
-                        // A fila pode ficar horas sem sinal: a hora de fim é a do
-                        // momento em que o treino terminou, não a do envio.
-                        await finishSession(sessionId, operation.enqueuedAt)
-                    }
-
-                    madeProgress = true
-                    updateQueue(removeSentOperation(queueRef.current, operation))
-                } catch (sendError) {
-                    const classification = classifyOutboxError(sendError)
-                    const attemptedOperation = markOperationAttempt(operation, classification)
-                    updateQueue(replaceSentOperation(queueRef.current, operation, attemptedOperation))
-                    if (classification === 'retry') {
-                        blockedDates.add(operation.sessionDate)
-                    }
-                } finally {
-                    inFlightOperationRef.current = null
-                }
-            }
-
+            const madeProgress = await runSendPass(
+                {
+                    read: () => queueRef.current,
+                    write: updateQueue,
+                    setInFlight: (operation) => {
+                        inFlightOperationRef.current = operation
+                    },
+                },
+                SUPABASE_TRANSPORT,
+            )
             backoffDelayRef.current = madeProgress ? null : nextBackoffDelayMs(backoffDelayRef.current)
         } finally {
             isFlushingRef.current = false
@@ -371,19 +315,31 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
     const contextValue = useMemo<OutboxContextValue>(() => {
         const { pending, failed } = countByStatus(queue)
 
+        function enqueueAndSync(operations: OutboxOperation[]) {
+            if (enqueueRecordable(operations)) {
+                void runFlushCycle()
+            }
+        }
+
+        function sessionPauseOperation(
+            kind: 'pause_session' | 'resume_session',
+            sessionDate: string,
+            pause: SessionPauseValues,
+            enqueuedAt: string,
+        ): OutboxOperation {
+            return { kind, sessionDate, pause, enqueuedAt, attempts: 0, status: 'pending' }
+        }
+
         return {
             pendingCount: pending,
             failedCount: failed,
             isOnline,
             getOperationsForDate: (sessionDate: string) => operationsForDate(queue, sessionDate),
             enqueueUpsertSet: (input: EnqueueUpsertSetInput) => {
-                const operation = buildUpsertSetOperation(input, new Date().toISOString())
-                updateQueue(enqueueOperation(queueRef.current, operation))
-                void runFlushCycle()
+                enqueueAndSync([buildUpsertSetOperation(input, new Date().toISOString())])
             },
             stageUpsertSet: (input: EnqueueUpsertSetInput) => {
-                const operation = buildUpsertSetOperation(input, new Date().toISOString())
-                updateQueue(enqueueOperation(queueRef.current, operation))
+                enqueueRecordable([buildUpsertSetOperation(input, new Date().toISOString())])
             },
             syncNow: () => {
                 void runFlushCycle()
@@ -396,57 +352,32 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                     return
                 }
                 const enqueuedAt = new Date().toISOString()
-                const operations = inputs.map((input) => buildUpsertSetOperation(input, enqueuedAt))
-                updateQueue(enqueueOperations(queueRef.current, operations))
-                void runFlushCycle()
+                enqueueAndSync(inputs.map((input) => buildUpsertSetOperation(input, enqueuedAt)))
             },
             enqueueStartSession: (input: EnqueueStartSessionInput) => {
-                updateQueue(enqueueOperation(queueRef.current, buildStartSessionOperation(input)))
-                void runFlushCycle()
+                enqueueAndSync([buildStartSessionOperation(input)])
             },
             enqueueFinishSession: (sessionDate: string, finishedAt: string) => {
-                const operation: OutboxOperation = {
-                    kind: 'finish_session',
-                    sessionDate,
-                    enqueuedAt: finishedAt,
-                    attempts: 0,
-                    status: 'pending',
-                }
-                updateQueue(enqueueOperation(queueRef.current, operation))
-                void runFlushCycle()
+                enqueueAndSync([
+                    { kind: 'finish_session', sessionDate, enqueuedAt: finishedAt, attempts: 0, status: 'pending' },
+                ])
             },
             enqueueAddExtraExercise: (input: EnqueueAddExtraExerciseInput) => {
-                updateQueue(enqueueOperation(queueRef.current, buildAddExtraExerciseOperation(input)))
-                void runFlushCycle()
+                enqueueAndSync([buildAddExtraExerciseOperation(input)])
             },
             discardPendingExtraExercises: (sessionDate: string) => {
                 updateQueue(removePendingExtraExercises(queueRef.current, sessionDate))
             },
             enqueuePauseSession: (sessionDate: string, pause: SessionPauseValues, pausedAt: string) => {
-                const operation: OutboxOperation = {
-                    kind: 'pause_session',
-                    sessionDate,
-                    pause,
-                    enqueuedAt: pausedAt,
-                    attempts: 0,
-                    status: 'pending',
-                }
-                updateQueue(enqueueOperation(queueRef.current, operation))
-                void runFlushCycle()
+                enqueueAndSync([sessionPauseOperation('pause_session', sessionDate, pause, pausedAt)])
             },
             enqueueResumeSession: (sessionDate: string, pause: SessionPauseValues, resumedAt: string) => {
-                const operation: OutboxOperation = {
-                    kind: 'resume_session',
-                    sessionDate,
-                    pause,
-                    enqueuedAt: resumedAt,
-                    attempts: 0,
-                    status: 'pending',
-                }
-                updateQueue(enqueueOperation(queueRef.current, operation))
-                void runFlushCycle()
+                enqueueAndSync([sessionPauseOperation('resume_session', sessionDate, pause, resumedAt)])
             },
             cancelSessionStart: (sessionDate: string, cancelledAt: string) => {
+                if (!isRecordableSessionDate(sessionDate, todayInTimezone())) {
+                    return
+                }
                 const nextQueue = cancelSessionStart(
                     queueRef.current,
                     sessionDate,
@@ -456,12 +387,17 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                 updateQueue(nextQueue)
                 void runFlushCycle()
             },
+            deleteSession: (sessionDate: string) => {
+                updateQueue(deleteSessionFromQueue(queueRef.current, sessionDate, new Date().toISOString()))
+                void runFlushCycle()
+            },
+            hasPendingSessionDeletion: (sessionDate: string) => hasSessionDeletion(queueRef.current, sessionDate),
             discardOperation: (naturalKey: string) => {
                 updateQueue(removeOperation(queueRef.current, naturalKey))
             },
             listFailedOperations: () => operationsWithStatus(queue, 'failed'),
         }
-    }, [queue, isOnline, updateQueue, runFlushCycle])
+    }, [queue, isOnline, updateQueue, enqueueRecordable, runFlushCycle])
 
     return <OutboxContext.Provider value={contextValue}>{children}</OutboxContext.Provider>
 }

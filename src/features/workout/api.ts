@@ -419,3 +419,14 @@ export async function updateSessionFeeling(
 
     return normalizeSessionRow(data)
 }
+
+// Apaga a sessão da data; séries e quedas saem junto pela cascata no banco,
+// e extras e avaliação moram na própria linha. Nenhuma linha apagada não é
+// erro: a sessão pode nunca ter chegado ao servidor.
+export async function deleteSessionForDate(sessionDate: string): Promise<void> {
+    const { error } = await supabase.from('workout_sessions').delete().eq('session_date', sessionDate)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}

@@ -3,6 +3,7 @@
 // erro, pra poder testar sem mock de I/O.
 
 import { appendExtraExercises } from '@/features/workout/extraExercises'
+import { isRecordableSessionDate } from '@/features/workout/recordableDate'
 import {
     setKey,
     type WorkoutSetRow,
@@ -126,7 +127,19 @@ export type CancelSessionStartOperation = {
     status: OutboxOperationStatus
 }
 
+// Exclui no servidor a sessão da data e tudo dela (séries, quedas, extras e
+// avaliação vão junto pela cascata). Entra na fila no lugar de todas as
+// operações da data, para nenhuma delas recriar a sessão depois de apagada.
+export type DeleteSessionOperation = {
+    kind: 'delete_session'
+    sessionDate: string
+    enqueuedAt: string
+    attempts: number
+    status: OutboxOperationStatus
+}
+
 export type OutboxOperation =
+    | DeleteSessionOperation
     | UpsertSetOperation
     | StartSessionOperation
     | AddExtraExerciseOperation
@@ -288,20 +301,22 @@ export function countByStatus(queue: OutboxOperation[]): { pending: number; fail
 }
 
 // Dentro da mesma data, o início vai antes da pausa, das séries e da
-// finalização, na ordem em que as coisas aconteceram no treino. O
-// cancelamento de um início anterior vem antes de tudo: com ele ainda na
+// finalização, na ordem em que as coisas aconteceram no treino. A exclusão da
+// sessão vem antes de tudo: o que estiver na fila junto com ela foi feito
+// depois, num treino recomeçado do zero. O cancelamento de um início anterior vem antes de tudo: com ele ainda na
 // fila, um início novo só vale depois de o antigo ter sido desfeito. O
 // exercício extra entra no snapshot do servidor antes de qualquer série,
 // inclusive as dele; extras entre si mantêm a ordem da fila (a ordenação é
 // estável), que é a ordem em que foram acrescentados.
 const SEND_PRIORITY_BY_KIND: Record<OutboxOperation['kind'], number> = {
-    cancel_session_start: 0,
-    start_session: 1,
-    add_extra_exercise: 2,
-    pause_session: 3,
-    resume_session: 3,
-    upsert_set: 4,
-    finish_session: 5,
+    delete_session: 0,
+    cancel_session_start: 1,
+    start_session: 2,
+    add_extra_exercise: 3,
+    pause_session: 4,
+    resume_session: 4,
+    upsert_set: 5,
+    finish_session: 6,
 }
 
 function sendPriority(operation: OutboxOperation): number {
@@ -324,9 +339,13 @@ export function sortQueueForSending(queue: OutboxOperation[]): OutboxOperation[]
 // serem enviados. Sessões já garantidas na mesma passada de envio não
 // precisam ser repetidas. O snapshot da criação já leva os extras pendentes
 // da data, porque o início ou a série que cria a sessão podem ter sido
-// enfileirados antes deles.
+// enfileirados antes deles. Uma exclusão que falhou de vez segura a data
+// inteira: o treino recomeçado depois dela cairia na sessão antiga, que
+// continua no servidor, até a falha ser descartada.
 export function buildSendPlan(queue: OutboxOperation[]): SendStep[] {
-    const pendingOperations = queue.filter((operation) => operation.status === 'pending')
+    const pendingOperations = queue.filter(
+        (operation) => operation.status === 'pending' && !hasFailedSessionDeletion(queue, operation.sessionDate),
+    )
     const sortedOperations = sortQueueForSending(pendingOperations)
     const sessionsAlreadyEnsured = new Set<string>()
     const steps: SendStep[] = []
@@ -438,6 +457,57 @@ export function findPendingPauseState(operations: OutboxOperation[], sessionDate
     const pendingPauseState = pauseOperation?.pause ?? null
 
     return pendingPauseState
+}
+
+export function hasSessionDeletion(operations: OutboxOperation[], sessionDate: string): boolean {
+    const hasDeletion = operations.some(
+        (operation) => operation.kind === 'delete_session' && operation.sessionDate === sessionDate,
+    )
+
+    return hasDeletion
+}
+
+function hasFailedSessionDeletion(operations: OutboxOperation[], sessionDate: string): boolean {
+    const hasFailedDeletion = operations.some(
+        (operation) =>
+            operation.kind === 'delete_session' && operation.sessionDate === sessionDate && operation.status === 'failed',
+    )
+
+    return hasFailedDeletion
+}
+
+// Excluir o treino do dia descarta tudo o que a data tem na fila, inclusive
+// falhas e uma exclusão anterior, e deixa só a exclusão nova. Ela vai para o
+// servidor mesmo quando nada da data chegou a sair do aparelho, porque a
+// sessão pode ter sido criada lá antes (em outro aparelho ou numa abertura
+// anterior); apagar o que não existe não é erro. Uma operação da data que
+// esteja a caminho do servidor agora termina antes da exclusão, porque o
+// envio é sequencial, e o que ela gravar é apagado junto.
+export function deleteSessionFromQueue(
+    queue: OutboxOperation[],
+    sessionDate: string,
+    deletedAt: string,
+): OutboxOperation[] {
+    const deleteOperation: DeleteSessionOperation = {
+        kind: 'delete_session',
+        sessionDate,
+        enqueuedAt: deletedAt,
+        attempts: 0,
+        status: 'pending',
+    }
+    const queueWithoutDate = queue.filter((operation) => operation.sessionDate !== sessionDate)
+
+    return [...queueWithoutDate, deleteOperation]
+}
+
+// Em data futura nada é registrado; a exclusão continua valendo em qualquer
+// data, para limpar um dia registrado antes dessa regra existir.
+export function isEnqueueableOperation(operation: OutboxOperation, today: string): boolean {
+    if (operation.kind === 'delete_session') {
+        return true
+    }
+
+    return isRecordableSessionDate(operation.sessionDate, today)
 }
 
 export function hasPendingStartCancellation(operations: OutboxOperation[], sessionDate: string): boolean {

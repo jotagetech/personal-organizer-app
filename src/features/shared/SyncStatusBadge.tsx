@@ -86,6 +86,9 @@ function describeOperation(operation: OutboxOperation): string {
     if (operation.kind === 'cancel_session_start') {
         return `Cancelar início do treino de ${operation.sessionDate}`
     }
+    if (operation.kind === 'delete_session') {
+        return `Excluir treino de ${operation.sessionDate}`
+    }
     if (operation.kind === 'add_extra_exercise') {
         return `Adicionar ${operation.exercise.nome} ao treino de ${operation.sessionDate}`
     }

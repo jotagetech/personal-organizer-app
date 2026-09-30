@@ -114,6 +114,14 @@ const cancelSessionStartOperationSchema = z.object({
     status: outboxOperationStatusSchema,
 })
 
+const deleteSessionOperationSchema = z.object({
+    kind: z.literal('delete_session'),
+    sessionDate: z.string(),
+    enqueuedAt: z.string(),
+    attempts: z.number().int().nonnegative(),
+    status: outboxOperationStatusSchema,
+})
+
 // Tipos novos de operação entram na união sem mudar a versão do envelope:
 // filas gravadas antes deles continuam válidas, só não os contêm.
 const outboxOperationSchema = z.discriminatedUnion('kind', [
@@ -124,6 +132,7 @@ const outboxOperationSchema = z.discriminatedUnion('kind', [
     sessionPauseOperationSchema('resume_session'),
     cancelSessionStartOperationSchema,
     finishSessionOperationSchema,
+    deleteSessionOperationSchema,
 ])
 
 const outboxEnvelopeSchema = z.object({
