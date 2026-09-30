@@ -18,6 +18,15 @@ import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/featu
 import { DropSetStepRow } from '@/features/workout/DropSetStepRow'
 import { appendExtraExercise } from '@/features/workout/extraExercises'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
+import { GroupBanner, GroupBox, GroupHandoffPanel } from '@/features/workout/GroupBlocks'
+import {
+    FINISH_WORKOUT_LABEL,
+    groupConfirmLabel,
+    groupHandoffOf,
+    groupHintOf,
+    handoffAnnouncement,
+    type GroupHandoff,
+} from '@/features/workout/groupPresentation'
 import { IntervalStep } from '@/features/workout/IntervalStep'
 import { recordingLockNotice, type RecordingLock } from '@/features/workout/recordableDate'
 import { RestTimerBar } from '@/features/workout/RestTimerBar'
@@ -29,7 +38,7 @@ import { planDefaultRest } from '@/features/workout/restPrescription'
 import { exerciseTags } from '@/features/workout/setPresentation'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
 import { buildSavedWorkoutStep, restoreWorkoutStep, type SavedWorkoutStep } from '@/features/workout/sessionResume'
-import { restAfterSet } from '@/features/workout/supersets'
+import { exerciseBlocksOf, groupContextOf, restAfterSet, supersetLabelOf, type ExerciseBlock } from '@/features/workout/supersets'
 import {
     clearWorkoutStep,
     loadRestTimer,
@@ -105,6 +114,7 @@ const BUTTON_ICON_SIZE = 18
 const FIRST_POSITION: StepPosition = { exerciseIndex: 0, setIndexInExercise: 0 }
 const STATUS_ICON_SIZE = 14
 const STATUS_ICON_STROKE = 3
+const HANDOFF_DURATION_MS = 1500
 
 type WorkoutSessionViewProps = {
     plan: WorkoutPlan
@@ -146,6 +156,9 @@ export function WorkoutSessionView({
     const [switchWorkoutErrorMessage, setSwitchWorkoutErrorMessage] = useState<string | null>(null)
     const [isExercisePickerOpen, setIsExercisePickerOpen] = useState(false)
     const [isAddingExercise, setIsAddingExercise] = useState(false)
+    // Passagem de um membro do grupo para o próximo; só existe na memória e
+    // some sozinha, então reabrir a tela nunca a encontra.
+    const [handoff, setHandoff] = useState<GroupHandoff | null>(null)
     const canRecord = recordingLock === null
     const isShowingDeletedDay = recordingLock === 'excluindo'
     const [restTimer, setRestTimer] = useState<RestTimer | null>(() =>
@@ -267,6 +280,17 @@ export function WorkoutSessionView({
         setSession(null)
         setSetsByKey(new Map())
         setDropsBySetKey(new Map())
+    }
+
+    // Logo depois de concluir uma série com próximo membro na rodada, a tela
+    // avisa a troca sem descanso. `resolvedSetsByKey` já inclui a série recém
+    // concluída, que é o que o contexto do grupo precisa para achar o próximo.
+    function announceGroupHandoff(resolvedSetsByKey: Map<string, WorkoutSetRow>, confirmedPosition: StepPosition) {
+        if (!snapshot) {
+            return
+        }
+        const context = groupContextOf(snapshot, confirmedPosition, resolvedSetsByKey)
+        setHandoff(groupHandoffOf(snapshot, context))
     }
 
     function goToSet(nextPosition: StepPosition | null) {
@@ -640,6 +664,7 @@ export function WorkoutSessionView({
         }
 
         startRestAfterSet(mergeSavedRow(row), position)
+        announceGroupHandoff(mergeSavedRow(row), position)
         handleSetResolved(row)
     }
 
@@ -676,6 +701,7 @@ export function WorkoutSessionView({
         }
 
         startRestAfterSet(currentEffectiveSetsByKey(), position)
+        announceGroupHandoff(currentEffectiveSetsByKey(), position)
         moveToNextUnresolved(currentEffectiveSetsByKey())
     }
 
@@ -683,6 +709,7 @@ export function WorkoutSessionView({
         ensureWorkoutRunning()
         if (position) {
             startRestAfterSet(currentEffectiveSetsByKey(), position)
+            announceGroupHandoff(currentEffectiveSetsByKey(), position)
         }
         moveToNextUnresolved(currentEffectiveSetsByKey())
     }
@@ -831,6 +858,17 @@ export function WorkoutSessionView({
             cancelRestPush()
         }
     }, [isLoading, isShowingDeletedDay, restTimer, isPaused, snapshot, position])
+
+    // A passagem se desfaz sozinha. O temporizador é refeito a cada passagem
+    // nova e cancelado ao sair da tela, para nunca apagar a passagem seguinte.
+    useEffect(() => {
+        if (!handoff) {
+            return
+        }
+        const timeoutId = setTimeout(() => setHandoff(null), HANDOFF_DURATION_MS)
+
+        return () => clearTimeout(timeoutId)
+    }, [handoff])
 
     // O passo atual fica guardado a cada mudança, para sair da aba (ou fechar
     // o app) e voltar na mesma tela. Com o treino concluído não há passo, e o
@@ -1004,6 +1042,25 @@ export function WorkoutSessionView({
     const isOnDropStep = dropPosition !== null && setStatusOf(currentSetRow) === 'completed'
     const currentStep: WizardStep = { position, dropPosition: isOnDropStep ? dropPosition : null }
     const isFinalUnresolvedSet = isOnlyUnresolvedSet(snapshot, effectiveSetsByKey, position)
+    const groupContext = groupContextOf(snapshot, position, effectiveSetsByKey)
+    const hasRestAfterSet =
+        restAfterSet(snapshot, position, effectiveSetsByKey) !== null &&
+        findNextUnresolvedPosition(snapshot, effectiveSetsByKey, position) !== null
+    const groupHint = groupHintOf(snapshot, groupContext, hasRestAfterSet)
+    // A passagem só vale enquanto a tela está no membro para o qual ela
+    // aponta; qualquer outra navegação a deixa sem efeito.
+    const activeHandoff =
+        handoff &&
+        handoff.exerciseKey === currentExercicio.exercise_key &&
+        handoff.setIndexInExercise === position.setIndexInExercise
+            ? handoff
+            : null
+    const setConfirmLabel = isFinalUnresolvedSet && currentSet.quedas.length === 0 ? FINISH_WORKOUT_LABEL : 'Confirmar'
+    const isLastDropStep = isOnDropStep && currentStep.dropPosition === currentSet.quedas.length - 1
+    const dropLabel = dropConfirmLabel(
+        isLastDropStep,
+        findNextUnresolvedPosition(snapshot, effectiveSetsByKey, position) === null,
+    )
     const segmentStatuses = snapshot.exercicios.flatMap((exercicio) =>
         exercicio.series.map((serie) =>
             setStatusOf(effectiveSetsByKey.get(setKey(exercicio.exercise_key, serie.set_index))),
@@ -1034,6 +1091,7 @@ export function WorkoutSessionView({
             </fieldset>
             <ExercisePicker
                 progress={summarizeExerciseProgress(snapshot, effectiveSetsByKey)}
+                blocks={exerciseBlocksOf(snapshot)}
                 currentExerciseIndex={position.exerciseIndex}
                 isOpen={isExercisePickerOpen}
                 onToggle={() => {
@@ -1063,81 +1121,92 @@ export function WorkoutSessionView({
                     onDismiss={() => updateRestTimer(null)}
                 />
             )}
-            <fieldset className="workout-lock" disabled={!canRecord}>
-                <section className="card set-card">
-                    <div className="set-card__eyebrow">
-                        <span>
-                            Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length}
-                        </span>
-                        <span className={isOnDropStep ? 'set-card__set-count set-card__set-count--drop' : 'set-card__set-count'}>
-                            {setCountLabel(currentExercicio, position, isOnDropStep ? currentStep.dropPosition : null)}
-                        </span>
-                    </div>
-                    <h3 className="set-card__exercise-name">{currentExercicio.nome}</h3>
-                    <ExerciseDetails exercicio={currentExercicio} />
-                    <div className="progress-track">
-                        {segmentStatuses.map((status, segmentIndex) => (
-                            <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
-                        ))}
-                    </div>
-                    {currentInterval ? (
-                        <IntervalStep
-                            key={currentExercicio.exercise_key}
-                            sessionDate={sessionDate}
-                            planId={planId}
-                            snapshot={snapshot}
-                            exercicio={currentExercicio}
-                            interval={currentInterval}
-                            setsByKey={effectiveSetsByKey}
-                            confirmLabel={
-                                isOnlyUnresolvedExercise(snapshot, effectiveSetsByKey, position.exerciseIndex)
-                                    ? 'Confirmar e finalizar treino'
-                                    : 'Confirmar rodadas'
-                            }
-                            onConfirmed={handleIntervalConfirmed}
-                            onSkipExercise={handleSkipIntervalExercise}
-                        />
-                    ) : isOnDropStep && currentSetRow && currentStep.dropPosition !== null ? (
-                        <DropSetStepRow
-                            key={`${currentSetKey}:queda:${currentStep.dropPosition}`}
-                            sessionDate={sessionDate}
-                            planId={planId}
-                            snapshot={snapshot}
-                            exercicio={currentExercicio}
-                            serie={currentSet}
-                            dropPosition={currentStep.dropPosition}
-                            parentSet={currentSetRow}
-                            drops={effectiveDropsByKey.get(currentSetKey) ?? []}
-                            confirmLabel={dropConfirmLabel(
-                                currentStep.dropPosition === currentSet.quedas.length - 1,
-                                findNextUnresolvedPosition(snapshot, effectiveSetsByKey, position) === null,
-                            )}
-                            onConfirmed={handleDropConfirmed}
-                            onSkipRemainingDrops={handleSkipRemainingDrops}
-                            onLocalDropsSave={(drops) => handleLocalDropsSaved(currentSetKey, drops)}
-                        />
-                    ) : (
-                        <ExerciseSetRow
-                            key={currentSetKey}
-                            sessionDate={sessionDate}
-                            planId={planId}
-                            snapshot={snapshot}
-                            exercicio={currentExercicio}
-                            serie={currentSet}
-                            existingSet={currentSetRow}
-                            confirmLabel={
-                                isFinalUnresolvedSet && currentSet.quedas.length === 0
-                                    ? 'Confirmar e finalizar treino'
-                                    : 'Confirmar'
-                            }
-                            onConfirmed={handleSetConfirmed}
-                            onSkipped={handleSetSkipped}
-                            onSkipExercise={handleSkipExercise}
-                            onLocalSave={handleLocalSetSaved}
-                        />
-                    )}
-                </section>
-            </fieldset>
+            <div className="visually-hidden" role="status" aria-live="polite">
+                {activeHandoff ? handoffAnnouncement(activeHandoff) : ''}
+            </div>
+            {activeHandoff ? (
+                <GroupHandoffPanel handoff={activeHandoff} onDismiss={() => setHandoff(null)} />
+            ) : (
+                <fieldset className="workout-lock" disabled={!canRecord}>
+                    <section className="card set-card">
+                        {groupContext && <GroupBanner context={groupContext} />}
+                        <div className="set-card__eyebrow">
+                            <span>
+                                Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length}
+                            </span>
+                            <span className={isOnDropStep ? 'set-card__set-count set-card__set-count--drop' : 'set-card__set-count'}>
+                                {setCountLabel(currentExercicio, position, isOnDropStep ? currentStep.dropPosition : null)}
+                            </span>
+                        </div>
+                        <h3 className="set-card__exercise-name">{currentExercicio.nome}</h3>
+                        <ExerciseDetails exercicio={currentExercicio} />
+                        <div className="progress-track">
+                            {segmentStatuses.map((status, segmentIndex) => (
+                                <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
+                            ))}
+                        </div>
+                        {currentInterval ? (
+                            <IntervalStep
+                                key={currentExercicio.exercise_key}
+                                sessionDate={sessionDate}
+                                planId={planId}
+                                snapshot={snapshot}
+                                exercicio={currentExercicio}
+                                interval={currentInterval}
+                                setsByKey={effectiveSetsByKey}
+                                confirmLabel={
+                                    isOnlyUnresolvedExercise(snapshot, effectiveSetsByKey, position.exerciseIndex)
+                                        ? FINISH_WORKOUT_LABEL
+                                        : 'Confirmar rodadas'
+                                }
+                                onConfirmed={handleIntervalConfirmed}
+                                onSkipExercise={handleSkipIntervalExercise}
+                            />
+                        ) : isOnDropStep && currentSetRow && currentStep.dropPosition !== null ? (
+                            <DropSetStepRow
+                                key={`${currentSetKey}:queda:${currentStep.dropPosition}`}
+                                sessionDate={sessionDate}
+                                planId={planId}
+                                snapshot={snapshot}
+                                exercicio={currentExercicio}
+                                serie={currentSet}
+                                dropPosition={currentStep.dropPosition}
+                                parentSet={currentSetRow}
+                                drops={effectiveDropsByKey.get(currentSetKey) ?? []}
+                                confirmLabel={
+                                    isLastDropStep
+                                        ? groupConfirmLabel(groupContext, dropLabel)
+                                        : dropLabel
+                                }
+                                groupHint={isLastDropStep ? groupHint : null}
+                                onConfirmed={handleDropConfirmed}
+                                onSkipRemainingDrops={handleSkipRemainingDrops}
+                                onLocalDropsSave={(drops) => handleLocalDropsSaved(currentSetKey, drops)}
+                            />
+                        ) : (
+                            <ExerciseSetRow
+                                key={currentSetKey}
+                                sessionDate={sessionDate}
+                                planId={planId}
+                                snapshot={snapshot}
+                                exercicio={currentExercicio}
+                                serie={currentSet}
+                                existingSet={currentSetRow}
+                                confirmLabel={
+                                    currentSet.quedas.length === 0
+                                        ? groupConfirmLabel(groupContext, setConfirmLabel)
+                                        : setConfirmLabel
+                                }
+                                groupHint={currentSet.quedas.length === 0 ? groupHint : null}
+                                onConfirmed={handleSetConfirmed}
+                                onSkipped={handleSetSkipped}
+                                onSkipExercise={handleSkipExercise}
+                                onLocalSave={handleLocalSetSaved}
+                            />
+                        )}
+                    </section>
+                </fieldset>
+            )}
             {!isFirstStep(currentStep) && (
                 <button type="button" className="ghost-button" onClick={handleGoBack}>
                     <ChevronLeft size={BUTTON_ICON_SIZE} aria-hidden="true" />
@@ -1189,7 +1258,7 @@ function dropConfirmLabel(isLastDrop: boolean, isWorkoutOtherwiseDone: boolean):
         return 'Confirmar queda'
     }
 
-    return isWorkoutOtherwiseDone ? 'Confirmar e finalizar treino' : 'Confirmar'
+    return isWorkoutOtherwiseDone ? FINISH_WORKOUT_LABEL : 'Confirmar'
 }
 
 // Etiquetas e observações do plano ficam no card, acima dos campos, e valem
@@ -1226,6 +1295,7 @@ const PROGRESS_SEGMENT_CLASS_BY_STATUS = {
 
 type ExercisePickerProps = {
     progress: ExerciseProgress[]
+    blocks: ExerciseBlock[]
     currentExerciseIndex: number
     isOpen: boolean
     onToggle: () => void
@@ -1239,6 +1309,7 @@ type ExercisePickerProps = {
 
 function ExercisePicker({
     progress,
+    blocks,
     currentExerciseIndex,
     isOpen,
     onToggle,
@@ -1264,22 +1335,26 @@ function ExercisePicker({
             </button>
             {isOpen && (
                 <div className="exercise-picker__list">
-                    {progress.map((exercise) => (
-                        <button
-                            key={exercise.exerciseIndex}
-                            type="button"
-                            className={exercisePickerItemClass(exercise, currentExerciseIndex)}
-                            aria-current={exercise.exerciseIndex === currentExerciseIndex ? 'step' : undefined}
-                            onClick={() => onSelect(exercise.exerciseIndex)}
-                        >
-                            <ExerciseStatusMarker exercise={exercise} />
-                            <span className="exercise-picker__name">
-                                {exercise.nome}
-                                {exercise.isExtra && <span className="exercise-picker__extra-tag">extra</span>}
-                            </span>
-                            <span className="exercise-picker__status">{formatExerciseStatus(exercise)}</span>
-                        </button>
-                    ))}
+                    {blocks.map((block) => {
+                        const items = block.exerciseIndexes.map((exerciseIndex) => (
+                            <ExercisePickerItem
+                                key={exerciseIndex}
+                                exercise={progress[exerciseIndex]}
+                                isCurrent={exerciseIndex === currentExerciseIndex}
+                                currentExerciseIndex={currentExerciseIndex}
+                                onSelect={onSelect}
+                            />
+                        ))
+                        if (block.grupo === null) {
+                            return items
+                        }
+
+                        return (
+                            <GroupBox key={block.exerciseIndexes[0]} label={supersetLabelOf(block.exerciseIndexes.length)}>
+                                {items}
+                            </GroupBox>
+                        )
+                    })}
                     {addExercisePanel ? (
                         <div className="exercise-picker__add-panel">{addExercisePanel}</div>
                     ) : (
@@ -1296,6 +1371,31 @@ function ExercisePicker({
                 </div>
             )}
         </div>
+    )
+}
+
+type ExercisePickerItemProps = {
+    exercise: ExerciseProgress
+    isCurrent: boolean
+    currentExerciseIndex: number
+    onSelect: (exerciseIndex: number) => void
+}
+
+function ExercisePickerItem({ exercise, isCurrent, currentExerciseIndex, onSelect }: ExercisePickerItemProps) {
+    return (
+        <button
+            type="button"
+            className={exercisePickerItemClass(exercise, currentExerciseIndex)}
+            aria-current={isCurrent ? 'step' : undefined}
+            onClick={() => onSelect(exercise.exerciseIndex)}
+        >
+            <ExerciseStatusMarker exercise={exercise} />
+            <span className="exercise-picker__name">
+                {exercise.nome}
+                {exercise.isExtra && <span className="exercise-picker__extra-tag">extra</span>}
+            </span>
+            <span className="exercise-picker__status">{formatExerciseStatus(exercise)}</span>
+        </button>
     )
 }
 

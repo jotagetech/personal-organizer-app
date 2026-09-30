@@ -46,6 +46,8 @@ type DropSetStepRowProps = {
     parentSet: WorkoutSetRow
     drops: OutboxDropValues[]
     confirmLabel: string
+    // Dica do grupo na última queda, que é a que fecha a série; nula fora dela.
+    groupHint: string | null
     onConfirmed: () => void
     onSkipRemainingDrops: () => void
     onLocalDropsSave: (drops: OutboxDropValues[]) => void
@@ -65,6 +67,7 @@ export function DropSetStepRow({
     parentSet,
     drops,
     confirmLabel,
+    groupHint,
     onConfirmed,
     onSkipRemainingDrops,
     onLocalDropsSave,
@@ -209,6 +212,7 @@ export function DropSetStepRow({
                     />
                 </div>
             </div>
+            {groupHint && <p className="set-card__group-hint">{groupHint}</p>}
             <button
                 type="button"
                 className="primary-button set-card__confirm"

@@ -1,5 +1,11 @@
 import { formatDropResult, formatSetResult } from '@/features/results/setResultText'
-import type { WorkoutExerciseSummary, WorkoutSetSummary, WorkoutSummary } from '@/features/results/daySummary'
+import {
+    groupExerciseSummaries,
+    type WorkoutExerciseSummary,
+    type WorkoutSetSummary,
+    type WorkoutSummary,
+} from '@/features/results/daySummary'
+import { GroupBox } from '@/features/workout/GroupBlocks'
 import { formatIntervalPrescription, formatIntervalResult } from '@/features/workout/intervalPresentation'
 import type { SetStatus } from '@/features/workout/sessionProgress'
 import type { WorkoutSnapshotInterval } from '@/features/workout/types'
@@ -12,9 +18,20 @@ export function WorkoutSummaryView({ summary }: WorkoutSummaryViewProps) {
     return (
         <>
             <div className="day-workout__exercises">
-                {summary.exercises.map((exercise) => (
-                    <WorkoutExerciseDetail key={exercise.exerciseKey} exercise={exercise} />
-                ))}
+                {groupExerciseSummaries(summary.exercises).map((block) => {
+                    const details = block.exercises.map((exercise) => (
+                        <WorkoutExerciseDetail key={exercise.exerciseKey} exercise={exercise} />
+                    ))
+                    if (block.groupLabel === null) {
+                        return details
+                    }
+
+                    return (
+                        <GroupBox key={block.exercises[0].exerciseKey} label={block.groupLabel}>
+                            {details}
+                        </GroupBox>
+                    )
+                })}
             </div>
             {summary.orphanSets.length > 0 && (
                 <p className="day-workout__orphans">

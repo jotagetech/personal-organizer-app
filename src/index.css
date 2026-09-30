@@ -47,6 +47,14 @@
 
     --color-skipped: #a1a1aa;
 
+    /* Ciano é a cor dos grupos (bi-set, tri-set, circuito) e de mais nada:
+       lima e âmbar já significam concluído e pendente. */
+    --color-group: #0e7490;
+    --color-group-soft: #ecfeff;
+    --color-group-border: #67c4d6;
+    --color-group-text: #155e75;
+    --color-on-group: #ffffff;
+
     --color-info-surface: #eff6ff;
     --color-info-border: #dbeafe;
 
@@ -118,6 +126,12 @@
 
         --color-skipped: #71717a;
 
+        --color-group: #22d3ee;
+        --color-group-soft: #0f2f36;
+        --color-group-border: #1d6b7a;
+        --color-group-text: #67e8f9;
+        --color-on-group: #04222a;
+
         --color-info-surface: #121c30;
         --color-info-border: #1f2f4f;
 
@@ -182,6 +196,12 @@
     --color-error-text: #fca5a5;
 
     --color-skipped: #71717a;
+
+    --color-group: #22d3ee;
+    --color-group-soft: #0b2a31;
+    --color-group-border: #176577;
+    --color-group-text: #67e8f9;
+    --color-on-group: #04222a;
 
     --color-info-surface: #121c30;
     --color-info-border: #1f2f4f;
@@ -3906,4 +3926,214 @@ h1, h2, h3, h4 {
 
 .builder-issues__message {
     display: block;
+}
+
+/* Grupos de exercícios (bi-set, tri-set, circuito): tudo em ciano, à parte de
+   lima (feito) e âmbar (pendente). */
+.group-banner {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.group-banner__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    min-height: var(--touch-target);
+    padding: 6px 12px;
+    border: 1px solid var(--color-group-border);
+    border-radius: var(--radius-md);
+    background: var(--color-group-soft);
+    color: var(--color-group-text);
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: var(--display-letter-spacing);
+    text-transform: var(--display-text-transform);
+}
+
+.group-banner__round {
+    font-variant-numeric: tabular-nums;
+}
+
+.group-banner__chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.group-banner__arrow {
+    color: var(--color-group-text);
+    font-size: 12px;
+}
+
+.group-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 4px 10px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.group-chip--current {
+    border-color: var(--color-group);
+    background: var(--color-group);
+    color: var(--color-on-group);
+    font-weight: 700;
+}
+
+.group-chip--done {
+    border-color: var(--color-done);
+    color: var(--color-text);
+}
+
+.group-chip--done svg {
+    flex-shrink: 0;
+    color: var(--color-done);
+}
+
+.group-chip--rest {
+    border-style: dashed;
+    border-color: var(--color-group-border);
+    color: var(--color-group-text);
+}
+
+.set-card__group-hint {
+    margin: 12px 0 0;
+    padding: 8px 12px;
+    border-left: 3px solid var(--color-group);
+    border-radius: var(--radius-sm);
+    background: var(--color-group-soft);
+    color: var(--color-group-text);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.set-card__group-hint + .set-card__confirm {
+    margin-top: 8px;
+}
+
+.group-handoff {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 160px;
+    margin-bottom: 12px;
+    padding: 20px 16px;
+    border: 1px solid var(--color-group);
+    border-radius: var(--radius-lg);
+    background: var(--color-group-soft);
+    color: var(--color-group-text);
+    text-align: left;
+    animation: group-handoff-in 0.18s ease-out;
+}
+
+.group-handoff__kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.group-handoff__title {
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: var(--display-letter-spacing);
+    line-height: 1.05;
+    text-transform: var(--display-text-transform);
+    overflow-wrap: anywhere;
+}
+
+.group-handoff__detail {
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes group-handoff-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .group-handoff {
+        animation: none;
+    }
+}
+
+.group-box {
+    margin: 6px;
+    overflow: hidden;
+    border: 1px solid var(--color-group-border);
+    border-radius: var(--radius-md);
+    background: var(--color-group-soft);
+}
+
+.group-box__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    padding: 8px 12px 6px;
+}
+
+.group-box__title {
+    color: var(--color-group-text);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.group-box__caption {
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.group-box .exercise-picker__item:first-of-type {
+    border-top: 1px solid var(--color-group-border);
+}
+
+.group-box .day-workout__exercise {
+    padding-inline: 12px;
+}
+
+.group-box__header + .day-workout__exercise,
+.group-box .day-workout__exercise + .day-workout__exercise {
+    border-top: 1px solid var(--color-group-border);
+}
+
+.group-box .day-workout__exercise:last-child {
+    padding-bottom: 10px;
+}
+
+.day-workout__exercises .group-box {
+    margin: 6px 0;
 }

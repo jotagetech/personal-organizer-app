@@ -57,6 +57,8 @@ type ExerciseSetRowProps = {
     serie: WorkoutSnapshotExerciseSet
     existingSet: WorkoutSetRow | undefined
     confirmLabel: string
+    // Dica do grupo (bi-set, tri-set, circuito) sob os campos; nula fora de um.
+    groupHint: string | null
     onConfirmed: (row: WorkoutSetRow) => void
     onSkipped: (row: WorkoutSetRow) => void
     onSkipExercise: (row: WorkoutSetRow) => void
@@ -71,6 +73,7 @@ export function ExerciseSetRow({
     serie,
     existingSet,
     confirmLabel,
+    groupHint,
     onConfirmed,
     onSkipped,
     onSkipExercise,
@@ -427,6 +430,7 @@ export function ExerciseSetRow({
                 </button>
             ) : (
                 <>
+                    {groupHint && <p className="set-card__group-hint">{groupHint}</p>}
                     <button
                         type="button"
                         className="primary-button set-card__confirm"
