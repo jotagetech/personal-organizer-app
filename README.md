@@ -316,6 +316,15 @@ hash, o plano salvo vira o ativo); nada muda na forma como o plano é lido.
   equipamento sugere a forma de carga (halteres: por halter; barra: total;
   máquina assistida, que no arquivo vira `maquina` com `assistencia`:
   assistência; peso corporal: peso corporal), e dá para trocar.
+- Bi-set, tri-set e circuito: em exercício de séries, "Agrupar com o
+  próximo" junta o exercício com o de baixo (se um dos dois já está num
+  grupo, o outro entra nele; se os dois estão, os grupos viram um só) e
+  "Desagrupar" tira só aquele exercício do grupo. O rótulo do `grupo` é
+  gerado pela tela, nunca digitado, e os membros aparecem juntos numa caixa
+  com o nome (Bi-set, Tri-set ou Circuito). Subir, descer, remover, duplicar
+  ou trocar para cardio nunca deixa grupo quebrado: o que ficar fora de
+  sequência sai do grupo, e um grupo que sobra com um exercício só deixa de
+  existir. Cardio intervalado não entra em grupo.
 - Toda faixa tem o modo "Fixo", que grava o mesmo número no mínimo e no
   máximo.
 - "Descanso padrão", no topo do plano, vale para os exercícios sem descanso
@@ -405,6 +414,22 @@ Atenção para não confundir os dois: `por_lado: true` fala de **como o exercí
 é executado** (um lado por vez), enquanto `forma_carga: "por_lado"` fala de
 **quanto peso o número da carga representa** (o que está em cada lado da
 barra). Os dois podem aparecer juntos ou separados.
+
+**Bi-set, tri-set e circuito** (`grupo`, no exercício de séries): exercícios
+vizinhos no treino com o mesmo `grupo` são feitos alternando, uma série de
+cada por vez, em rodadas (A1, B1, A2, B2...). Com 2 membros o app chama de
+Bi-set, com 3 de Tri-set e com 4 ou mais de Circuito. O descanso só vem no fim
+da rodada, depois da série do último membro, e vale o descanso desse membro
+(série, exercício ou padrão do plano); a troca entre membros é sem descanso.
+O rótulo é livre (até 40 caracteres) e só liga os exercícios entre si:
+
+```json
+{ "id": "supino-inclinado", "nome": "Supino inclinado", "grupo": "peito-triceps", "series": [{ "repeticoes_min": 10, "repeticoes_max": 12 }] }
+```
+
+Regras: os membros precisam estar em sequência no treino, o grupo precisa de
+pelo menos 2 exercícios e `grupo` não vale no cardio intervalado. Um membro
+com menos séries que os outros sai das rodadas finais.
 
 **Descanso** prescrito, em segundos (`descanso_segundos_min` e
 `descanso_segundos_max`, sempre o par):

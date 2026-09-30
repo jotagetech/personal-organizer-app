@@ -50,6 +50,41 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 - Trocar o treino do dia antes de a sessão existir só fecha o descanso na
   tela quando ele é da própria data.
 
+## 2026-09-30
+
+### Adicionado
+
+- Bi-set, tri-set e circuito. O contrato do plano ganha `grupo` opcional no
+  exercício de séries: exercícios vizinhos com o mesmo `grupo` formam um
+  grupo (2 membros é Bi-set, 3 é Tri-set, 4 ou mais é Circuito). A validação
+  exige membros em sequência no treino, pelo menos 2 por grupo e recusa
+  `grupo` no cardio intervalado; o JSON Schema e o snapshot da sessão levam o
+  campo, e um exercício extra nunca entra num grupo.
+- Ordem alternada na sessão: uma série de cada membro por rodada (A1, B1, A2,
+  B2...), seguindo a ordem da ficha; um membro com menos séries sai das
+  rodadas finais. O descanso e o push de fim de descanso só acontecem ao fechar
+  a rodada, e usam o descanso do membro que a fecha.
+- Faixa ciano no topo do card da série com o rótulo do grupo, "Rodada N de M"
+  e os membros como chips (atual, feito na rodada, falta) terminando em
+  "descanso". O botão de confirmar vira "Confirmar e ir pra X" quando há
+  próximo membro na rodada, com uma dica sob os campos (sem descanso, alvo e
+  carga sugerida do próximo); "Confirmar e finalizar treino" não é trocado. Logo
+  depois de confirmar, um painel curto de passagem mostra para onde ir, some
+  sozinho ou ao toque e é anunciado por leitor de tela.
+- Os membros do grupo aparecem juntos numa caixa com o rótulo no seletor de
+  exercícios e no resumo do dia.
+- A exportação do período leva o campo `superset_group` em cada exercício.
+- Montador de plano: em exercício de séries, "Agrupar com o próximo" junta com
+  o de baixo (se um dos dois já tem grupo, o outro entra nele; se os dois têm,
+  viram um só) e "Desagrupar" tira só aquele exercício, e um grupo que fica com
+  um exercício só desaparece. O rótulo é gerado pela tela e nunca digitado; os
+  cartões do grupo ficam juntos numa caixa com o rótulo. Subir, descer, remover,
+  duplicar ou trocar para cardio nunca deixa grupo fora de sequência, de um
+  exercício só ou no intervalado: o trecho que sobra se separa ou se desfaz. O
+  `grupo` passa pelo carregamento, pelo rascunho e pelo arquivo salvo ou
+  baixado, e o erro de grupo abre o exercício e leva ao campo como os outros.
+  O plano de exemplo ganhou um bi-set.
+
 ## 2026-09-29
 
 ### Adicionado
