@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
+import { SignOutSection } from '@/features/account/SignOutSection'
 import { BodyWeightLog, SleepLog } from '@/features/bodyMetrics/BodyMetricLogs'
 import { PeriodExportPanel } from '@/features/export/PeriodExportPanel'
 import { FoodItemsCatalog } from '@/features/food/FoodItemsCatalog'
@@ -106,6 +107,7 @@ function MenuHome({ onOpenTool }: { onOpenTool: (toolKey: MenuToolKey) => void }
                 </div>
             </section>
             <PushNotificationsSection />
+            <SignOutSection />
         </div>
     )
 }

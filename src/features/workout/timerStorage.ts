@@ -125,3 +125,11 @@ export function clearWorkoutLocalStateForDate(sessionDate: string): { hadRestTim
 
     return { hadRestTimer }
 }
+
+// Saída da conta: nenhum cronômetro nem passo guardado sobrevive para a
+// próxima conta que entrar no mesmo aparelho.
+export function clearAllWorkoutLocalState(): void {
+    for (const key of [STOPWATCH_KEY, REST_KEY, INTERVAL_KEY, RESUME_KEY]) {
+        writeItem(key, null)
+    }
+}

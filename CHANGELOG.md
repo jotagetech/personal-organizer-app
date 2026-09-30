@@ -7,6 +7,12 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Sair da conta, no fim da aba Menu (seção Conta, com o e-mail logado), com
+  confirmação. Fica bloqueado enquanto houver registro do treino não enviado,
+  porque a fila do aparelho não é separada por conta. Ao sair, as
+  notificações do aparelho são desligadas (a assinatura é apagada antes do
+  logout) e somem os cronômetros, o passo guardado do treino e o rascunho do
+  montador.
 - Excluir treino do dia, no menu de três pontos da aba Treino, quando a data
   tem sessão registrada (no servidor ou só na fila do aparelho), em qualquer
   data e com o treino em andamento ou concluído. O item do menu pede um
