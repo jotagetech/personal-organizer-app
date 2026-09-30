@@ -7,6 +7,13 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Seção Ciclos em Resultados, abaixo da grade: cada ciclo com número,
+  período, dias decorridos, treinos concluídos e sem finalizar, planos usados
+  e a última semana do bloco. Tocar num ciclo leva a grade até ele.
+- Editar a data de início e excluir um ciclo, na seção Ciclos. A exclusão
+  pede confirmação; os treinos continuam registrados e passam a contar no
+  ciclo anterior.
+- "Ciclo anterior" e "Próximo ciclo" na grade de Resultados.
 - Cabeçalho da aba Treino com o ciclo da data aberta: "Ciclo N · Dia D", a
   semana do bloco com "volta V" a partir da segunda passada, e "próximo em
   N dias" quando já existe um ciclo marcado para depois.
@@ -58,6 +65,8 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- Iniciar um ciclo numa data que já tem ciclo reaproveita o existente em
+  vez de criar outro no mesmo dia (migração `20260930010000`).
 - A grade de Resultados segue o ciclo da data selecionada, com número do
   ciclo e o último dia quando ele já terminou, em vez de sempre o ciclo mais
   recente.

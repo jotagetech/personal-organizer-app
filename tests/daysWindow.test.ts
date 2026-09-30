@@ -4,6 +4,7 @@ import type { WorkoutCycleRow } from '@/features/cycle/types'
 import {
     formatDaysGridTitle,
     formatExpandGridLabel,
+    resolveCycleNavigation,
     resolveDaysRangeEnd,
     resolveDaysWindow,
 } from '@/features/evolution/sections/daysWindow'
@@ -74,5 +75,41 @@ describe('textos da grade', () => {
         expect(formatExpandGridLabel(resolveDaysWindow(CYCLES, '2026-05-10', TODAY), 8)).toBe(
             'Ver todas as semanas (8 semanas)',
         )
+    })
+})
+
+describe('resolveCycleNavigation', () => {
+    it('vai ao último dia do anterior e ao primeiro dia do seguinte', () => {
+        const cycles = [...CYCLES, cycleRow('c3', '2026-08-10')]
+
+        expect(resolveCycleNavigation(cycles, '2026-07-20')).toEqual({
+            previousDate: '2026-07-05',
+            nextDate: '2026-08-10',
+        })
+    })
+
+    it('não tem anterior no primeiro ciclo', () => {
+        expect(resolveCycleNavigation(CYCLES, '2026-06-15')).toEqual({
+            previousDate: null,
+            nextDate: '2026-07-06',
+        })
+    })
+
+    it('não tem próximo no ciclo em aberto', () => {
+        expect(resolveCycleNavigation(CYCLES, TODAY)).toEqual({
+            previousDate: '2026-07-05',
+            nextDate: null,
+        })
+    })
+
+    it('antes do primeiro ciclo só oferece o próximo', () => {
+        expect(resolveCycleNavigation(CYCLES, '2026-05-01')).toEqual({
+            previousDate: null,
+            nextDate: '2026-06-01',
+        })
+    })
+
+    it('não oferece nada sem ciclos', () => {
+        expect(resolveCycleNavigation([], TODAY)).toEqual({ previousDate: null, nextDate: null })
     })
 })

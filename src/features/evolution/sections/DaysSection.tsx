@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
-import { listCycles } from '@/features/cycle/api'
-import type { WorkoutCycleRow } from '@/features/cycle/types'
+import { useCycleHistory } from '@/features/evolution/data/CycleHistoryContext'
+import { CycleHistoryErrorBanner } from '@/features/evolution/data/CycleHistoryErrorBanner'
 import {
+    type CycleNavigation,
     formatDayMonth,
     formatDaysGridTitle,
     formatExpandGridLabel,
+    resolveCycleNavigation,
     resolveDaysRangeEnd,
     resolveDaysWindow,
 } from '@/features/evolution/sections/daysWindow'
@@ -34,35 +36,15 @@ function loadErrorText(loadError: unknown): string {
 
 export function DaysSection() {
     const { selectedDate, setSelectedDate } = useSelectedDate()
-    const [cycles, setCycles] = useState<WorkoutCycleRow[] | null>(null)
+    const { history, errorMessage: historyErrorMessage } = useCycleHistory()
+    const cycles = history?.cycles ?? null
     const [finished, setFinished] = useState<FinishedDates | null>(null)
-    const [errorMessage, setErrorMessage] = useState<string | null>(null)
+    const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
+    const errorMessage = loadErrorMessage ?? (history ? null : historyErrorMessage)
     const [isShowingWholeCycle, setIsShowingWholeCycle] = useState(false)
     const today = todayInTimezone()
     const daysWindow = cycles ? resolveDaysWindow(cycles, selectedDate, today) : null
     const rangeStart = daysWindow?.rangeStart ?? null
-
-    useEffect(() => {
-        let isCancelled = false
-
-        async function loadCycles() {
-            try {
-                const loadedCycles = await listCycles()
-                if (!isCancelled) {
-                    setCycles(loadedCycles)
-                }
-            } catch (loadError) {
-                if (!isCancelled) {
-                    setErrorMessage(loadErrorText(loadError))
-                }
-            }
-        }
-
-        void loadCycles()
-        return () => {
-            isCancelled = true
-        }
-    }, [])
 
     // Só a troca de ciclo muda o início da janela; tocar em outro dia do mesmo
     // ciclo reaproveita os treinos já carregados.
@@ -81,7 +63,7 @@ export function DaysSection() {
                 }
             } catch (loadError) {
                 if (!isCancelled) {
-                    setErrorMessage(loadErrorText(loadError))
+                    setLoadErrorMessage(loadErrorText(loadError))
                 }
             }
         }
@@ -116,7 +98,14 @@ export function DaysSection() {
 
     return (
         <div>
+            <CycleHistoryErrorBanner />
             <h2 className="section-title results-tab__title">{formatDaysGridTitle(daysWindow)}</h2>
+            {cycles && cycles.length > 0 && (
+                <CycleNavigationButtons
+                    navigation={resolveCycleNavigation(cycles, selectedDate)}
+                    onNavigate={setSelectedDate}
+                />
+            )}
             <div className="results-grid">
                 <div className="results-grid__row results-grid__row--header">
                     {(Object.keys(WEEKDAY_LABELS) as Weekday[]).map((weekday) => (
@@ -157,6 +146,36 @@ export function DaysSection() {
                 </div>
             )}
             <DayDetail selectedDate={selectedDate} />
+        </div>
+    )
+}
+
+type CycleNavigationButtonsProps = {
+    navigation: CycleNavigation
+    onNavigate: (date: IsoDate) => void
+}
+
+function CycleNavigationButtons({ navigation, onNavigate }: CycleNavigationButtonsProps) {
+    const { previousDate, nextDate } = navigation
+
+    return (
+        <div className="cycle-nav">
+            <button
+                type="button"
+                className="cycle-nav__button"
+                disabled={previousDate === null}
+                onClick={() => previousDate !== null && onNavigate(previousDate)}
+            >
+                ‹ Ciclo anterior
+            </button>
+            <button
+                type="button"
+                className="cycle-nav__button"
+                disabled={nextDate === null}
+                onClick={() => nextDate !== null && onNavigate(nextDate)}
+            >
+                Próximo ciclo ›
+            </button>
         </div>
     )
 }

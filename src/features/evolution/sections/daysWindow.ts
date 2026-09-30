@@ -1,4 +1,4 @@
-import { cycleForDate } from '@/features/cycle/cycleTimeline'
+import { cycleForDate, nextCycleAfter } from '@/features/cycle/cycleTimeline'
 import type { WorkoutCycleRow } from '@/features/cycle/types'
 import { shiftIsoDate, type IsoDate } from '@/lib/dateUtils'
 
@@ -81,4 +81,24 @@ export function formatExpandGridLabel(window: DaysWindow, totalWeeks: number): s
     const label = `${scopeLabel} (${totalWeeks} semanas)`
 
     return label
+}
+
+export type CycleNavigation = {
+    // Último dia do ciclo anterior; nulo quando não há ciclo antes.
+    previousDate: IsoDate | null
+    // Primeiro dia do ciclo seguinte; nulo quando não há ciclo depois.
+    nextDate: IsoDate | null
+}
+
+// Antes do primeiro ciclo não existe "anterior", e o "próximo" é o primeiro
+// ciclo cadastrado.
+export function resolveCycleNavigation(cycles: readonly WorkoutCycleRow[], selectedDate: IsoDate): CycleNavigation {
+    const current = cycleForDate(cycles, selectedDate)
+    const nextCycle = nextCycleAfter(cycles, selectedDate)
+    const nextDate = nextCycle ? nextCycle.start_date : null
+    const previousDate = current && cycles.some((cycle) => cycle.start_date < current.cycle.start_date)
+        ? shiftIsoDate(current.cycle.start_date, -1)
+        : null
+
+    return { previousDate, nextDate }
 }
