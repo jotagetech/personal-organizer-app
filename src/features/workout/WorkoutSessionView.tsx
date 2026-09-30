@@ -1056,6 +1056,7 @@ export function WorkoutSessionView({
                         sets={Array.from(effectiveSetsByKey.values())}
                         dropsBySetKey={effectiveDropsByKey}
                         onSessionUpdated={setSession}
+                        onSetCorrected={session.finished_at ? handleLocalSetSaved : undefined}
                     />
                 ) : (
                     <p className="save-status">Treino concluído no aparelho, sincronizando com o servidor...</p>

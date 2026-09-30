@@ -268,7 +268,7 @@ function primaryMetricOf(appearance: Appearance): SetMetric {
     return metric
 }
 
-function estimateOneRepMax(loadKg: number, reps: number): number {
+export function estimateOneRepMax(loadKg: number, reps: number): number {
     const estimate = loadKg * (1 + reps / EPLEY_REPS_DIVISOR)
 
     return estimate
@@ -295,7 +295,7 @@ function lowerRecord(current: RecordEntry | null, value: number, date: IsoDate):
     return current
 }
 
-function isEstimable(set: LogSet): boolean {
+export function isEstimable(set: LogSet): boolean {
     const canEstimate =
         set.loadKg !== null &&
         set.reps !== null &&
@@ -319,13 +319,13 @@ function sum(values: readonly number[]): number {
 
 // A série e as quedas dela entram no volume; só a série principal entra nos
 // recordes de carga.
-function sessionVolume(sets: readonly LogSet[]): number {
+export function sessionVolume(sets: readonly LogSet[]): number {
     const volume = sum(sets.map((set) => loadTimesReps(set) + sum(set.drops.map(loadTimesReps))))
 
     return volume
 }
 
-function sessionTotalReps(sets: readonly LogSet[]): number {
+export function sessionTotalReps(sets: readonly LogSet[]): number {
     const totalReps = sum(sets.map((set) => (set.reps ?? 0) + sum(set.drops.map((drop) => drop.reps ?? 0))))
 
     return totalReps
@@ -374,7 +374,16 @@ function addRepsRecords(records: ExerciseRecords, sets: readonly LogSet[], date:
     }
 }
 
-function recordsOf(appearances: readonly Appearance[]): ExerciseRecords | null {
+type RecordScope = {
+    metric: SetMetric
+    formaCarga: LoadConvention
+    hasOtherLoadForm: boolean
+    appearances: Appearance[]
+}
+
+// Só as aparições na forma de carga da mais recente entram quando a métrica é
+// de repetições; tempo e distância não dependem de carga.
+function scopeOf(appearances: readonly Appearance[]): RecordScope | null {
     if (appearances.length === 0) {
         return null
     }
@@ -384,11 +393,34 @@ function recordsOf(appearances: readonly Appearance[]): ExerciseRecords | null {
     const isRepsMetric = metric === 'repeticoes'
     const scoped = isRepsMetric
         ? appearances.filter((appearance) => appearance.formaCarga === latest.formaCarga)
-        : appearances
-    const records: ExerciseRecords = {
+        : [...appearances]
+    const scope = {
         metric,
         formaCarga: latest.formaCarga,
         hasOtherLoadForm: scoped.length < appearances.length,
+        appearances: scoped,
+    }
+
+    return scope
+}
+
+function metricSets(appearance: Appearance, metric: SetMetric): LogSet[] {
+    const sets = appearance.sets.filter((set) => setMetricOf(set, appearance.exercise) === metric)
+
+    return sets
+}
+
+function recordsOf(appearances: readonly Appearance[]): ExerciseRecords | null {
+    const scope = scopeOf(appearances)
+    if (scope === null) {
+        return null
+    }
+
+    const { metric } = scope
+    const records: ExerciseRecords = {
+        metric,
+        formaCarga: scope.formaCarga,
+        hasOtherLoadForm: scope.hasOtherLoadForm,
         maxLoad: null,
         maxReps: null,
         maxBallast: null,
@@ -399,9 +431,9 @@ function recordsOf(appearances: readonly Appearance[]): ExerciseRecords | null {
         maxDistance: null,
     }
 
-    scoped.forEach((appearance) => {
+    scope.appearances.forEach((appearance) => {
         const date = appearance.session.sessionDate
-        const sets = appearance.sets.filter((set) => setMetricOf(set, appearance.exercise) === metric)
+        const sets = metricSets(appearance, metric)
         if (metric === 'tempo') {
             sets.forEach((set) => {
                 records.maxDuration = beatRecord(records.maxDuration, set.durationSeconds ?? 0, date)
@@ -553,4 +585,32 @@ export function exerciseRecords(log: ExerciseLog, key: string, range?: DateRange
     const records = recordsOf(appearancesByKey(log, range).get(key) ?? [])
 
     return records
+}
+
+export type SessionSets = {
+    date: IsoDate
+    // Só as séries principais da métrica do exercício, em ordem de índice.
+    sets: LogSet[]
+}
+
+// As sessões que os recordes consideram, da mais antiga para a mais nova,
+// para as séries por sessão usarem exatamente o mesmo recorte.
+export type SeriesScope = {
+    metric: SetMetric
+    formaCarga: LoadConvention
+    sessions: SessionSets[]
+}
+
+export function exerciseSeriesScope(log: ExerciseLog, key: string, range?: DateRange): SeriesScope | null {
+    const scope = scopeOf(appearancesByKey(log, range).get(key) ?? [])
+    if (scope === null) {
+        return null
+    }
+    const sessions = scope.appearances.map((appearance) => ({
+        date: appearance.session.sessionDate,
+        sets: metricSets(appearance, scope.metric),
+    }))
+    const seriesScope = { metric: scope.metric, formaCarga: scope.formaCarga, sessions }
+
+    return seriesScope
 }

@@ -9,9 +9,11 @@ import {
     type WorkoutSnapshotInterval,
 } from '@/features/workout/types'
 import type { OutboxDropValues } from '@/lib/outbox/outboxQueue'
-import type { LoadConvention, SetMetric } from '@/lib/workoutPlanSchema'
+import type { EquipmentType, LoadConvention, SetMetric } from '@/lib/workoutPlanSchema'
 
 export type WorkoutSetSummary = {
+    // Id da linha gravada; nulo quando a série ainda não tem registro.
+    setId: string | null
     setIndex: number
     loadKg: number | null
     reps: number | null
@@ -30,6 +32,7 @@ export type WorkoutExerciseSummary = {
     exerciseKey: string
     exerciseName: string
     loadConvention: LoadConvention
+    equipment: EquipmentType | null
     perSide: boolean
     // Prescrição do intervalado; nula em exercício de séries. Nele, cada
     // item de `sets` é uma rodada.
@@ -106,6 +109,7 @@ export function summarizeWorkoutSetsWithDrops(
             const status = setStatusOf(matchingSet)
 
             const setSummary: WorkoutSetSummary = {
+                setId: matchingSet?.id ?? null,
                 setIndex: serie.set_index,
                 loadKg: matchingSet?.load_kg ?? null,
                 reps: matchingSet?.reps ?? null,
@@ -129,6 +133,7 @@ export function summarizeWorkoutSetsWithDrops(
             exerciseKey: exercicio.exercise_key,
             exerciseName: exercicio.nome,
             loadConvention: exercicio.forma_carga,
+            equipment: exercicio.equipamento,
             perSide: exercicio.por_lado,
             interval: exercicio.tipo === 'intervalado' ? exercicio.intervalado : null,
             grupo,

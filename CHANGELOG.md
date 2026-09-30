@@ -7,6 +7,13 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Gráficos no detalhe do exercício: carga máxima (repetições em peso
+  corporal, assistência com "menor é melhor"), 1RM estimado e volume por
+  sessão, seguindo o filtro Ciclo ou Tudo. Tocar num ponto mostra data e
+  valor.
+- Corrigir uma série de treino finalizado pelo lápis no detalhe do dia e em
+  "Ver treino", sem reabrir o treino. Fica bloqueado enquanto houver
+  registro do treino ainda não enviado.
 - Seção Exercícios em Resultados, abaixo de Ciclos, com filtro "Ciclo" ou
   "Tudo": cada exercício com número de sessões, data da última e recorde
   principal. Tocar abre os recordes com data e o histórico por sessão, com o

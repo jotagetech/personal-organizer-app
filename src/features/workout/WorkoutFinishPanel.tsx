@@ -5,6 +5,7 @@ import { CardioSection } from '@/features/cardio/CardioSection'
 import { FeelingScaleInput } from '@/features/cardio/FeelingScaleInput'
 import { feelingEmoji, feelingLabel } from '@/features/cardio/types'
 import { summarizeWorkoutSetsWithDrops } from '@/features/results/daySummary'
+import type { SetCorrectionTarget } from '@/features/results/SetCorrectionItem'
 import { WorkoutSummaryView } from '@/features/results/WorkoutSummaryView'
 import { updateSessionFeeling } from '@/features/workout/api'
 import { normalizeFeelingNote } from '@/features/workout/feelingDraft'
@@ -26,6 +27,8 @@ type WorkoutFinishPanelProps = {
     sets: WorkoutSetRow[]
     dropsBySetKey: Map<string, OutboxDropValues[]>
     onSessionUpdated: (session: WorkoutSessionRow) => void
+    // Só vem quando o servidor já tem o treino como finalizado.
+    onSetCorrected?: (row: WorkoutSetRow) => void
 }
 
 export function WorkoutFinishPanel({
@@ -34,6 +37,7 @@ export function WorkoutFinishPanel({
     sets,
     dropsBySetKey,
     onSessionUpdated,
+    onSetCorrected,
 }: WorkoutFinishPanelProps) {
     const hasSavedFeeling = session.feeling_scale !== null
     const [isEditing, setIsEditing] = useState(!hasSavedFeeling)
@@ -74,6 +78,9 @@ export function WorkoutFinishPanel({
     const statusCounts = countSetsByStatus(session.workout_snapshot, setsByKey)
     const workoutSummary = summarizeWorkoutSetsWithDrops(session.workout_snapshot, sets, dropsBySetKey)
     const isSaving = saveStatus === 'saving'
+    const correctionTarget: SetCorrectionTarget | undefined = onSetCorrected
+        ? { sessionDate, onSetCorrected }
+        : undefined
 
     return (
         <div>
@@ -115,7 +122,7 @@ export function WorkoutFinishPanel({
                 </button>
                 {isDetailOpen && (
                     <div className="finish-card__detail">
-                        <WorkoutSummaryView summary={workoutSummary} />
+                        <WorkoutSummaryView summary={workoutSummary} correctionTarget={correctionTarget} />
                     </div>
                 )}
                 {isEditing ? (

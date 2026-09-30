@@ -5,6 +5,7 @@ import {
     type WorkoutSetSummary,
     type WorkoutSummary,
 } from '@/features/results/daySummary'
+import { SetCorrectionItem, type SetCorrectionTarget } from '@/features/results/SetCorrectionItem'
 import { GroupBox } from '@/features/workout/GroupBlocks'
 import { formatIntervalPrescription, formatIntervalResult } from '@/features/workout/intervalPresentation'
 import type { SetStatus } from '@/features/workout/sessionProgress'
@@ -12,15 +13,21 @@ import type { WorkoutSnapshotInterval } from '@/features/workout/types'
 
 type WorkoutSummaryViewProps = {
     summary: WorkoutSummary
+    // Presente só em treino finalizado: libera corrigir as séries concluídas.
+    correctionTarget?: SetCorrectionTarget
 }
 
-export function WorkoutSummaryView({ summary }: WorkoutSummaryViewProps) {
+export function WorkoutSummaryView({ summary, correctionTarget }: WorkoutSummaryViewProps) {
     return (
         <>
             <div className="day-workout__exercises">
                 {groupExerciseSummaries(summary.exercises).map((block) => {
                     const details = block.exercises.map((exercise) => (
-                        <WorkoutExerciseDetail key={exercise.exerciseKey} exercise={exercise} />
+                        <WorkoutExerciseDetail
+                            key={exercise.exerciseKey}
+                            exercise={exercise}
+                            correctionTarget={correctionTarget}
+                        />
                     ))
                     if (block.groupLabel === null) {
                         return details
@@ -75,7 +82,13 @@ function IntervalExerciseDetail({ exercise, interval }: IntervalExerciseDetailPr
     )
 }
 
-function WorkoutExerciseDetail({ exercise }: { exercise: WorkoutExerciseSummary }) {
+type WorkoutExerciseDetailProps = {
+    exercise: WorkoutExerciseSummary
+    correctionTarget: SetCorrectionTarget | undefined
+}
+
+// Série pulada ou não registrada não tem o que corrigir e fica só para leitura.
+function WorkoutExerciseDetail({ exercise, correctionTarget }: WorkoutExerciseDetailProps) {
     if (exercise.interval) {
         return <IntervalExerciseDetail exercise={exercise} interval={exercise.interval} />
     }
@@ -84,22 +97,41 @@ function WorkoutExerciseDetail({ exercise }: { exercise: WorkoutExerciseSummary 
         <div className="day-workout__exercise">
             <p className="day-workout__exercise-name">{exercise.exerciseName}</p>
             <ul className="day-workout__sets">
-                {exercise.sets.map((set) => (
-                    <li key={set.setIndex} className={SET_STATUS_CLASS_NAMES[set.status]}>
-                        <span className="day-workout__set-label">Série {set.setIndex}</span>
-                        <div className="day-workout__set-body">
-                            <span className="day-workout__set-value">{formatSetSummary(set, exercise)}</span>
-                            {set.status === 'completed' &&
-                                set.drops.map((drop, dropPosition) => (
-                                    <span key={dropPosition} className="day-workout__set-drop">
-                                        {formatDropResult(exercise.loadConvention, set.metric, drop, exercise.perSide)}
-                                    </span>
-                                ))}
-                        </div>
-                    </li>
-                ))}
+                {exercise.sets.map((set) =>
+                    correctionTarget && set.status === 'completed' ? (
+                        <SetCorrectionItem key={set.setIndex} set={set} exercise={exercise} target={correctionTarget}>
+                            <SetResultContent set={set} exercise={exercise} />
+                        </SetCorrectionItem>
+                    ) : (
+                        <li key={set.setIndex} className={SET_STATUS_CLASS_NAMES[set.status]}>
+                            <SetResultContent set={set} exercise={exercise} />
+                        </li>
+                    ),
+                )}
             </ul>
         </div>
+    )
+}
+
+type SetResultContentProps = {
+    set: WorkoutSetSummary
+    exercise: WorkoutExerciseSummary
+}
+
+function SetResultContent({ set, exercise }: SetResultContentProps) {
+    return (
+        <>
+            <span className="day-workout__set-label">Série {set.setIndex}</span>
+            <div className="day-workout__set-body">
+                <span className="day-workout__set-value">{formatSetSummary(set, exercise)}</span>
+                {set.status === 'completed' &&
+                    set.drops.map((drop, dropPosition) => (
+                        <span key={dropPosition} className="day-workout__set-drop">
+                            {formatDropResult(exercise.loadConvention, set.metric, drop, exercise.perSide)}
+                        </span>
+                    ))}
+            </div>
+        </>
     )
 }
 

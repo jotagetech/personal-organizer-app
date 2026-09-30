@@ -179,3 +179,51 @@ export function formatPlanText(planned: PlannedSet | null, formaCarga: LoadConve
 
     return text
 }
+
+const SERIES_TITLE: Partial<Record<RecordKind, string>> = {
+    maxLoad: 'Carga máxima',
+    maxReps: 'Repetições numa série',
+    minAssistance: 'Assistência (menor é melhor)',
+    bestOneRepMax: '1RM estimado',
+    bestVolume: 'Volume',
+    maxDuration: 'Maior tempo',
+    maxDistance: 'Maior distância',
+}
+
+export const CHART_NEEDS_MORE_SESSIONS = 'Faça mais uma sessão para ver a evolução'
+export const CHART_TOUCH_HINT = 'Toque num ponto para ver a data e o valor'
+
+export function formatSeriesTitle(kind: RecordKind): string {
+    const title = SERIES_TITLE[kind] ?? RECORD_LABEL[kind]
+
+    return title
+}
+
+// Mesmo texto dos recordes, para o valor do gráfico bater com a lista acima.
+export function formatSeriesValue(kind: RecordKind, formaCarga: LoadConvention, value: number): string {
+    const text = formatRecordValue(kind, formaCarga, value)
+
+    return text
+}
+
+export function formatAxisTick(value: number): string {
+    const text = formatDecimal(roundToOneDecimal(value))
+
+    return text
+}
+
+export function formatChartReadout(date: IsoDate, valueText: string): string {
+    const text = `${formatDayMonth(date)} · ${valueText}`
+
+    return text
+}
+
+export function formatChartSummary(title: string, values: readonly number[], formatValue: (value: number) => string): string {
+    const sessionsLabel = values.length === 1 ? '1 sessão' : `${values.length} sessões`
+    const low = formatValue(Math.min(...values))
+    const high = formatValue(Math.max(...values))
+    const last = formatValue(values[values.length - 1])
+    const summary = `${title}: ${sessionsLabel}, de ${low} a ${high}, última ${last}`
+
+    return summary
+}

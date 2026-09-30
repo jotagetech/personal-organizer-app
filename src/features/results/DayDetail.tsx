@@ -11,6 +11,9 @@ import type { FoodEntryRow, FoodUnit } from '@/features/food/types'
 import { getDaySummary, type DaySummary } from '@/features/results/api'
 import { buildDayReport, type DayReport, type DayReportPendingItem } from '@/features/results/dayReport'
 import { summarizeWorkoutSets } from '@/features/results/daySummary'
+import { replaceSetRow } from '@/features/results/setCorrection'
+import type { SetCorrectionTarget } from '@/features/results/SetCorrectionItem'
+import { useOptionalCycleHistoryReload } from '@/features/results/useOptionalCycleHistoryReload'
 import { WorkoutSummaryView } from '@/features/results/WorkoutSummaryView'
 import { formatPlanWeekLabel } from '@/features/workout/planWeek'
 import { formatDurationMinutes, resolveSessionDuration } from '@/features/workout/sessionDuration'
@@ -27,6 +30,7 @@ type DayDetailProps = {
 
 export function DayDetail({ selectedDate }: DayDetailProps) {
     const { goToTab } = useAppNavigation()
+    const reloadCycleHistory = useOptionalCycleHistoryReload()
     const [summary, setSummary] = useState<DaySummary | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -42,6 +46,18 @@ export function DayDetail({ selectedDate }: DayDetailProps) {
             setErrorMessage(message)
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    // A linha devolvida pelo banco entra no lugar da antiga, sem recarregar o
+    // dia inteiro; ciclos e exercícios de Resultados recalculam por conta
+    // própria a partir do histórico.
+    function handleSetCorrected(correctedRow: WorkoutSetRow) {
+        setSummary((previous) =>
+            previous ? { ...previous, workoutSets: replaceSetRow(previous.workoutSets, correctedRow) } : previous,
+        )
+        if (reloadCycleHistory) {
+            void reloadCycleHistory()
         }
     }
 
@@ -80,6 +96,7 @@ export function DayDetail({ selectedDate }: DayDetailProps) {
                 sets={summary.workoutSets}
                 drops={summary.workoutDrops}
                 onOpenWorkout={() => goToTab('treino')}
+                onSetCorrected={handleSetCorrected}
             />
             <CardioDaySection entries={summary.cardioEntries} activityTypes={summary.activityTypes} />
             <FoodDaySection entries={summary.foodEntries} onOpenFood={() => goToTab('alimentacao')} />
@@ -170,14 +187,15 @@ type WorkoutDaySectionProps = {
     sets: WorkoutSetRow[]
     drops: WorkoutSetDropRow[]
     onOpenWorkout: () => void
+    onSetCorrected: (row: WorkoutSetRow) => void
 }
 
-function WorkoutDaySection({ session, sets, drops, onOpenWorkout }: WorkoutDaySectionProps) {
+function WorkoutDaySection({ session, sets, drops, onOpenWorkout, onSetCorrected }: WorkoutDaySectionProps) {
     return (
         <div className="card">
             <SectionHeader icon={Dumbbell} title="Treino" actionLabel="Abrir no Treino" onAction={onOpenWorkout} />
             {session ? (
-                <WorkoutSessionDetail session={session} sets={sets} drops={drops} />
+                <WorkoutSessionDetail session={session} sets={sets} drops={drops} onSetCorrected={onSetCorrected} />
             ) : (
                 <p className="day-detail__empty">Nenhum treino registrado neste dia.</p>
             )}
@@ -189,9 +207,10 @@ type WorkoutSessionDetailProps = {
     session: WorkoutSessionRow
     sets: WorkoutSetRow[]
     drops: WorkoutSetDropRow[]
+    onSetCorrected: (row: WorkoutSetRow) => void
 }
 
-function WorkoutSessionDetail({ session, sets, drops }: WorkoutSessionDetailProps) {
+function WorkoutSessionDetail({ session, sets, drops, onSetCorrected }: WorkoutSessionDetailProps) {
     const workoutSummary = summarizeWorkoutSets(session.workout_snapshot, sets, drops)
     const activeWindow = resolveSessionDuration(session, sets)
     const { semana_bloco: blockWeek, bloco_semanas: blockWeeks, descricao_semana: weekDescription } =
@@ -202,6 +221,9 @@ function WorkoutSessionDetail({ session, sets, drops }: WorkoutSessionDetailProp
               session.feeling_scale !== null ? feelingEmoji(session.feeling_scale) : null,
           ]
         : []
+    const correctionTarget: SetCorrectionTarget | undefined = session.finished_at
+        ? { sessionDate: session.session_date, onSetCorrected }
+        : undefined
     const sessionDetailParts = [
         blockWeek !== null && blockWeeks !== null ? formatPlanWeekLabel(blockWeek, blockWeeks) : null,
         weekDescription,
@@ -215,7 +237,7 @@ function WorkoutSessionDetail({ session, sets, drops }: WorkoutSessionDetailProp
                 <p className="day-workout__meta">{sessionDetailParts.join(' · ')}</p>
             )}
             {session.feeling_note && <p className="day-workout__note">{session.feeling_note}</p>}
-            <WorkoutSummaryView summary={workoutSummary} />
+            <WorkoutSummaryView summary={workoutSummary} correctionTarget={correctionTarget} />
         </div>
     )
 }

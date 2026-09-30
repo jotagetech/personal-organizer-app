@@ -1577,6 +1577,60 @@ h1, h2, h3, h4 {
     color: var(--color-text-muted);
 }
 
+/* Correção de série de treino finalizado. O lápis ocupa o alvo de toque
+   inteiro, então a linha que pode ser corrigida cresce até ele; o aviso e o
+   formulário quebram para a linha de baixo, na largura toda. */
+.day-workout__set--correctable {
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.day-workout__set--correctable .day-workout__set-body {
+    flex: 1;
+}
+
+.day-workout__set-edit {
+    margin-left: auto;
+    color: var(--color-text-muted);
+}
+
+.day-workout__set-notice {
+    flex-basis: 100%;
+    margin: 0 0 4px;
+}
+
+.day-workout__set--correcting {
+    display: block;
+    padding: 4px 0 8px;
+}
+
+.set-correction {
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-muted);
+}
+
+.set-correction__title {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.set-correction__fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 8px;
+}
+
+.set-correction__note {
+    margin-bottom: 8px;
+}
+
+.set-correction .save-status {
+    margin: 0 0 8px;
+}
+
 .day-food__macros {
     margin-bottom: 14px;
 }
@@ -4456,6 +4510,96 @@ h1, h2, h3, h4 {
 .exercise-detail__plan {
     font-weight: 400;
     color: var(--color-text-muted);
+}
+
+.exercise-charts {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.exercise-chart__title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.exercise-chart__readout {
+    min-height: 18px;
+    margin: 2px 0 4px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.exercise-chart__scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+
+.exercise-chart__svg {
+    display: block;
+    width: 100%;
+    height: 140px;
+    touch-action: pan-x pan-y;
+}
+
+.exercise-chart__grid,
+.exercise-chart__axis {
+    stroke: var(--color-text-muted);
+    stroke-opacity: 0.3;
+    stroke-width: 1;
+}
+
+.exercise-chart__axis {
+    stroke-opacity: 0.6;
+}
+
+.exercise-chart__tick,
+.exercise-chart__date {
+    fill: var(--color-text-muted);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+.exercise-chart__label {
+    fill: var(--color-text);
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.exercise-chart__line {
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.exercise-chart__dot {
+    fill: var(--color-accent);
+    stroke: var(--color-surface);
+    stroke-width: 1.5;
+}
+
+.exercise-chart__dot--active {
+    stroke: var(--color-text);
+}
+
+.exercise-chart__bar {
+    fill: var(--color-accent);
+}
+
+.exercise-chart__bar--active {
+    stroke: var(--color-text);
+    stroke-width: 1.5;
+}
+
+.exercise-chart__hit {
+    fill: transparent;
+    cursor: pointer;
 }
 
 .stored-plans__actions {

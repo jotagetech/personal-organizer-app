@@ -4,6 +4,10 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { useCycleHistory, type CycleHistoryContextValue } from '@/features/evolution/data/CycleHistoryContext'
 import { loadExerciseLog, type ExerciseLog } from '@/features/evolution/data/exerciseLog'
+import { BarChart } from '@/features/evolution/charts/BarChart'
+import type { SeriesChartPoint } from '@/features/evolution/charts/ChartFrame'
+import { LineChart } from '@/features/evolution/charts/LineChart'
+import { exerciseSessionSeries, topRecordKind, type SessionPoint } from '@/features/evolution/metrics/exerciseSeries'
 import {
     buildExerciseIndex,
     cycleDateRange,
@@ -11,6 +15,7 @@ import {
     exerciseRecords,
     type DateRange,
     type ExerciseIndexEntry,
+    type ExerciseRecords,
     type ExerciseSessionEntry,
 } from '@/features/evolution/metrics/exerciseStats'
 import {
@@ -21,6 +26,8 @@ import {
     formatPlanText,
     formatRecordLines,
     formatRecordsScopeNotice,
+    formatSeriesTitle,
+    formatSeriesValue,
     formatSessionsLine,
     formatUnreadableSessions,
 } from '@/features/evolution/metrics/exerciseText'
@@ -229,6 +236,7 @@ function ExerciseDetail({ entry, log, range }: ExerciseDetailProps) {
     const [visibleCount, setVisibleCount] = useState(SESSIONS_PER_PAGE)
     const records = useMemo(() => exerciseRecords(log, entry.key, range ?? undefined), [log, entry.key, range])
     const sessions = useMemo(() => exerciseHistory(log, entry.key, range ?? undefined), [log, entry.key, range])
+    const series = useMemo(() => exerciseSessionSeries(log, entry.key, range ?? undefined), [log, entry.key, range])
     const alsoRecordedAs = formatAlsoRecordedAs(entry.previousNames)
     const scopeNotice = formatRecordsScopeNotice(records)
 
@@ -241,6 +249,7 @@ function ExerciseDetail({ entry, log, range }: ExerciseDetailProps) {
             </ul>
             {scopeNotice && <p className="text-muted text-small">{scopeNotice}</p>}
             {alsoRecordedAs && <p className="text-muted text-small">{alsoRecordedAs}</p>}
+            <ExerciseCharts records={records} series={series} />
             <div className="day-workout__exercises">
                 {sessions.slice(0, visibleCount).map((session) => (
                     <SessionEntry key={session.sessionId} session={session} />
@@ -254,6 +263,63 @@ function ExerciseDetail({ entry, log, range }: ExerciseDetailProps) {
                 >
                     Ver mais
                 </button>
+            )}
+        </div>
+    )
+}
+
+type ExerciseChartsProps = {
+    records: ExerciseRecords | null
+    series: readonly SessionPoint[]
+}
+
+function pointsOf(series: readonly SessionPoint[], pick: (point: SessionPoint) => number | null): SeriesChartPoint[] {
+    const points: SeriesChartPoint[] = []
+    series.forEach((point) => {
+        const value = pick(point)
+        if (value !== null) {
+            points.push({ date: point.date, value })
+        }
+    })
+
+    return points
+}
+
+// Carga, 1RM e volume só aparecem quando a forma de carga tem o dado; o
+// gráfico que não se aplica some em vez de ficar vazio.
+function ExerciseCharts({ records, series }: ExerciseChartsProps) {
+    if (records === null || series.length === 0) {
+        return null
+    }
+
+    const { metric, formaCarga } = records
+    const topKind = topRecordKind(metric, formaCarga)
+    const oneRepMaxPoints = pointsOf(series, (point) => point.oneRepMax)
+    const volumePoints = pointsOf(series, (point) => point.volume)
+
+    return (
+        <div className="exercise-charts">
+            <LineChart
+                title={formatSeriesTitle(topKind)}
+                points={pointsOf(series, (point) => point.topValue)}
+                preference={topKind === 'minAssistance' ? 'min' : 'max'}
+                formatValue={(value) => formatSeriesValue(topKind, formaCarga, value)}
+            />
+            {oneRepMaxPoints.length > 0 && (
+                <LineChart
+                    title={formatSeriesTitle('bestOneRepMax')}
+                    points={oneRepMaxPoints}
+                    preference="max"
+                    formatValue={(value) => formatSeriesValue('bestOneRepMax', formaCarga, value)}
+                />
+            )}
+            {volumePoints.length > 0 && (
+                <BarChart
+                    title={formatSeriesTitle('bestVolume')}
+                    points={volumePoints}
+                    preference="max"
+                    formatValue={(value) => formatSeriesValue('bestVolume', formaCarga, value)}
+                />
             )}
         </div>
     )
