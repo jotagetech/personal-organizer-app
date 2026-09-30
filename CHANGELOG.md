@@ -7,6 +7,12 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- "Última vez" no card da série: carga, repetições, tempo ou distância da
+  série equivalente na sessão anterior com o mesmo exercício, com a data. O
+  exercício é reconhecido pela chave dele, também entre planos diferentes.
+  Aparece também na dica e na passagem do próximo membro de bi-set e
+  tri-set. Buscado uma vez ao abrir o treino; sem rede, a linha só não
+  aparece.
 - Histórico de troca de plano: cada vez que o plano ativo muda (importação,
   montador ou "Usar este plano") fica registrado no banco (migração
   `20260930020000`). As trocas anteriores foram estimadas pela data de

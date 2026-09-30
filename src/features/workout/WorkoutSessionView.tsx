@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { loadLastTimeByExercise } from '@/features/evolution/data/exerciseHistory'
+import { formatLastTimeText } from '@/features/evolution/metrics/lastTime'
 import { AddExtraExercisePanel } from '@/features/workout/AddExtraExercisePanel'
 
 import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/features/workout/api'
@@ -26,6 +28,7 @@ import {
     groupHintOf,
     handoffAnnouncement,
     type GroupHandoff,
+    type LastTimeByExercise,
 } from '@/features/workout/groupPresentation'
 import { IntervalStep } from '@/features/workout/IntervalStep'
 import { recordingLockNotice, type RecordingLock } from '@/features/workout/recordableDate'
@@ -159,6 +162,7 @@ export function WorkoutSessionView({
     // Passagem de um membro do grupo para o próximo; só existe na memória e
     // some sozinha, então reabrir a tela nunca a encontra.
     const [handoff, setHandoff] = useState<GroupHandoff | null>(null)
+    const [lastTimeByKey, setLastTimeByKey] = useState<LastTimeByExercise>(new Map())
     const canRecord = recordingLock === null
     const isShowingDeletedDay = recordingLock === 'excluindo'
     const [restTimer, setRestTimer] = useState<RestTimer | null>(() =>
@@ -290,7 +294,7 @@ export function WorkoutSessionView({
             return
         }
         const context = groupContextOf(snapshot, confirmedPosition, resolvedSetsByKey)
-        setHandoff(groupHandoffOf(snapshot, context))
+        setHandoff(groupHandoffOf(snapshot, context, lastTimeByKey))
     }
 
     function goToSet(nextPosition: StepPosition | null) {
@@ -884,6 +888,34 @@ export function WorkoutSessionView({
         saveWorkoutStep(sessionDate, buildSavedWorkoutStep(snapshot, { position, dropPosition }))
     }, [isLoading, isShowingDeletedDay, snapshot, workoutChoices, position, dropPosition, sessionDate])
 
+    // O histórico vem uma vez por conjunto de exercícios (um extra acrescentado
+    // traz a própria chave), não a cada série. Sem rede ele simplesmente não
+    // chega, e o treino segue sem a linha da última vez.
+    const exerciseKeysText = snapshot ? snapshot.exercicios.map((exercicio) => exercicio.exercise_key).join('|') : ''
+    useEffect(() => {
+        if (exerciseKeysText === '') {
+            return
+        }
+
+        let isCancelled = false
+
+        async function loadLastTime() {
+            try {
+                const loaded = await loadLastTimeByExercise(exerciseKeysText.split('|'), sessionDate)
+                if (!isCancelled) {
+                    setLastTimeByKey(loaded)
+                }
+            } catch {
+                // Linha de apoio: a falha não aparece nem interrompe o treino.
+            }
+        }
+
+        void loadLastTime()
+        return () => {
+            isCancelled = true
+        }
+    }, [exerciseKeysText, sessionDate])
+
     // Treino terminado antes de a sessão ter sido criada no servidor (o dia
     // inteiro foi feito sem sinal): o painel de finalização depende do id real
     // da sessão, então observa a fila até o envio confirmar e revelar esse id.
@@ -1046,7 +1078,14 @@ export function WorkoutSessionView({
     const hasRestAfterSet =
         restAfterSet(snapshot, position, effectiveSetsByKey) !== null &&
         findNextUnresolvedPosition(snapshot, effectiveSetsByKey, position) !== null
-    const groupHint = groupHintOf(snapshot, groupContext, hasRestAfterSet)
+    const groupHint = groupHintOf(snapshot, groupContext, hasRestAfterSet, lastTimeByKey)
+    const lastTimeText = formatLastTimeText(
+        lastTimeByKey.get(currentExercicio.exercise_key) ?? null,
+        currentSet.set_index,
+        currentExercicio.forma_carga,
+        currentSet.metrica,
+        currentExercicio.por_lado,
+    )
     // A passagem só vale enquanto a tela está no membro para o qual ela
     // aponta; qualquer outra navegação a deixa sem efeito.
     const activeHandoff =
@@ -1201,6 +1240,7 @@ export function WorkoutSessionView({
                                             : setConfirmLabel
                                     }
                                     groupHint={currentSet.quedas.length === 0 ? groupHint : null}
+                                    lastTimeText={lastTimeText}
                                     onConfirmed={handleSetConfirmed}
                                     onSkipped={handleSetSkipped}
                                     onSkipExercise={handleSkipExercise}

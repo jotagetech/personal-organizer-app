@@ -2,6 +2,7 @@
 // dos componentes para o que muda conforme a rodada (rótulo do botão, dica,
 // chips) ser testado sem montar a tela.
 
+import { formatLastTimeText, type LastTime } from '@/features/evolution/metrics/lastTime'
 import { formatDecimal, formatSetTarget } from '@/features/workout/setPresentation'
 import type { SupersetContext, SupersetLabel } from '@/features/workout/supersets'
 import type { WorkoutSnapshot } from '@/features/workout/types'
@@ -45,12 +46,23 @@ export function groupConfirmLabel(context: SupersetContext | null, baseLabel: st
     return `Confirmar e ir pra ${context.nextInRound.nome}`
 }
 
-export type NextMemberText = { nome: string; target: string; suggestion: string | null }
+export type LastTimeByExercise = Map<string, LastTime>
 
-// Alvo e carga sugerida da próxima série da rodada, como a tela dela mostra.
-// O app não guarda a carga da última vez que o exercício foi feito, então só
-// a sugestão do plano entra quando existe.
-export function nextMemberTextOf(snapshot: WorkoutSnapshot, context: SupersetContext): NextMemberText | null {
+export type NextMemberText = {
+    nome: string
+    target: string
+    suggestion: string | null
+    lastTime: string | null
+}
+
+// Alvo, carga sugerida e resultado da última vez da próxima série da rodada,
+// como a tela dela mostra. A última vez só entra quando o histórico do
+// exercício já chegou e tem uma série a mostrar.
+export function nextMemberTextOf(
+    snapshot: WorkoutSnapshot,
+    context: SupersetContext,
+    lastTimeByKey: LastTimeByExercise = new Map(),
+): NextMemberText | null {
     const next = context.nextInRound
     if (!next) {
         return null
@@ -59,7 +71,15 @@ export function nextMemberTextOf(snapshot: WorkoutSnapshot, context: SupersetCon
     const target = formatSetTarget(next.serie.metrica, next.serie.alvo_min, next.serie.alvo_max, exercicio.por_lado)
     const suggestion = next.serie.carga_sugerida !== null ? `${formatDecimal(next.serie.carga_sugerida)} kg` : null
 
-    return { nome: next.nome, target: `${target.value} ${target.unit}`, suggestion }
+    const lastTime = formatLastTimeText(
+        lastTimeByKey.get(next.exerciseKey) ?? null,
+        next.serie.set_index,
+        exercicio.forma_carga,
+        next.serie.metrica,
+        exercicio.por_lado,
+    )
+
+    return { nome: next.nome, target: `${target.value} ${target.unit}`, suggestion, lastTime }
 }
 
 // Dica sob os campos: com próximo membro, a troca é sem descanso; ao fechar a
@@ -68,15 +88,17 @@ export function groupHintOf(
     snapshot: WorkoutSnapshot,
     context: SupersetContext | null,
     hasRestAfter: boolean,
+    lastTimeByKey: LastTimeByExercise = new Map(),
 ): string | null {
     if (!context) {
         return null
     }
-    const next = nextMemberTextOf(snapshot, context)
+    const next = nextMemberTextOf(snapshot, context, lastTimeByKey)
     if (next) {
         const suggestionText = next.suggestion ? `, sugestão ${next.suggestion}` : ''
+        const lastTimeText = next.lastTime ? `. ${next.lastTime}` : ''
 
-        return `Sem descanso. ${next.nome}: ${next.target}${suggestionText}`
+        return `Sem descanso. ${next.nome}: ${next.target}${suggestionText}${lastTimeText}`
     }
 
     return context.closesRound && hasRestAfter ? 'Fim da rodada: descanso depois de confirmar' : null
@@ -87,17 +109,22 @@ export type GroupHandoff = {
     nome: string
     target: string
     suggestion: string | null
+    lastTime: string | null
     exerciseKey: string
     setIndexInExercise: number
 }
 
 // Passagem mostrada logo depois de confirmar uma série que tem próximo membro
 // na rodada; null quando o descanso é que vem a seguir.
-export function groupHandoffOf(snapshot: WorkoutSnapshot, context: SupersetContext | null): GroupHandoff | null {
+export function groupHandoffOf(
+    snapshot: WorkoutSnapshot,
+    context: SupersetContext | null,
+    lastTimeByKey: LastTimeByExercise = new Map(),
+): GroupHandoff | null {
     if (!context?.nextInRound) {
         return null
     }
-    const next = nextMemberTextOf(snapshot, context)
+    const next = nextMemberTextOf(snapshot, context, lastTimeByKey)
     if (!next) {
         return null
     }
@@ -107,6 +134,7 @@ export function groupHandoffOf(snapshot: WorkoutSnapshot, context: SupersetConte
         nome: next.nome,
         target: next.target,
         suggestion: next.suggestion,
+        lastTime: next.lastTime,
         exerciseKey: context.nextInRound.exerciseKey,
         setIndexInExercise: context.nextInRound.position.setIndexInExercise,
     }

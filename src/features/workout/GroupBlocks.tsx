@@ -76,6 +76,7 @@ export function GroupHandoffPanel({ handoff, onDismiss }: GroupHandoffPanelProps
             </span>
             <span className="group-handoff__title">Vai pra {handoff.nome}</span>
             <span className="group-handoff__detail">{detail}</span>
+            {handoff.lastTime && <span className="group-handoff__detail">{handoff.lastTime}</span>}
         </button>
     )
 }

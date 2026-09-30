@@ -135,3 +135,23 @@ describe('groupHandoffOf', () => {
         expect(groupHandoffOf(BI_SET, contextAt(2, 0))).toBeNull()
     })
 })
+
+describe('última vez na dica do próximo membro', () => {
+    it('acrescenta a última vez do próximo membro quando o histórico chegou', () => {
+        const lastTimeByKey = new Map([
+            [
+                'remada',
+                {
+                    sessionDate: '2026-09-28',
+                    sets: [
+                        { setIndex: 1, loadKg: 40, reps: 10, durationSeconds: null, distanceM: null, metric: null },
+                    ],
+                },
+            ],
+        ])
+
+        expect(groupHintOf(BI_SET, contextAt(0, 0), true, lastTimeByKey)).toContain(
+            '. Última vez (28/09): 40 kg × 10 reps',
+        )
+    })
+})

@@ -2555,6 +2555,13 @@ h1, h2, h3, h4 {
     color: var(--color-text-muted);
 }
 
+.set-card__last-time {
+    flex-basis: 100%;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
 .set-card__target-value {
     font-family: var(--font-numeric);
     font-size: 18px;

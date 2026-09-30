@@ -59,6 +59,9 @@ type ExerciseSetRowProps = {
     confirmLabel: string
     // Dica do grupo (bi-set, tri-set, circuito) sob os campos; nula fora de um.
     groupHint: string | null
+    // Resultado da última vez que o exercício foi feito; nulo sem histórico
+    // (ou enquanto ele ainda não chegou).
+    lastTimeText: string | null
     onConfirmed: (row: WorkoutSetRow) => void
     onSkipped: (row: WorkoutSetRow) => void
     onSkipExercise: (row: WorkoutSetRow) => void
@@ -74,6 +77,7 @@ export function ExerciseSetRow({
     existingSet,
     confirmLabel,
     groupHint,
+    lastTimeText,
     onConfirmed,
     onSkipped,
     onSkipExercise,
@@ -347,6 +351,7 @@ export function ExerciseSetRow({
                     </span>
                 )}
                 {restPrescription && <span>{restPrescription}</span>}
+                {lastTimeText && <span className="set-card__last-time">{lastTimeText}</span>}
                 {hasPlannedDrops && (
                     <span className="set-card__drop-note">
                         Drop set: {serie.quedas.length} {serie.quedas.length === 1 ? 'queda' : 'quedas'} depois
