@@ -61,10 +61,13 @@ export type BarShape = {
     height: number
 }
 
-export function chartLayout(columnCount: number): ChartLayout {
+// A largura acompanha o espaço disponível (1 unidade do viewBox = 1 px) e só
+// passa dele quando as colunas não cabem com a área de toque mínima; aí o
+// gráfico rola na horizontal.
+export function chartLayout(columnCount: number, availableWidth: number = CHART_BASE_WIDTH): ChartLayout {
     const neededWidth = PLOT_LEFT + PLOT_RIGHT + columnCount * COLUMN_MIN_WIDTH
     const layout = {
-        width: Math.max(CHART_BASE_WIDTH, neededWidth),
+        width: Math.max(availableWidth, neededWidth),
         height: CHART_HEIGHT,
         plotLeft: PLOT_LEFT,
         plotRight: PLOT_RIGHT,
@@ -160,8 +163,13 @@ export function extremeIndex(values: readonly number[], preference: Preference):
     return best
 }
 
-export function buildChartModel(values: readonly number[], baseline: Baseline, preference: Preference): ChartModel {
-    const layout = chartLayout(values.length)
+export function buildChartModel(
+    values: readonly number[],
+    baseline: Baseline,
+    preference: Preference,
+    availableWidth: number = CHART_BASE_WIDTH,
+): ChartModel {
+    const layout = chartLayout(values.length, availableWidth)
     const axis = axisScaleFor(values, baseline)
     const columns = values.map((value, index) => ({
         ...columnAt(index, values.length, layout),
@@ -233,4 +241,72 @@ export function labelAnchorFor(x: number, layout: ChartLayout): LabelAnchor {
     const anchor = x > layout.width / 2 ? 'end' : 'start'
 
     return anchor
+}
+
+export type PlacedLabel = {
+    key: 'last' | 'record'
+    x: number
+    y: number
+    text: string
+    anchor: LabelAnchor
+}
+
+const LABEL_OFFSET_Y = 10
+const LABEL_LINE_HEIGHT = 13
+// Largura média de um caractere do rótulo (11 px, negrito, números tabulares).
+const LABEL_CHAR_WIDTH = 6.5
+const LABEL_MIN_Y = 11
+
+function labelSpan(label: PlacedLabel): { left: number; right: number } {
+    const width = label.text.length * LABEL_CHAR_WIDTH
+    const span = label.anchor === 'start' ? { left: label.x, right: label.x + width } : { left: label.x - width, right: label.x }
+
+    return span
+}
+
+function labelsCollide(first: PlacedLabel, second: PlacedLabel): boolean {
+    const firstSpan = labelSpan(first)
+    const secondSpan = labelSpan(second)
+    const overlapsHorizontally = firstSpan.left < secondSpan.right && secondSpan.left < firstSpan.right
+    const overlapsVertically = Math.abs(first.y - second.y) < LABEL_LINE_HEIGHT
+
+    return overlapsHorizontally && overlapsVertically
+}
+
+// Último valor e recorde; quando são o mesmo ponto, um rótulo só. Se os dois
+// rótulos se cruzariam, eles viram uma pilha sobre o ponto mais alto, na
+// coluna do último valor, com o recorde em cima.
+export function placeChartLabels(model: ChartModel, lastText: string, recordText: string): PlacedLabel[] {
+    const { columns, recordIndex, lastIndex, layout } = model
+    const lastColumn = columns[lastIndex]
+    const lastLabel: PlacedLabel = {
+        key: 'last',
+        x: lastColumn.center,
+        y: lastColumn.y - LABEL_OFFSET_Y,
+        text: recordIndex === lastIndex ? recordText : lastText,
+        anchor: labelAnchorFor(lastColumn.center, layout),
+    }
+    if (recordIndex === lastIndex) {
+        return [lastLabel]
+    }
+
+    const recordColumn = columns[recordIndex]
+    const recordLabel: PlacedLabel = {
+        key: 'record',
+        x: recordColumn.center,
+        y: recordColumn.y - LABEL_OFFSET_Y,
+        text: recordText,
+        anchor: recordIndex < lastIndex ? 'start' : 'end',
+    }
+    if (!labelsCollide(lastLabel, recordLabel)) {
+        return [lastLabel, recordLabel]
+    }
+
+    const stackBottom = Math.max(Math.min(lastColumn.y, recordColumn.y) - LABEL_OFFSET_Y, LABEL_MIN_Y + LABEL_LINE_HEIGHT)
+    const stacked: PlacedLabel[] = [
+        { ...lastLabel, y: stackBottom },
+        { ...recordLabel, x: lastLabel.x, anchor: lastLabel.anchor, y: stackBottom - LABEL_LINE_HEIGHT },
+    ]
+
+    return stacked
 }

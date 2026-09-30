@@ -13,6 +13,7 @@ import {
     columnAt,
     extremeIndex,
     labelAnchorFor,
+    placeChartLabels,
     linePath,
     niceStep,
     valueToY,
@@ -186,5 +187,59 @@ describe('labelAnchorFor', () => {
 
         expect(labelAnchorFor(layout.plotLeft + 10, layout)).toBe('start')
         expect(labelAnchorFor(layout.width - 20, layout)).toBe('end')
+    })
+})
+
+describe('chartLayout com largura medida', () => {
+    it('ocupa a largura disponível quando as colunas cabem', () => {
+        expect(chartLayout(3, 380).width).toBe(380)
+        expect(chartLayout(3, 280).width).toBe(280)
+    })
+
+    it('passa da largura disponível só quando as colunas não cabem', () => {
+        const layout = chartLayout(20, 380)
+
+        expect(layout.width).toBeGreaterThan(380)
+        expect(layout.width).toBe(40 + 12 + 20 * COLUMN_MIN_WIDTH)
+    })
+})
+
+describe('placeChartLabels', () => {
+    it('empilha recorde e último valor quando os rótulos se cruzariam', () => {
+        const model = buildChartModel([40, 42, 44, 50, 49], 'data', 'max')
+        const labels = placeChartLabels(model, '49 kg', 'recorde 50 kg')
+        const last = labels.find((label) => label.key === 'last')
+        const record = labels.find((label) => label.key === 'record')
+
+        expect(labels).toHaveLength(2)
+        expect(record?.x).toBe(last?.x)
+        expect(record?.anchor).toBe(last?.anchor)
+        expect((last?.y ?? 0) - (record?.y ?? 0)).toBe(13)
+    })
+
+    it('deixa cada rótulo no seu ponto quando estão longe', () => {
+        const model = buildChartModel([50, 40, 42, 44, 45], 'data', 'max')
+        const labels = placeChartLabels(model, '45 kg', 'recorde 50 kg')
+        const last = labels.find((label) => label.key === 'last')
+        const record = labels.find((label) => label.key === 'record')
+
+        expect(record?.x).toBe(model.columns[0].center)
+        expect(last?.x).toBe(model.columns[4].center)
+        expect(record?.anchor).toBe('start')
+        expect(last?.anchor).toBe('end')
+    })
+
+    it('usa um rótulo só quando o último valor é o recorde', () => {
+        const model = buildChartModel([40, 45, 50], 'data', 'max')
+        const labels = placeChartLabels(model, '50 kg', 'recorde 50 kg')
+
+        expect(labels).toEqual([expect.objectContaining({ key: 'last', text: 'recorde 50 kg' })])
+    })
+
+    it('não deixa a pilha sair pelo topo do gráfico', () => {
+        const model = buildChartModel([10, 100, 99], 'data', 'max')
+        const labels = placeChartLabels(model, '99 kg', 'recorde 100 kg')
+
+        labels.forEach((label) => expect(label.y).toBeGreaterThanOrEqual(11))
     })
 })

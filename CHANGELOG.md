@@ -126,6 +126,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Corrigido
 
+- Gráficos dos exercícios ocupam a largura da tela em vez de ficarem com
+  largura fixa centralizada, e só rolam na horizontal quando as sessões não
+  cabem. Os rótulos de recorde e último valor não se sobrepõem mais quando
+  os pontos estão perto: viram uma pilha sobre o ponto mais alto.
 - Correção de série em treino finalizado abre a carga também em séries de
   tempo e distância, com a mesma exigência do registro normal.
 - Na aba Treino, logo depois de finalizar, a correção não aparece mais
