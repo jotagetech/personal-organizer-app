@@ -126,6 +126,13 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Corrigido
 
+- Correção de série em treino finalizado abre a carga também em séries de
+  tempo e distância, com a mesma exigência do registro normal.
+- Na aba Treino, logo depois de finalizar, a correção não aparece mais
+  bloqueada por engano; ela fica disponível em Resultados e ao reabrir a aba.
+- Gráfico com todos os valores zerados não mostra mais eixo negativo, e um
+  exercício com recorde mas sem pontos mostra a mensagem em vez de esconder
+  os gráficos.
 - Treino lançado com data passada grava a semana do bloco do ciclo daquela
   data, e não a do ciclo mais recente. O cabeçalho numa data passada também
   deixou de mostrar o ciclo atual.

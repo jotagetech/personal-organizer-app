@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { WorkoutSetSummary } from '@/features/results/daySummary'
 import {
     correctionShapeOf,
+    hasLocalOnlySets,
     initialCorrectionFields,
     isCorrectionBlocked,
     replaceSetRow,
@@ -64,15 +65,23 @@ const PENDING_FINISH: OutboxOperation = {
 }
 
 describe('correctionShapeOf', () => {
-    it('série de repetições abre carga; tempo e distância abrem só a medida', () => {
+    it('abre carga em toda métrica, como o registro da série', () => {
         expect(correctionShapeOf(buildSetSummary({}), 'total').hasLoadField).toBe(true)
-        expect(correctionShapeOf(buildSetSummary({ metric: 'tempo' }), 'total').hasLoadField).toBe(false)
-        expect(correctionShapeOf(buildSetSummary({ metric: 'distancia' }), 'total').hasLoadField).toBe(false)
+        expect(correctionShapeOf(buildSetSummary({ metric: 'tempo' }), 'total').hasLoadField).toBe(true)
+        expect(correctionShapeOf(buildSetSummary({ metric: 'distancia' }), 'total').hasLoadField).toBe(true)
     })
 
     it('comentário só aparece quando a série já tinha um', () => {
         expect(correctionShapeOf(buildSetSummary({}), 'total').hasNoteField).toBe(false)
         expect(correctionShapeOf(buildSetSummary({ note: 'ombro' }), 'total').hasNoteField).toBe(true)
+    })
+})
+
+describe('hasLocalOnlySets', () => {
+    it('detecta série com id local e aceita só ids do servidor', () => {
+        expect(hasLocalOnlySets([buildSetRow({ id: 'pending:supino:1' }), buildSetRow({})])).toBe(true)
+        expect(hasLocalOnlySets([buildSetRow({}), buildSetRow({ id: 'set-2' })])).toBe(false)
+        expect(hasLocalOnlySets([])).toBe(false)
     })
 })
 
@@ -114,18 +123,24 @@ describe('validateCorrection', () => {
         })
     })
 
-    it('tempo e distância gravam só a própria medida', () => {
+    it('tempo e distância gravam a medida e a carga, com a mesma exigência de carga do registro', () => {
         const timeShape = correctionShapeOf(buildSetSummary({ metric: 'tempo' }), 'total')
         const distanceShape = correctionShapeOf(buildSetSummary({ metric: 'distancia' }), 'total')
+        const bodyweightTimeShape = correctionShapeOf(buildSetSummary({ metric: 'tempo' }), 'peso_corporal')
 
-        expect(validateCorrection(timeShape, buildFields({ loadText: '', resultText: '40' }))).toEqual({
+        expect(validateCorrection(timeShape, buildFields({ loadText: '32', resultText: '40' }))).toEqual({
             isValid: true,
-            patch: { duration_seconds: 40, rir: null },
+            patch: { load_kg: 32, duration_seconds: 40, rir: null },
         })
+        expect(validateCorrection(timeShape, buildFields({ loadText: '', resultText: '40' })).isValid).toBe(false)
         expect(validateCorrection(timeShape, buildFields({ resultText: '30,5' })).isValid).toBe(false)
         expect(validateCorrection(distanceShape, buildFields({ resultText: '32,5' }))).toEqual({
             isValid: true,
-            patch: { distance_m: 32.5, rir: null },
+            patch: { load_kg: 60, distance_m: 32.5, rir: null },
+        })
+        expect(validateCorrection(bodyweightTimeShape, buildFields({ loadText: '', resultText: '40' }))).toEqual({
+            isValid: true,
+            patch: { load_kg: 0, duration_seconds: 40, rir: null },
         })
     })
 

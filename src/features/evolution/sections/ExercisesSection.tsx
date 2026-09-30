@@ -288,7 +288,7 @@ function pointsOf(series: readonly SessionPoint[], pick: (point: SessionPoint) =
 // Carga, 1RM e volume só aparecem quando a forma de carga tem o dado; o
 // gráfico que não se aplica some em vez de ficar vazio.
 function ExerciseCharts({ records, series }: ExerciseChartsProps) {
-    if (records === null || series.length === 0) {
+    if (records === null) {
         return null
     }
 

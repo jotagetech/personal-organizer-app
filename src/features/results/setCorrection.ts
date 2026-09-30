@@ -29,9 +29,9 @@ export type SetCorrectionFields = {
     noteText: string
 }
 
-// Quais campos a correção abre. Carga só entra em série de repetições: em
-// tempo e distância o número que define a série é a medida, e a carga gravada
-// fica como está. O comentário só aparece se a série já tinha um.
+// Quais campos a correção abre. A carga entra em toda métrica, como no
+// registro da série (tempo e distância também podem ter carga, como numa
+// caminhada com halteres). O comentário só aparece se a série já tinha um.
 export type SetCorrectionShape = {
     metric: SetMetric
     loadConvention: LoadConvention
@@ -61,7 +61,7 @@ export function correctionShapeOf(set: WorkoutSetSummary, loadConvention: LoadCo
     const shape: SetCorrectionShape = {
         metric: set.metric,
         loadConvention,
-        hasLoadField: set.metric === 'repeticoes',
+        hasLoadField: true,
         hasNoteField: set.note !== null,
     }
 
@@ -134,8 +134,8 @@ function measuredPatchOf(shape: SetCorrectionShape, fields: SetCorrectionFields)
     const rir = parseRirText(fields.rirText)
     const patchByMetric: Record<SetMetric, SetCorrectionPatch> = {
         repeticoes: { load_kg: measuredValues.loadKg, reps: measuredValues.reps, rir },
-        tempo: { duration_seconds: measuredValues.durationSeconds, rir },
-        distancia: { distance_m: measuredValues.distanceM, rir },
+        tempo: { load_kg: measuredValues.loadKg, duration_seconds: measuredValues.durationSeconds, rir },
+        distancia: { load_kg: measuredValues.loadKg, distance_m: measuredValues.distanceM, rir },
     }
 
     return patchByMetric[shape.metric]
@@ -163,6 +163,15 @@ export function isCorrectionBlocked(sessionOperations: OutboxOperation[], setId:
     const isBlocked = sessionOperations.length > 0 || !hasServerId
 
     return isBlocked
+}
+
+// Na tela do treino, as séries confirmadas no aparelho ficam com id local
+// até a tela ser recarregada, mesmo depois de subirem. Sem o id do servidor
+// não há o que corrigir, então a correção só é oferecida sem id local.
+export function hasLocalOnlySets(sets: readonly WorkoutSetRow[]): boolean {
+    const hasLocalId = sets.some((set) => set.id.startsWith(LOCAL_SET_ID_PREFIX))
+
+    return hasLocalId
 }
 
 // Troca a linha corrigida na lista de séries, mantendo a ordem.

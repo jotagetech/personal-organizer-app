@@ -102,8 +102,10 @@ function paddedExtent(values: readonly number[], baseline: Baseline): { low: num
     }
     if (dataLow === dataHigh) {
         const spread = Math.max(Math.abs(dataLow) * 0.1, 1)
+        // Dado sem negativo não ganha eixo negativo só pela folga.
+        const paddedLow = dataLow >= 0 ? Math.max(0, dataLow - spread) : dataLow - spread
 
-        return { low: dataLow - spread, high: dataHigh + spread }
+        return { low: paddedLow, high: dataHigh + spread }
     }
 
     return { low: dataLow, high: dataHigh }

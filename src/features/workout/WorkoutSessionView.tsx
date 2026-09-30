@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { loadLastTimeByExercise } from '@/features/evolution/data/exerciseHistory'
 import { formatLastTimeText } from '@/features/evolution/metrics/lastTime'
+import { hasLocalOnlySets } from '@/features/results/setCorrection'
 import { AddExtraExercisePanel } from '@/features/workout/AddExtraExercisePanel'
 
 import { finishSession, getSessionForDate, replaceSessionWorkout } from '@/features/workout/api'
@@ -1056,7 +1057,11 @@ export function WorkoutSessionView({
                         sets={Array.from(effectiveSetsByKey.values())}
                         dropsBySetKey={effectiveDropsByKey}
                         onSessionUpdated={setSession}
-                        onSetCorrected={session.finished_at ? handleLocalSetSaved : undefined}
+                        onSetCorrected={
+                            session.finished_at && !hasLocalOnlySets(Array.from(effectiveSetsByKey.values()))
+                                ? handleLocalSetSaved
+                                : undefined
+                        }
                     />
                 ) : (
                     <p className="save-status">Treino concluído no aparelho, sincronizando com o servidor...</p>

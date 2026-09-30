@@ -65,3 +65,11 @@ export function useCycleHistory(): CycleHistoryContextValue {
 
     return contextValue
 }
+
+// Para telas que também aparecem fora de Resultados: sem provider, devolve
+// nulo em vez de lançar.
+export function useOptionalCycleHistory(): CycleHistoryContextValue | null {
+    const contextValue = useContext(CycleHistoryContext)
+
+    return contextValue
+}

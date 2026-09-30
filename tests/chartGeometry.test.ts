@@ -58,6 +58,13 @@ describe('axisScaleFor', () => {
         expect(axis.max).toBeGreaterThan(40)
     })
 
+    it('não desce abaixo de zero com todos os valores zerados nos dados', () => {
+        const axis = axisScaleFor([0, 0], 'data')
+
+        expect(axis.min).toBe(0)
+        expect(axis.max).toBeGreaterThan(0)
+    })
+
     it('mantém o eixo de zero com todos os valores zerados', () => {
         const axis = axisScaleFor([0, 0], 'zero')
 
