@@ -1,5 +1,6 @@
 import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
+import { exerciseBlocksOf, supersetLabelOf, type SupersetLabel } from '@/features/workout/supersets'
 import {
     setKey,
     type WorkoutSetDropRow,
@@ -33,7 +34,34 @@ export type WorkoutExerciseSummary = {
     // Prescrição do intervalado; nula em exercício de séries. Nele, cada
     // item de `sets` é uma rodada.
     interval: WorkoutSnapshotInterval | null
+    // Grupo de que o exercício faz parte de fato (bi-set, tri-set, circuito),
+    // já descontado o rótulo solto que não forma grupo; nulo se avulso.
+    grupo: string | null
+    groupLabel: SupersetLabel | null
     sets: WorkoutSetSummary[]
+}
+
+// Exercícios consecutivos do mesmo grupo, na ordem do treino; um exercício
+// avulso é um bloco de um só, com `grupo` nulo.
+export type WorkoutExerciseBlock = {
+    grupo: string | null
+    groupLabel: SupersetLabel | null
+    exercises: WorkoutExerciseSummary[]
+}
+
+export function groupExerciseSummaries(exercises: WorkoutExerciseSummary[]): WorkoutExerciseBlock[] {
+    const blocks: WorkoutExerciseBlock[] = []
+
+    for (const exercise of exercises) {
+        const previousBlock = blocks[blocks.length - 1]
+        if (exercise.grupo !== null && previousBlock?.grupo === exercise.grupo) {
+            previousBlock.exercises.push(exercise)
+            continue
+        }
+        blocks.push({ grupo: exercise.grupo, groupLabel: exercise.groupLabel, exercises: [exercise] })
+    }
+
+    return blocks
 }
 
 export type WorkoutSummary = {
@@ -64,8 +92,13 @@ export function summarizeWorkoutSetsWithDrops(
 ): WorkoutSummary {
     const setsByKey = new Map(sets.map((set) => [setKey(set.exercise_key, set.set_index), set]))
     const knownKeys = new Set<string>()
+    const blockByExerciseIndex = new Map(
+        exerciseBlocksOf(snapshot).flatMap((block) =>
+            block.exerciseIndexes.map((exerciseIndex) => [exerciseIndex, block] as const),
+        ),
+    )
 
-    const exercises: WorkoutExerciseSummary[] = snapshot.exercicios.map((exercicio) => {
+    const exercises: WorkoutExerciseSummary[] = snapshot.exercicios.map((exercicio, exerciseIndex) => {
         const exerciseSets: WorkoutSetSummary[] = exercicio.series.map((serie) => {
             const key = setKey(exercicio.exercise_key, serie.set_index)
             knownKeys.add(key)
@@ -90,12 +123,16 @@ export function summarizeWorkoutSetsWithDrops(
             return setSummary
         })
 
+        const block = blockByExerciseIndex.get(exerciseIndex)
+        const grupo = block?.grupo ?? null
         const exerciseSummary: WorkoutExerciseSummary = {
             exerciseKey: exercicio.exercise_key,
             exerciseName: exercicio.nome,
             loadConvention: exercicio.forma_carga,
             perSide: exercicio.por_lado,
             interval: exercicio.tipo === 'intervalado' ? exercicio.intervalado : null,
+            grupo,
+            groupLabel: block && grupo !== null ? supersetLabelOf(block.exerciseIndexes.length) : null,
             sets: exerciseSets,
         }
         return exerciseSummary

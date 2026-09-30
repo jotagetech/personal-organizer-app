@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { summarizeWorkoutSets, summarizeWorkoutSetsWithDrops } from '@/features/results/daySummary'
+import {
+    groupExerciseSummaries,
+    summarizeWorkoutSets,
+    summarizeWorkoutSetsWithDrops,
+} from '@/features/results/daySummary'
 import type { WorkoutSetDropRow, WorkoutSetRow } from '@/features/workout/types'
 import type { WorkoutSnapshot } from '@/lib/databaseTypes'
 import { EMPTY_SET_METRIC_COLUMNS, NO_SET_REST, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
@@ -206,5 +210,63 @@ describe('summarizeWorkoutSetsWithDrops', () => {
 
         expect(summary.exercises[0].sets[0].drops).toEqual(drops.get('supino:0'))
         expect(summary.exercises[0].sets[1].drops).toEqual([])
+    })
+})
+
+describe('grupos no resumo do dia', () => {
+    function exerciseOf(exerciseKey: string, grupo: string | undefined) {
+        return {
+            ...SNAPSHOT_EXERCISE_DEFAULTS,
+            exercise_key: exerciseKey,
+            nome: exerciseKey,
+            forma_carga: 'total' as const,
+            series: [repsSnapshotSet(0, 8, 10, 40)],
+            ...(grupo ? { grupo } : {}),
+        }
+    }
+
+    function blocksOf(exercicios: ReturnType<typeof exerciseOf>[]) {
+        const summary = summarizeWorkoutSets({ ...SNAPSHOT, exercicios }, [])
+
+        return groupExerciseSummaries(summary.exercises).map((block) => ({
+            label: block.groupLabel,
+            keys: block.exercises.map((exercise) => exercise.exerciseKey),
+        }))
+    }
+
+    it('junta os vizinhos do mesmo grupo e deixa o resto avulso', () => {
+        const blocks = blocksOf([
+            exerciseOf('a', undefined),
+            exerciseOf('b', 'G1'),
+            exerciseOf('c', 'G1'),
+            exerciseOf('d', 'G1'),
+            exerciseOf('e', 'G2'),
+            exerciseOf('f', 'G2'),
+        ])
+
+        expect(blocks).toEqual([
+            { label: null, keys: ['a'] },
+            { label: 'Tri-set', keys: ['b', 'c', 'd'] },
+            { label: 'Bi-set', keys: ['e', 'f'] },
+        ])
+    })
+
+    it('trata um rótulo sem par como exercício avulso', () => {
+        expect(blocksOf([exerciseOf('a', 'G1'), exerciseOf('b', undefined)])).toEqual([
+            { label: null, keys: ['a'] },
+            { label: null, keys: ['b'] },
+        ])
+    })
+
+    it('não junta o mesmo rótulo separado por outro exercício', () => {
+        const blocks = blocksOf([
+            exerciseOf('a', 'G1'),
+            exerciseOf('b', 'G1'),
+            exerciseOf('c', undefined),
+            exerciseOf('d', 'G1'),
+            exerciseOf('e', 'G1'),
+        ])
+
+        expect(blocks.map((block) => block.keys)).toEqual([['a', 'b'], ['c'], ['d', 'e']])
     })
 })
