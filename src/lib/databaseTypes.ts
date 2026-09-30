@@ -25,6 +25,14 @@ type UserSettingsRow = {
     timezone: string
 }
 
+type PlanActivationRow = {
+    id: string
+    user_id: string
+    plan_id: string
+    activated_at: string
+    source: 'app' | 'backfill'
+}
+
 type WorkoutSessionRow = {
     id: string
     user_id: string
@@ -224,6 +232,11 @@ export type Database = {
             user_settings: TableDefinition<
                 UserSettingsRow,
                 Record<never, never>,
+                Record<never, never>
+            >
+            plan_activations: TableDefinition<
+                PlanActivationRow,
+                { id?: string; activated_at?: string },
                 Record<never, never>
             >
             workout_sessions: TableDefinition<

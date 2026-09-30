@@ -9,7 +9,10 @@ import {
     cycleFocusDate,
     formatCycleBlockWeek,
     formatCycleCounts,
+    formatCyclePlans,
     formatCycleRange,
+    formatCycleRateChange,
+    formatCycleRhythm,
     formatCycleTitle,
 } from '@/features/evolution/metrics/cycleText'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
@@ -26,8 +29,6 @@ type CycleItemProps = {
 export function CyclesSection() {
     const { history, isLoading, errorMessage, reload } = useCycleHistory()
     const { setSelectedDate } = useSelectedDate()
-    const today = todayInTimezone()
-
     if (errorMessage && !history) {
         return <div className="error-list">{errorMessage}</div>
     }
@@ -35,6 +36,10 @@ export function CyclesSection() {
     if (!history) {
         return isLoading ? <p className="text-muted">Carregando ciclos...</p> : null
     }
+
+    // Mesmo fuso das ativações, para o dia de hoje e o dia de cada troca
+    // de plano caírem na mesma régua.
+    const today = todayInTimezone(history.timeZone)
 
     const summaries = summarizeCycles(history, today)
 
@@ -65,6 +70,9 @@ function CycleItem({ summary, onFocus, onChanged }: CycleItemProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const blockWeekLabel = formatCycleBlockWeek(summary)
+    const plansLabel = formatCyclePlans(summary)
+    const rhythmLabel = formatCycleRhythm(summary)
+    const rateChangeLabel = formatCycleRateChange(summary)
     const cycleId = summary.cycleId
 
     function changeMode(nextMode: ItemMode) {
@@ -94,8 +102,10 @@ function CycleItem({ summary, onFocus, onChanged }: CycleItemProps) {
                 <span className="cycle-item__title">{formatCycleTitle(summary)}</span>
                 <span className="cycle-item__line">{formatCycleRange(summary)}</span>
                 <span className="cycle-item__line">{formatCycleCounts(summary)}</span>
-                {summary.plans.length > 0 && <span className="cycle-item__line">{summary.plans.join(', ')}</span>}
+                {plansLabel && <span className="cycle-item__line">{plansLabel}</span>}
                 {blockWeekLabel && <span className="cycle-item__line">{blockWeekLabel}</span>}
+                {rhythmLabel && <span className="cycle-item__line">{rhythmLabel}</span>}
+                {rateChangeLabel && <span className="cycle-item__line">{rateChangeLabel}</span>}
             </button>
             {errorMessage && <div className="error-list">{errorMessage}</div>}
             {mode === 'idle' && (

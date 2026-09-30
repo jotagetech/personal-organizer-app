@@ -66,6 +66,21 @@ function groupBlockOf(snapshot: WorkoutSnapshot, exerciseIndex: number): Exercis
 
 // Rodada r (a partir de 0) do grupo: a série r de cada membro, na ordem da
 // ficha. Um membro com menos séries simplesmente sai das rodadas finais.
+export function memberIndexesInRound(setCounts: number[], round: number): number[] {
+    const memberIndexes = setCounts.flatMap((setCount, memberIndex) => (round < setCount ? [memberIndex] : []))
+
+    return memberIndexes
+}
+
+// A série `round` do membro fecha a rodada quando nenhum membro seguinte
+// ainda tem série nessa rodada (membros podem ter quantidades diferentes).
+export function closesRoundByCounts(setCounts: number[], memberIndex: number, round: number): boolean {
+    const hasLaterMember = memberIndexesInRound(setCounts, round).some((index) => index > memberIndex)
+
+    return !hasLaterMember
+}
+
+// Posições da rodada r na sessão, na mesma regra de memberIndexesInRound.
 export function groupRoundPositions(snapshot: WorkoutSnapshot, block: ExerciseBlock, round: number): StepPosition[] {
     const positions = block.exerciseIndexes
         .filter((exerciseIndex) => round < snapshot.exercicios[exerciseIndex].series.length)

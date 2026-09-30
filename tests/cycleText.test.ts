@@ -6,7 +6,10 @@ import {
     cycleFocusDate,
     formatCycleBlockWeek,
     formatCycleCounts,
+    formatCyclePlans,
     formatCycleRange,
+    formatCycleRateChange,
+    formatCycleRhythm,
 } from '@/features/evolution/metrics/cycleText'
 
 function summaryOf(overrides: Partial<CycleSummary> = {}): CycleSummary {
@@ -20,7 +23,11 @@ function summaryOf(overrides: Partial<CycleSummary> = {}): CycleSummary {
         finishedWorkouts: 8,
         startedNotFinished: 0,
         plans: [],
+        planTimeline: null,
         lastBlockWeek: null,
+        workoutsPerWeek: null,
+        adherence: null,
+        weeklyRateChange: null,
         ...overrides,
     }
 }
@@ -86,5 +93,76 @@ describe('buildDeleteCycleQuestion', () => {
         expect(buildDeleteCycleQuestion(summaryOf({ number: 1 }))).toBe(
             'Excluir o Ciclo 1? Os treinos continuam registrados; os dias dele passam a ficar sem ciclo.',
         )
+    })
+})
+
+describe('formatCyclePlans', () => {
+    it('mostra a troca de plano com a data em que ela passou a valer', () => {
+        const planTimeline = [
+            { name: 'Plano A', startDate: '2026-07-06' },
+            { name: 'Plano B', startDate: '2026-07-10' },
+        ]
+
+        expect(formatCyclePlans(summaryOf({ planTimeline, plans: ['Outro'] }))).toBe(
+            'Plano A · depois Plano B desde 10/07',
+        )
+    })
+
+    it('mostra um plano só quando não houve troca', () => {
+        const planTimeline = [{ name: 'Plano A', startDate: '2026-07-06' }]
+
+        expect(formatCyclePlans(summaryOf({ planTimeline }))).toBe('Plano A')
+    })
+
+    it('cai nos planos das sessões sem linha do tempo', () => {
+        expect(formatCyclePlans(summaryOf({ plans: ['Plano A', 'Plano B'] }))).toBe('Plano A, Plano B')
+    })
+
+    it('não mostra nada sem linha do tempo e sem sessões', () => {
+        expect(formatCyclePlans(summaryOf())).toBeNull()
+    })
+})
+
+describe('formatCycleRhythm', () => {
+    it('não mostra nada em ciclo que ainda não começou', () => {
+        expect(formatCycleRhythm(summaryOf())).toBeNull()
+    })
+
+    it('mostra o ritmo com uma casa decimal e vírgula', () => {
+        expect(formatCycleRhythm(summaryOf({ workoutsPerWeek: 8 / 15 * 7 }))).toBe('3,7 treinos por semana')
+    })
+
+    it('usa o singular entre um e dois treinos por semana', () => {
+        expect(formatCycleRhythm(summaryOf({ workoutsPerWeek: 1.5 }))).toBe('1,5 treino por semana')
+    })
+
+    it('acrescenta a aderência em porcentagem quando existe', () => {
+        expect(formatCycleRhythm(summaryOf({ workoutsPerWeek: 3, adherence: 0.8333 }))).toBe(
+            '3,0 treinos por semana · aderência 83%',
+        )
+    })
+})
+
+describe('formatCycleRateChange', () => {
+    it('não mostra nada sem ciclo anterior para comparar', () => {
+        expect(formatCycleRateChange(summaryOf())).toBeNull()
+    })
+
+    it('mostra o ganho com sinal de mais', () => {
+        const weeklyRateChange = { previousNumber: 1, difference: 0.5 }
+
+        expect(formatCycleRateChange(summaryOf({ weeklyRateChange }))).toBe('+0,5 por semana que o Ciclo 1')
+    })
+
+    it('mostra a queda com sinal de menos', () => {
+        const weeklyRateChange = { previousNumber: 1, difference: -1.2 }
+
+        expect(formatCycleRateChange(summaryOf({ weeklyRateChange }))).toBe('-1,2 por semana que o Ciclo 1')
+    })
+
+    it('fala em mesmo ritmo quando a diferença é zero', () => {
+        const weeklyRateChange = { previousNumber: 3, difference: 0 }
+
+        expect(formatCycleRateChange(summaryOf({ weeklyRateChange }))).toBe('mesmo ritmo do Ciclo 3')
     })
 })

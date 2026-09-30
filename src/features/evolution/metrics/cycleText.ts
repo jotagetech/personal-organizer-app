@@ -1,3 +1,4 @@
+import { roundToOneDecimal } from '@/features/evolution/metrics/cycleComparison'
 import type { CycleSummary } from '@/features/evolution/metrics/cycleSummary'
 import { formatDayMonth } from '@/features/evolution/sections/daysWindow'
 import { formatPlanWeekLabel } from '@/features/workout/planWeek'
@@ -26,6 +27,64 @@ export function formatCycleCounts(summary: CycleSummary): string {
 
     const counts = parts.join(' · ')
     return counts
+}
+
+// Pela linha do tempo de ativação quando ela cobre o início do ciclo; sem
+// isso, os planos usados nas sessões.
+export function formatCyclePlans(summary: CycleSummary): string | null {
+    if (summary.planTimeline !== null) {
+        const [firstPeriod, ...laterPeriods] = summary.planTimeline
+        const changes = laterPeriods.map((period) => `depois ${period.name} desde ${formatDayMonth(period.startDate)}`)
+        const timelineText = [firstPeriod.name, ...changes].join(' · ')
+        return timelineText
+    }
+
+    const sessionPlans = summary.plans.length > 0 ? summary.plans.join(', ') : null
+    return sessionPlans
+}
+
+function formatDecimal(value: number): string {
+    const formatted = value.toFixed(1).replace('.', ',')
+
+    return formatted
+}
+
+function formatWeeklyRate(rate: number): string {
+    const rounded = roundToOneDecimal(rate)
+    const workoutWord = rounded >= 1 && rounded < 2 ? 'treino' : 'treinos'
+    const text = `${formatDecimal(rounded)} ${workoutWord} por semana`
+
+    return text
+}
+
+export function formatCycleRhythm(summary: CycleSummary): string | null {
+    if (summary.workoutsPerWeek === null) {
+        return null
+    }
+
+    const parts = [formatWeeklyRate(summary.workoutsPerWeek)]
+    if (summary.adherence !== null) {
+        parts.push(`aderência ${Math.round(summary.adherence * 100)}%`)
+    }
+
+    const rhythm = parts.join(' · ')
+    return rhythm
+}
+
+export function formatCycleRateChange(summary: CycleSummary): string | null {
+    const change = summary.weeklyRateChange
+    if (change === null) {
+        return null
+    }
+
+    const previousTitle = `Ciclo ${change.previousNumber}`
+    if (change.difference === 0) {
+        return `mesmo ritmo do ${previousTitle}`
+    }
+
+    const sign = change.difference > 0 ? '+' : '-'
+    const text = `${sign}${formatDecimal(Math.abs(change.difference))} por semana que o ${previousTitle}`
+    return text
 }
 
 export function formatCycleBlockWeek(summary: CycleSummary): string | null {

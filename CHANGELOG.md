@@ -7,6 +7,19 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Histórico de troca de plano: cada vez que o plano ativo muda (importação,
+  montador ou "Usar este plano") fica registrado no banco (migração
+  `20260930020000`). As trocas anteriores foram estimadas pela data de
+  importação de cada plano.
+- Na seção Ciclos: os planos de cada ciclo na ordem das trocas, treinos por
+  semana, diferença de ritmo em relação ao ciclo anterior e aderência (dias
+  com treino previsto que tiveram treino concluído, quando o plano define os
+  dias da semana dos treinos). O dia de hoje só entra na aderência depois de
+  concluído.
+- "Ver" em Menu › Planos de treino: mostra o conteúdo de qualquer plano
+  guardado só para leitura, sem ativá-lo, com bloco, treinos, dias da semana,
+  grupos, séries, prescrição, quedas e observações. Em grupo, o descanso
+  aparece só na série que fecha a rodada, como no treino.
 - Seção Ciclos em Resultados, abaixo da grade: cada ciclo com número,
   período, dias decorridos, treinos concluídos e sem finalizar, planos usados
   e a última semana do bloco. Tocar num ciclo leva a grade até ele.

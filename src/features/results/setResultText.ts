@@ -30,7 +30,7 @@ function metricValueText(metric: SetMetric, values: SetResultValues, porLado: bo
 
 // Null quando não há carga a mostrar: peso corporal sem lastro fica com 0 no
 // banco e "0 kg" pareceria uma carga lançada.
-function loadText(formaCarga: LoadConvention, loadKg: number | null): string | null {
+export function formatLoadText(formaCarga: LoadConvention, loadKg: number | null): string | null {
     if (formaCarga === 'peso_corporal') {
         return loadKg === null || loadKg === 0 ? null : `+${formatDecimal(loadKg)} kg`
     }
@@ -56,7 +56,7 @@ export function formatSetResult(
     values: SetResultValues,
     porLado: boolean,
 ): string {
-    const load = loadText(formaCarga, values.loadKg)
+    const load = formatLoadText(formaCarga, values.loadKg)
     const metricText = metricValueText(metric, values, porLado)
 
     return load === null ? metricText : `${load} × ${metricText}`

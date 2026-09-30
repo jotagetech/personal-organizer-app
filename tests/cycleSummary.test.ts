@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import type { WorkoutCycleRow } from '@/features/cycle/types'
-import type { CycleHistory, HistorySession } from '@/features/evolution/data/cycleHistory'
+import type { CycleHistory, HistorySession, PlanActivation } from '@/features/evolution/data/cycleHistory'
+import type { PlanSchedule } from '@/features/evolution/metrics/cycleComparison'
 import { summarizeCycles } from '@/features/evolution/metrics/cycleSummary'
 
 function cycleRow(id: string, startDate: string): WorkoutCycleRow {
@@ -22,8 +23,22 @@ function session(sessionDate: string, overrides: Partial<HistorySession> = {}): 
 const PLANS = [{ id: 'plan-a', name: 'Treino ABC', importedAt: '2026-05-01T10:00:00Z' }]
 const TODAY = '2026-07-20'
 
-function historyOf(cycles: WorkoutCycleRow[], sessions: HistorySession[], plans = PLANS): CycleHistory {
-    return { cycles, sessions, plans }
+type TimelineExtras = { activations?: PlanActivation[]; planSchedules?: PlanSchedule[] }
+
+function historyOf(
+    cycles: WorkoutCycleRow[],
+    sessions: HistorySession[],
+    plans = PLANS,
+    extras: TimelineExtras = {},
+): CycleHistory {
+    return {
+        cycles,
+        sessions,
+        plans,
+        activations: extras.activations ?? [],
+        planSchedules: extras.planSchedules ?? [],
+        timeZone: 'America/Sao_Paulo',
+    }
 }
 
 describe('summarizeCycles', () => {
@@ -44,7 +59,11 @@ describe('summarizeCycles', () => {
             finishedWorkouts: 0,
             startedNotFinished: 0,
             plans: [],
+            planTimeline: null,
             lastBlockWeek: null,
+            workoutsPerWeek: 0,
+            adherence: null,
+            weeklyRateChange: null,
         })
     })
 
@@ -139,5 +158,96 @@ describe('summarizeCycles', () => {
         const [summary] = summarizeCycles(historyOf([cycleRow('c1', '2026-07-06')], sessions), TODAY)
 
         expect(summary.lastBlockWeek).toEqual({ semana: 2, totalSemanas: 4 })
+    })
+
+    it('mostra os planos pela linha do tempo de ativação quando ela cobre o início', () => {
+        const plans = [
+            { id: 'plan-a', name: 'Treino ABC', importedAt: '2026-05-01T10:00:00Z' },
+            { id: 'plan-b', name: 'Treino ABC', importedAt: '2026-07-10T15:00:00Z' },
+        ]
+        const activations = [
+            { planId: 'plan-a', activatedAt: '2026-05-01T10:00:00Z' },
+            { planId: 'plan-b', activatedAt: '2026-07-10T15:00:00Z' },
+        ]
+        const [summary] = summarizeCycles(
+            historyOf([cycleRow('c1', '2026-07-06')], [], plans, { activations }),
+            TODAY,
+        )
+
+        expect(summary.planTimeline).toEqual([
+            { name: 'Treino ABC (versão 1 de 2)', startDate: '2026-07-06' },
+            { name: 'Treino ABC (versão 2 de 2)', startDate: '2026-07-10' },
+        ])
+    })
+
+    it('deixa a linha do tempo nula quando nenhuma ativação cobre o início do ciclo', () => {
+        const activations = [{ planId: 'plan-a', activatedAt: '2026-07-08T10:00:00Z' }]
+        const [summary] = summarizeCycles(
+            historyOf([cycleRow('c1', '2026-07-06')], [session('2026-07-09')], PLANS, { activations }),
+            TODAY,
+        )
+
+        expect(summary.planTimeline).toBeNull()
+        expect(summary.plans).toEqual(['Treino ABC'])
+    })
+
+    it('calcula ritmo semanal, aderência e diferença para o ciclo anterior', () => {
+        const cycles = [cycleRow('c1', '2026-06-29'), cycleRow('c2', '2026-07-06')]
+        const activations = [{ planId: 'plan-a', activatedAt: '2026-05-01T10:00:00Z' }]
+        const planSchedules = [{ planId: 'plan-a', workoutWeekdays: [['segunda'], ['quarta'], ['sexta']] }]
+        const sessions = [
+            session('2026-06-29'),
+            session('2026-07-06'),
+            session('2026-07-08'),
+            session('2026-07-10'),
+        ]
+        const summaries = summarizeCycles(
+            historyOf(cycles, sessions, PLANS, { activations, planSchedules }),
+            '2026-07-12',
+        )
+
+        expect(summaries[1]).toMatchObject({ workoutsPerWeek: 1, adherence: 1 / 3, weeklyRateChange: null })
+        expect(summaries[0]).toMatchObject({
+            workoutsPerWeek: 3,
+            adherence: 1,
+            weeklyRateChange: { previousNumber: 1, difference: 2 },
+        })
+    })
+
+    it('deixa ritmo e aderência nulos em ciclo que ainda não começou', () => {
+        const cycles = [cycleRow('c1', '2026-07-06'), cycleRow('c2', '2026-07-25')]
+        const activations = [{ planId: 'plan-a', activatedAt: '2026-05-01T10:00:00Z' }]
+        const planSchedules = [{ planId: 'plan-a', workoutWeekdays: [['segunda']] }]
+        const [future] = summarizeCycles(historyOf(cycles, [], PLANS, { activations, planSchedules }), TODAY)
+
+        expect(future).toMatchObject({ workoutsPerWeek: null, adherence: null, weeklyRateChange: null })
+    })
+
+    describe('aderência e o dia de hoje', () => {
+        const activations = [{ planId: 'plan-a', activatedAt: '2026-05-01T10:00:00Z' }]
+        const planSchedules = [{ planId: 'plan-a', workoutWeekdays: [['segunda'], ['quarta']] }]
+        const extras = { activations, planSchedules }
+        const wednesday = '2026-07-08'
+
+        it('deixa hoje de fora enquanto não houver sessão concluída', () => {
+            const sessions = [session('2026-07-06'), session(wednesday, { finishedAt: null })]
+            const [summary] = summarizeCycles(historyOf([cycleRow('c1', '2026-07-06')], sessions, PLANS, extras), wednesday)
+
+            expect(summary.adherence).toBe(1)
+            expect(summary.workoutsPerWeek).toBeCloseTo((1 / 3) * 7)
+        })
+
+        it('conta hoje quando a sessão de hoje já foi concluída', () => {
+            const sessions = [session(wednesday)]
+            const [summary] = summarizeCycles(historyOf([cycleRow('c1', '2026-07-06')], sessions, PLANS, extras), wednesday)
+
+            expect(summary.adherence).toBe(1 / 2)
+        })
+
+        it('fica nulo no primeiro dia do ciclo sem sessão concluída', () => {
+            const [summary] = summarizeCycles(historyOf([cycleRow('c1', wednesday)], [], PLANS, extras), wednesday)
+
+            expect(summary.adherence).toBeNull()
+        })
     })
 })

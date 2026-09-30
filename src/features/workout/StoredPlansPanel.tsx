@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { startNewCycle } from '@/features/cycle/api'
 import { activateStoredPlan, listStoredPlans } from '@/features/workout/api'
 import { PlanSwitchConfirm } from '@/features/workout/PlanSwitchConfirm'
+import { StoredPlanViewer } from '@/features/workout/StoredPlanViewer'
 import {
     describeStoredPlans,
     formatPlanImportedAt,
@@ -22,6 +23,7 @@ type StoredPlansPanelProps = {
 export function StoredPlansPanel({ onClose }: StoredPlansPanelProps) {
     const [entries, setEntries] = useState<StoredPlanEntry[] | null>(null)
     const [confirmingPlanId, setConfirmingPlanId] = useState<string | null>(null)
+    const [viewingPlanId, setViewingPlanId] = useState<string | null>(null)
     const [isSwitching, setIsSwitching] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [statusMessage, setStatusMessage] = useState<string | null>(null)
@@ -65,6 +67,11 @@ export function StoredPlansPanel({ onClose }: StoredPlansPanelProps) {
     const activeEntry = entries?.find((entry) => entry.isActive)
     const activePlanName = activeEntry ? storedPlanDisplayName(activeEntry) : NO_ACTIVE_PLAN_NAME
 
+    const viewingEntry = entries?.find((entry) => entry.id === viewingPlanId)
+    if (viewingEntry) {
+        return <StoredPlanViewer entry={viewingEntry} onBack={() => setViewingPlanId(null)} />
+    }
+
     return (
         <div>
             <div className="page-header">
@@ -106,19 +113,28 @@ export function StoredPlansPanel({ onClose }: StoredPlansPanelProps) {
                                     onCancel={() => setConfirmingPlanId(null)}
                                 />
                             ) : (
-                                !entry.isActive && (
+                                <div className="stored-plans__actions">
                                     <button
                                         type="button"
-                                        className="secondary-button full-width"
-                                        onClick={() => {
-                                            setConfirmingPlanId(entry.id)
-                                            setStatusMessage(null)
-                                        }}
-                                        disabled={isSwitching}
+                                        className="secondary-button"
+                                        onClick={() => setViewingPlanId(entry.id)}
                                     >
-                                        Usar este plano
+                                        Ver
                                     </button>
-                                )
+                                    {!entry.isActive && (
+                                        <button
+                                            type="button"
+                                            className="secondary-button"
+                                            onClick={() => {
+                                                setConfirmingPlanId(entry.id)
+                                                setStatusMessage(null)
+                                            }}
+                                            disabled={isSwitching}
+                                        >
+                                            Usar este plano
+                                        </button>
+                                    )}
+                                </div>
                             )}
                         </div>
                     ))}

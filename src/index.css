@@ -4371,3 +4371,77 @@ h1, h2, h3, h4 {
 .cycle-item__action:active {
     background: var(--color-surface-pressed);
 }
+
+.stored-plans__actions {
+    display: flex;
+    gap: 8px;
+}
+
+.stored-plans__actions .secondary-button {
+    flex: 1;
+    min-height: var(--touch-target);
+}
+
+.plan-view__meta {
+    margin: 0 0 14px;
+}
+
+.plan-view__block,
+.plan-view__workout {
+    margin-bottom: 14px;
+}
+
+.plan-view__heading {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.plan-view__weeks {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+}
+
+.plan-view__week {
+    display: flex;
+    gap: 10px;
+}
+
+.plan-view__week-label {
+    flex-shrink: 0;
+    width: 72px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.plan-view__workout-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 12px;
+    margin-bottom: 4px;
+}
+
+.plan-view__tags {
+    margin: -2px 0 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.plan-view__note {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.plan-view .day-workout__set-label {
+    width: 64px;
+}

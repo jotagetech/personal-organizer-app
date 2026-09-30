@@ -127,6 +127,29 @@ export async function listStoredPlans(): Promise<StoredPlansListing> {
     return listing
 }
 
+export type StoredPlanDetail = { name: string; importedAt: string; plan: WorkoutPlan }
+
+// Leitura de um plano guardado sem ativá-lo: o payload passa pela mesma
+// normalização do plano ativo, então a tela de consulta vê o formato atual
+// mesmo para um arquivo gravado em versão antiga.
+export async function getStoredPlan(planId: string): Promise<StoredPlanDetail> {
+    const { data: planRow, error: planError } = await supabase
+        .from('workout_plans')
+        .select('name, payload, created_at')
+        .eq('id', planId)
+        .single()
+
+    if (planError || !planRow) {
+        throw new Error(planError?.message ?? 'Plano não encontrado')
+    }
+
+    return {
+        name: planRow.name,
+        importedAt: planRow.created_at,
+        plan: normalizeStoredWorkoutPlan(planRow.payload),
+    }
+}
+
 export async function activateStoredPlan(planId: string): Promise<void> {
     const { data: authData } = await supabase.auth.getUser()
     const currentUserId = authData.user?.id

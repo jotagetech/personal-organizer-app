@@ -12,14 +12,34 @@ const WEEKDAY_BY_INDEX = [
 
 export type IsoDate = string
 
-export function todayInTimezone(timezone: string = DEFAULT_TIMEZONE): IsoDate {
+const dateFormatterByTimezone = new Map<string, Intl.DateTimeFormat>()
+
+// Montar o formatador custa bem mais que usá-lo, e a conversão roda uma vez
+// por dia de cada ciclo; um por fuso basta.
+function dateFormatterFor(timezone: string): Intl.DateTimeFormat {
+    const cached = dateFormatterByTimezone.get(timezone)
+    if (cached) {
+        return cached
+    }
+
     const formatter = new Intl.DateTimeFormat('en-CA', {
         timeZone: timezone,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
     })
-    const isoDate = formatter.format(new Date())
+    dateFormatterByTimezone.set(timezone, formatter)
+    return formatter
+}
+
+export function isoDateInTimezone(instant: Date | string, timezone: string = DEFAULT_TIMEZONE): IsoDate {
+    const isoDate = dateFormatterFor(timezone).format(new Date(instant))
+
+    return isoDate
+}
+
+export function todayInTimezone(timezone: string = DEFAULT_TIMEZONE): IsoDate {
+    const isoDate = isoDateInTimezone(new Date(), timezone)
 
     return isoDate
 }
