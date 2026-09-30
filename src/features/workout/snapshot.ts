@@ -66,7 +66,8 @@ function snapshotSetOf(
 
 // O descanso do exercício no snapshot já é o resolvido para o dia (variação
 // da semana, exercício ou padrão do plano), então o histórico não muda
-// quando a ficha muda depois.
+// quando a ficha muda depois. O grupo só entra quando existe, para o snapshot
+// de uma ficha sem grupos continuar igual ao de antes.
 function snapshotExerciseOf(input: SnapshotExerciseInput): WorkoutSnapshotExercise {
     const exercicio = input.forWeek
     const layers = exerciseRestLayers(input)
@@ -84,6 +85,7 @@ function snapshotExerciseOf(input: SnapshotExerciseInput): WorkoutSnapshotExerci
         rir_alvo_max: exercicio.rir_alvo_max,
         observacoes: exercicio.observacoes,
         series: exercicio.series.map((set, seriesIndex) => snapshotSetOf(set, seriesIndex, layers, exerciseRest)),
+        ...(exercicio.grupo === null ? {} : { grupo: exercicio.grupo }),
     }
 
     return snapshotExercise

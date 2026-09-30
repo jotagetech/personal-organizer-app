@@ -753,3 +753,31 @@ describe('exercício extra na exportação', () => {
         expect(workout.exercises[2].sets[0]).toMatchObject({ status: 'completed', load_kg: 8, reps: 15 })
     })
 })
+
+describe('bi-set na exportação', () => {
+    it('leva o rótulo do grupo em superset_group e nulo nos exercícios avulsos', () => {
+        const [supino, remada] = SNAPSHOT.exercicios
+        const groupedSnapshot: WorkoutSnapshot = {
+            ...SNAPSHOT,
+            exercicios: [
+                { ...supino, grupo: 'A' },
+                { ...remada, grupo: 'A' },
+                {
+                    ...SNAPSHOT_EXERCISE_DEFAULTS,
+                    exercise_key: 'crucifixo',
+                    nome: 'Crucifixo',
+                    forma_carga: 'por_halter',
+                    series: [repsSnapshotSet(1, 12, 15, null)],
+                },
+            ],
+        }
+        const raw = buildRawData({ workoutSessions: [buildSession({ workout_snapshot: groupedSnapshot })] })
+
+        const [workout] = buildPeriodExport(raw, PERIOD, META).workouts
+        expect(workout.exercises.map((exercise) => [exercise.exercise_key, exercise.superset_group])).toEqual([
+            ['supino', 'A'],
+            ['remada', 'A'],
+            ['crucifixo', null],
+        ])
+    })
+})

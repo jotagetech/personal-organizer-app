@@ -46,8 +46,12 @@ export function normalizeExerciseName(nome: string): string {
     return normalized
 }
 
+// O extra entra sozinho no fim da lista, longe dos parceiros que tinha na
+// ficha, então nunca leva o grupo junto.
 function asExtra(exercise: WorkoutSnapshotExercise): WorkoutSnapshotExercise {
-    return { ...exercise, extra: true }
+    const { grupo: _grupo, ...ungrouped } = exercise
+
+    return { ...ungrouped, extra: true }
 }
 
 // O plano vem antes dos extras antigos: um exercício que existe nos dois

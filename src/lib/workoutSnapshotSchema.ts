@@ -47,6 +47,8 @@ const snapshotIntervalSchema = z.object({
 
 // `extra` marca o exercício acrescentado só a esta sessão, fora do treino do
 // plano. Ausente é exercício do plano, que é o que todo snapshot antigo tem.
+// `grupo` é o rótulo do bi-set, tri-set ou circuito copiado da ficha; ausente
+// é exercício feito sozinho, como em todo snapshot anterior aos grupos.
 export const snapshotExerciseSchema = z.object({
     exercise_key: z.string(),
     nome: z.string(),
@@ -62,6 +64,7 @@ export const snapshotExerciseSchema = z.object({
     observacoes: z.string().nullable().default(null),
     series: z.array(snapshotSetSchema),
     extra: z.boolean().optional(),
+    grupo: z.string().optional(),
 })
 
 // A semana do bloco fica gravada junto com as séries já resolvidas para ela,

@@ -113,6 +113,9 @@ export type ExportedExercise = {
     name: string
     // Acrescentado só àquela sessão, fora do treino do plano.
     is_extra: boolean
+    // Rótulo do bi-set, tri-set ou circuito da ficha; exercícios da mesma
+    // sessão com o mesmo rótulo foram feitos alternando uma série de cada.
+    superset_group: string | null
     exercise_type: ExerciseKind
     interval: ExportedInterval | null
     load_convention: LoadConvention
@@ -254,6 +257,7 @@ function buildWorkout(
         exercise_key: exercicio.exercise_key,
         name: exercicio.nome,
         is_extra: exercicio.extra === true,
+        superset_group: exercicio.grupo ?? null,
         exercise_type: exercicio.tipo,
         interval: exercicio.intervalado
             ? {
