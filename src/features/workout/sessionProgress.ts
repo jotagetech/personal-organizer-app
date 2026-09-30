@@ -1,3 +1,4 @@
+import { exerciseBlocksOf, groupRoundCount, groupRoundPositions } from '@/features/workout/supersets'
 import {
     setKey,
     type WorkoutSetRow,
@@ -54,13 +55,23 @@ function rowAtPosition(
     return setsByKey.get(setKey(exercicio.exercise_key, serie.set_index))
 }
 
+// Ordem do assistente: exercício a exercício, exceto dentro de um bi-set,
+// tri-set ou circuito, que alterna os membros rodada a rodada. Retomada,
+// próxima pendente, progresso e navegação andam todos por esta mesma lista.
 function allPositions(snapshot: WorkoutSnapshot): StepPosition[] {
     const positions: StepPosition[] = []
-    snapshot.exercicios.forEach((exercicio, exerciseIndex) => {
-        exercicio.series.forEach((_serie, setIndexInExercise) => {
-            positions.push({ exerciseIndex, setIndexInExercise })
-        })
-    })
+    for (const block of exerciseBlocksOf(snapshot)) {
+        if (block.grupo === null) {
+            const [exerciseIndex] = block.exerciseIndexes
+            snapshot.exercicios[exerciseIndex].series.forEach((_serie, setIndexInExercise) => {
+                positions.push({ exerciseIndex, setIndexInExercise })
+            })
+            continue
+        }
+        for (let round = 0; round < groupRoundCount(snapshot, block); round += 1) {
+            positions.push(...groupRoundPositions(snapshot, block, round))
+        }
+    }
 
     return positions
 }
@@ -230,29 +241,18 @@ export function summarizeExerciseProgress(
 }
 
 export function advancePosition(snapshot: WorkoutSnapshot, position: StepPosition): StepPosition | null {
-    const currentExercicio = snapshot.exercicios[position.exerciseIndex]
-    const hasNextSetInExercise = position.setIndexInExercise + 1 < currentExercicio.series.length
-    if (hasNextSetInExercise) {
-        return { exerciseIndex: position.exerciseIndex, setIndexInExercise: position.setIndexInExercise + 1 }
-    }
+    const positions = allPositions(snapshot)
+    const currentIndex = positions.findIndex((candidate) => isSamePosition(candidate, position))
 
-    const hasNextExercise = position.exerciseIndex + 1 < snapshot.exercicios.length
-    if (hasNextExercise) {
-        return { exerciseIndex: position.exerciseIndex + 1, setIndexInExercise: 0 }
-    }
-
-    return null
+    return positions[currentIndex + 1] ?? null
 }
 
+// Na primeira posição não há para onde voltar, e ela mesma é devolvida.
 export function retreatPosition(snapshot: WorkoutSnapshot, position: StepPosition): StepPosition {
-    const hasPreviousSetInExercise = position.setIndexInExercise > 0
-    if (hasPreviousSetInExercise) {
-        return { exerciseIndex: position.exerciseIndex, setIndexInExercise: position.setIndexInExercise - 1 }
-    }
+    const positions = allPositions(snapshot)
+    const currentIndex = positions.findIndex((candidate) => isSamePosition(candidate, position))
 
-    const previousExerciseIndex = position.exerciseIndex - 1
-    const previousExercicio = snapshot.exercicios[previousExerciseIndex]
-    return { exerciseIndex: previousExerciseIndex, setIndexInExercise: previousExercicio.series.length - 1 }
+    return currentIndex > 0 ? positions[currentIndex - 1] : position
 }
 
 export function totalSetCount(snapshot: WorkoutSnapshot): number {
@@ -262,19 +262,16 @@ export function totalSetCount(snapshot: WorkoutSnapshot): number {
 }
 
 export function positionToGlobalIndex(snapshot: WorkoutSnapshot, position: StepPosition): number {
-    const setsInPreviousExercises = snapshot.exercicios
-        .slice(0, position.exerciseIndex)
-        .reduce((sum, exercicio) => sum + exercicio.series.length, 0)
+    const globalIndex = allPositions(snapshot).findIndex((candidate) => isSamePosition(candidate, position))
 
-    return setsInPreviousExercises + position.setIndexInExercise
+    return globalIndex
 }
 
 export function isLastPosition(snapshot: WorkoutSnapshot, position: StepPosition): boolean {
-    const isLastExercise = position.exerciseIndex === snapshot.exercicios.length - 1
-    const currentExercicio = snapshot.exercicios[position.exerciseIndex]
-    const isLastSetInExercise = position.setIndexInExercise === currentExercicio.series.length - 1
+    const positions = allPositions(snapshot)
+    const lastPosition = positions[positions.length - 1]
 
-    return isLastExercise && isLastSetInExercise
+    return lastPosition !== undefined && isSamePosition(lastPosition, position)
 }
 
 // Passo do assistente: a série principal (dropPosition null) ou uma das quedas

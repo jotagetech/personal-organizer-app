@@ -25,10 +25,11 @@ import { decideRestPushAction, planRestPush, type RestPushPlan } from '@/feature
 import { SessionClock } from '@/features/workout/SessionClock'
 import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import type { PlanWeek } from '@/features/workout/planWeek'
-import { planDefaultRest, snapshotSetRest } from '@/features/workout/restPrescription'
+import { planDefaultRest } from '@/features/workout/restPrescription'
 import { exerciseTags } from '@/features/workout/setPresentation'
 import { buildWorkoutSnapshot } from '@/features/workout/snapshot'
 import { buildSavedWorkoutStep, restoreWorkoutStep, type SavedWorkoutStep } from '@/features/workout/sessionResume'
+import { restAfterSet } from '@/features/workout/supersets'
 import {
     clearWorkoutStep,
     loadRestTimer,
@@ -644,14 +645,13 @@ export function WorkoutSessionView({
 
     // Quedas intermediárias de um drop set são feitas sem pausa: o descanso
     // começa só quando a série termina por inteiro (última queda confirmada ou
-    // quedas restantes puladas).
+    // quedas restantes puladas). Num grupo, só a série que fecha a rodada
+    // descansa; sem timer, também não há push de fim de descanso.
     function startRestAfterSet(resolvedSetsByKey: Map<string, WorkoutSetRow>, confirmedPosition: StepPosition) {
         if (!snapshot) {
             return
         }
-        const exercicio = snapshot.exercicios[confirmedPosition.exerciseIndex]
-        const confirmedSet = exercicio.series[confirmedPosition.setIndexInExercise]
-        const rest = snapshotSetRest(exercicio, confirmedSet)
+        const rest = restAfterSet(snapshot, confirmedPosition, resolvedSetsByKey)
         if (rest === null) {
             return
         }
