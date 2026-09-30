@@ -148,13 +148,19 @@ export function WorkoutTab() {
                         Criar plano
                     </button>
                 </div>
-                <ImportWorkoutPlan onImported={reloadActivePlan} />
+                <ImportWorkoutPlan activePlanName={null} onImported={reloadActivePlan} />
             </>
         )
     }
 
     if (activePanel === 'import_plan') {
-        return <ImportWorkoutPlan onImported={reloadActivePlan} />
+        return (
+            <ImportWorkoutPlan
+                activePlanName={activePlan.plan.nome}
+                onImported={reloadActivePlan}
+                onCancel={() => setActivePanel(null)}
+            />
+        )
     }
 
     // A semana também entra na chave da sessão: iniciar um ciclo novo refaz o

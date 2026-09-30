@@ -1,4 +1,4 @@
-import { BookOpen, ChevronRight, Download, type LucideIcon } from 'lucide-react'
+import { BookOpen, ChevronRight, Download, Dumbbell, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { useDayStatus } from '@/contexts/DayStatusContext'
@@ -9,9 +9,10 @@ import { PeriodExportPanel } from '@/features/export/PeriodExportPanel'
 import { FoodItemsCatalog } from '@/features/food/FoodItemsCatalog'
 import { PushNotificationsSection } from '@/features/notifications/PushNotificationsSection'
 import { formatDateLabel } from '@/features/shared/DateHeader'
+import { StoredPlansPanel } from '@/features/workout/StoredPlansPanel'
 import { todayInTimezone } from '@/lib/dateUtils'
 
-type MenuToolKey = 'food_catalog' | 'period_export'
+type MenuToolKey = 'workout_plans' | 'food_catalog' | 'period_export'
 type MenuPanel = 'home' | MenuToolKey
 
 type MenuTool = {
@@ -28,6 +29,12 @@ const CHEVRON_ICON_SIZE = 20
 // da tela inicial é gerada daqui, então uma ferramenta nova só precisa de uma
 // entrada nesta lista e de um caso em renderToolPanel.
 const MENU_TOOLS: MenuTool[] = [
+    {
+        key: 'workout_plans',
+        label: 'Planos de treino',
+        description: 'Voltar para um plano já importado, sem o arquivo',
+        icon: Dumbbell,
+    },
     {
         key: 'food_catalog',
         label: 'Catálogo de alimentos',
@@ -54,6 +61,8 @@ export function MenuTab() {
 
 function renderToolPanel(toolKey: MenuToolKey, onClose: () => void) {
     switch (toolKey) {
+        case 'workout_plans':
+            return <StoredPlansPanel onClose={onClose} />
         case 'food_catalog':
             return <FoodItemsCatalog onClose={onClose} />
         case 'period_export':

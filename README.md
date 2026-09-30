@@ -348,6 +348,23 @@ hash, o plano salvo vira o ativo); nada muda na forma como o plano é lido.
   não perde nada; "Descartar rascunho" recomeça. Salvar com sucesso apaga o
   rascunho.
 
+### Trocar de plano e voltar para um plano antigo
+
+Importar outro arquivo com um plano já ativo pede confirmação antes de
+trocar: a caixa mostra o plano que sai e o que entra, e oferece "Começar
+ciclo novo hoje" (marcado por padrão), que volta para o Dia 1 e para a
+semana 1 do bloco. Nada é apagado na troca: o plano anterior continua no
+banco, porque as sessões feitas com ele apontam para ele, e o histórico não
+muda.
+
+Menu › Planos de treino lista todos os planos já importados ou salvos pelo
+montador, do mais novo para o mais antigo, com a data de importação e o
+ativo marcado. Como o montador salva cada edição como um plano novo, planos
+com o mesmo nome aparecem numerados ("versão 2 de 3"). "Usar este plano"
+passa pela mesma confirmação e reativa o plano sem precisar do arquivo; com
+o ciclo novo marcado, o plano recomeça do zero. É só a troca do plano ativo
+em `user_settings`, sem migração.
+
 ### O que a versão 2 acrescenta
 
 Cada item abaixo é opcional, e uma série escrita como na versão 1 continua

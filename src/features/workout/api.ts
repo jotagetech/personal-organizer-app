@@ -7,6 +7,7 @@ import {
     parseWorkoutPlanJson,
     type SetMetric,
     type WorkoutPlan,
+    type WorkoutPlanDocument,
     type WorkoutPlanValidationResult,
 } from '@/lib/workoutPlanSchema'
 import { normalizeWorkoutSnapshot, storedWorkoutSnapshotSchema } from '@/lib/workoutSnapshotSchema'
@@ -29,10 +30,14 @@ export async function importWorkoutPlanFromText(rawText: string): Promise<Import
         return { success: false, errors: validationResult.errors }
     }
 
-    // O banco guarda o documento como veio (v1 ou v2), não o formato interno:
-    // o hash de um arquivo v1 reimportado continua igual ao de antes, e a
-    // leitura normaliza do mesmo jeito que a importação.
-    const { document } = validationResult
+    const importResult = await importWorkoutPlanDocument(validationResult.document)
+    return importResult
+}
+
+// O banco guarda o documento como veio (v1 ou v2), não o formato interno:
+// o hash de um arquivo v1 reimportado continua igual ao de antes, e a
+// leitura normaliza do mesmo jeito que a importação.
+export async function importWorkoutPlanDocument(document: WorkoutPlanDocument): Promise<ImportPlanResult> {
     const contentHash = await sha256Hex(canonicalizeJson(document))
     const { data, error } = await supabase.rpc('import_workout_plan', {
         p_name: document.nome,
@@ -93,6 +98,50 @@ export async function getActivePlan(): Promise<ActivePlan | null> {
     }
 
     return { planId: planRow.id, plan: normalizeStoredWorkoutPlan(planRow.payload) }
+}
+
+export type StoredPlanSummary = { id: string; name: string; importedAt: string }
+
+export type StoredPlansListing = { plans: StoredPlanSummary[]; activePlanId: string | null }
+
+// Todo plano importado (ou salvo pelo montador) continua no banco depois da
+// troca, porque as sessões antigas apontam para ele; esta lista é o que deixa
+// voltar a um deles sem reimportar o arquivo.
+export async function listStoredPlans(): Promise<StoredPlansListing> {
+    const [plansResponse, settingsResponse] = await Promise.all([
+        supabase.from('workout_plans').select('id, name, created_at').order('created_at', { ascending: false }),
+        supabase.from('user_settings').select('active_plan_id').maybeSingle(),
+    ])
+
+    const loadError = plansResponse.error ?? settingsResponse.error
+    if (loadError) {
+        throw new Error(loadError.message)
+    }
+
+    const plans = (plansResponse.data ?? []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        importedAt: row.created_at,
+    }))
+    const listing = { plans, activePlanId: settingsResponse.data?.active_plan_id ?? null }
+    return listing
+}
+
+export async function activateStoredPlan(planId: string): Promise<void> {
+    const { data: authData } = await supabase.auth.getUser()
+    const currentUserId = authData.user?.id
+    if (!currentUserId) {
+        throw new Error('Usuário não autenticado')
+    }
+
+    const { error } = await supabase
+        .from('user_settings')
+        .update({ active_plan_id: planId })
+        .eq('user_id', currentUserId)
+
+    if (error) {
+        throw new Error(error.message)
+    }
 }
 
 function normalizeSessionRow(row: StoredWorkoutSessionRow): WorkoutSessionRow {

@@ -3483,6 +3483,85 @@ h1, h2, h3, h4 {
     cursor: default;
 }
 
+.import-plan__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* Âmbar e não vermelho: trocar de plano não apaga nada, só pede atenção. */
+.plan-switch-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--color-pending);
+    border-radius: var(--radius-sm);
+    background: var(--color-pending-surface);
+    font-size: 14px;
+}
+
+.plan-switch-confirm__title {
+    font-size: 16px;
+}
+
+.plan-switch-confirm__line {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.plan-switch-confirm__plan {
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.stored-plans__hint {
+    margin: 0 0 14px;
+}
+
+.stored-plans__list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.stored-plans__row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--color-divider);
+}
+
+.stored-plans__row:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.stored-plans__summary {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stored-plans__name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.stored-plans__badge {
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--color-done-soft);
+    color: var(--color-done);
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .login-page {
     display: flex;
     align-items: center;

@@ -7,6 +7,15 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Planos de treino, na aba Menu: lista todos os planos já importados ou
+  salvos pelo montador, com a data de importação, o ativo marcado e as
+  versões de um mesmo nome numeradas. "Usar este plano" volta para um plano
+  antigo sem reimportar o arquivo, com a opção de começar um ciclo novo
+  hoje (Dia 1 e semana 1 do bloco), marcada por padrão.
+- Confirmação antes de importar um plano quando já existe um ativo, com o
+  plano que sai, o que entra e a mesma opção de ciclo novo. Antes, escolher
+  o arquivo já trocava o plano na hora. A tela de importação ganhou
+  "Voltar".
 - Sair da conta, no fim da aba Menu (seção Conta, com o e-mail logado), com
   confirmação. Fica bloqueado enquanto houver registro do treino não enviado,
   porque a fila do aparelho não é separada por conta. Ao sair, as
