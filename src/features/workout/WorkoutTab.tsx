@@ -1,4 +1,4 @@
-import { CalendarPlus, EllipsisVertical, FilePen, FilePlus2, FileUp } from 'lucide-react'
+import { CalendarPlus, EllipsisVertical, FilePen, FilePlus2, FileUp, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { getCurrentCycle } from '@/features/cycle/api'
@@ -10,8 +10,18 @@ import type { BuilderOrigin } from '@/features/workout/builder/builderDraft'
 import { PlanBuilder } from '@/features/workout/builder/PlanBuilder'
 import { ImportWorkoutPlan } from '@/features/workout/ImportWorkoutPlan'
 import { formatPlanWeekLabel, resolvePlanWeek } from '@/features/workout/planWeek'
+import { resolveRecordingLock } from '@/features/workout/recordableDate'
+import {
+    commitWorkoutDayDeletion,
+    WORKOUT_DAY_DELETION_LABEL,
+    workoutDayDeletionId,
+} from '@/features/workout/workoutDayDeletion'
 import { WorkoutSessionView } from '@/features/workout/WorkoutSessionView'
+import { useDayStatus } from '@/contexts/DayStatusContext'
+import { useOutbox } from '@/contexts/OutboxContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
+import { useUndoableActions } from '@/contexts/UndoableActionContext'
+import { todayInTimezone } from '@/lib/dateUtils'
 
 type ActivePanel = 'import_plan' | 'start_cycle' | 'plan_builder' | null
 
@@ -20,6 +30,9 @@ const MENU_ITEM_ICON_SIZE = 18
 
 export function WorkoutTab() {
     const { selectedDate } = useSelectedDate()
+    const { deleteSession } = useOutbox()
+    const { refreshDayStatus } = useDayStatus()
+    const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [activePlan, setActivePlan] = useState<ActivePlan | null>(null)
     const [cycle, setCycle] = useState<WorkoutCycleRow | null>(null)
     const [isLoadingPlan, setIsLoadingPlan] = useState(true)
@@ -28,13 +41,32 @@ export function WorkoutTab() {
     const [activePanel, setActivePanel] = useState<ActivePanel>(null)
     const [builderOrigin, setBuilderOrigin] = useState<BuilderOrigin>('novo')
     const [savedPlanMessage, setSavedPlanMessage] = useState<string | null>(null)
+    const [hasRecordedWorkout, setHasRecordedWorkout] = useState(false)
+    // Remonta a tela do treino depois de a exclusão ser efetivada, para ela
+    // recarregar a data do zero em vez de continuar com o estado antigo.
+    const [sessionViewGeneration, setSessionViewGeneration] = useState(0)
     const menuRef = useRef<HTMLDivElement>(null)
+    const isWorkoutDayDeletionPending = isPendingDeletion(workoutDayDeletionId(selectedDate))
 
     function openPlanBuilder(origin: BuilderOrigin) {
         setBuilderOrigin(origin)
         setActivePanel('plan_builder')
         setIsMenuOpen(false)
         setSavedPlanMessage(null)
+    }
+
+    function handleDeleteWorkoutDay() {
+        const sessionDate = selectedDate
+        setIsMenuOpen(false)
+        scheduleDeletion({
+            id: workoutDayDeletionId(sessionDate),
+            label: WORKOUT_DAY_DELETION_LABEL,
+            commit: async () => {
+                commitWorkoutDayDeletion(sessionDate, deleteSession)
+                setSessionViewGeneration((generation) => generation + 1)
+                refreshDayStatus()
+            },
+        })
     }
 
     async function reloadActivePlan() {
@@ -125,6 +157,7 @@ export function WorkoutTab() {
     // A semana também entra na chave da sessão: iniciar um ciclo novo refaz o
     // treino ainda não gravado com as séries da semana certa.
     const planWeek = resolvePlanWeek(activePlan.plan, cycle?.start_date ?? null, selectedDate)
+    const recordingLock = resolveRecordingLock(selectedDate, todayInTimezone(), isWorkoutDayDeletionPending)
 
     return (
         <div>
@@ -184,6 +217,16 @@ export function WorkoutTab() {
                                 <CalendarPlus size={MENU_ITEM_ICON_SIZE} aria-hidden="true" />
                                 Iniciar novo ciclo
                             </button>
+                            {hasRecordedWorkout && !isWorkoutDayDeletionPending && (
+                                <button
+                                    type="button"
+                                    className="overflow-menu__item overflow-menu__item--danger"
+                                    onClick={handleDeleteWorkoutDay}
+                                >
+                                    <Trash2 size={MENU_ITEM_ICON_SIZE} aria-hidden="true" />
+                                    Excluir treino do dia
+                                </button>
+                            )}
                         </div>
                     )}
                     {isMenuOpen && activePanel === 'start_cycle' && (
@@ -204,11 +247,13 @@ export function WorkoutTab() {
             </div>
             {savedPlanMessage && <p className="save-status">{savedPlanMessage}</p>}
             <WorkoutSessionView
-                key={`${selectedDate}:${planWeek?.semana ?? ''}`}
+                key={`${selectedDate}:${planWeek?.semana ?? ''}:${recordingLock ?? ''}:${sessionViewGeneration}`}
                 plan={activePlan.plan}
                 planId={activePlan.planId}
                 sessionDate={selectedDate}
                 planWeek={planWeek}
+                recordingLock={recordingLock}
+                onRecordedWorkoutChange={setHasRecordedWorkout}
             />
         </div>
     )

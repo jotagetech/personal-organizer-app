@@ -105,3 +105,23 @@ export function clearWorkoutStep(sessionDate: string): void {
     }
     writeItem(RESUME_KEY, JSON.stringify(forgetWorkoutStep(savedSteps, sessionDate)))
 }
+
+// Treino do dia excluído: some o passo guardado e qualquer cronômetro da data
+// (descanso, série, intervalado). Devolve se havia descanso correndo nela,
+// para quem chama cancelar também o push agendado dele.
+export function clearWorkoutLocalStateForDate(sessionDate: string): { hadRestTimer: boolean } {
+    const nowMs = Date.now()
+    const hadRestTimer = loadRestTimer(sessionDate) !== null
+    if (hadRestTimer) {
+        saveRestTimer(null)
+    }
+    if (parseStopwatchRecord(readItem(STOPWATCH_KEY), nowMs)?.sessionDate === sessionDate) {
+        saveStopwatch(null)
+    }
+    if (parseIntervalTimer(readItem(INTERVAL_KEY), nowMs)?.sessionDate === sessionDate) {
+        saveIntervalTimer(null)
+    }
+    clearWorkoutStep(sessionDate)
+
+    return { hadRestTimer }
+}

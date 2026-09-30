@@ -863,6 +863,10 @@ h1, h2, h3, h4 {
     background: var(--color-surface-pressed);
 }
 
+.overflow-menu__item--danger {
+    color: var(--color-overdue-text);
+}
+
 .overflow-menu__form {
     padding: 10px 4px 4px;
 }
@@ -2383,6 +2387,40 @@ h1, h2, h3, h4 {
 
 .workout-choice__title {
     margin-bottom: 12px;
+}
+
+/* Treino só para consulta (data futura ou dia sendo excluído): o fieldset
+   desativa os controles sem mudar o layout de quem está dentro dele. */
+.workout-lock {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-inline-size: 0;
+}
+
+.workout-lock:disabled input,
+.workout-lock:disabled textarea {
+    opacity: 0.55;
+}
+
+.workout-lock-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-info-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-info-surface);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.workout-lock-notice svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--color-accent-text);
 }
 
 .workout-choice__name {

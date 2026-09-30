@@ -1,4 +1,15 @@
-import { ArrowLeftRight, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Minus, Plus } from 'lucide-react'
+import {
+    ArrowLeftRight,
+    CalendarClock,
+    Check,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    ChevronUp,
+    Minus,
+    Plus,
+    Trash2,
+} from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { AddExtraExercisePanel } from '@/features/workout/AddExtraExercisePanel'
@@ -8,6 +19,7 @@ import { DropSetStepRow } from '@/features/workout/DropSetStepRow'
 import { appendExtraExercise } from '@/features/workout/extraExercises'
 import { ExerciseSetRow } from '@/features/workout/ExerciseSetRow'
 import { IntervalStep } from '@/features/workout/IntervalStep'
+import { recordingLockNotice, type RecordingLock } from '@/features/workout/recordableDate'
 import { RestTimerBar } from '@/features/workout/RestTimerBar'
 import { decideRestPushAction, planRestPush, type RestPushPlan } from '@/features/workout/restPush'
 import { SessionClock } from '@/features/workout/SessionClock'
@@ -98,9 +110,23 @@ type WorkoutSessionViewProps = {
     planId: string
     sessionDate: IsoDate
     planWeek: PlanWeek | null
+    // Com trava, a tela mostra o treino para consulta e nada registra; em
+    // 'excluindo' ela também ignora o que a data tinha, como se o dia estivesse
+    // vazio, sem tocar em nada guardado, para o desfazer voltar intacto.
+    recordingLock: RecordingLock
+    // Avisa quem monta a tela se a data tem treino registrado (no servidor ou
+    // só na fila), que é quando excluir o treino do dia faz sentido.
+    onRecordedWorkoutChange: (hasRecordedWorkout: boolean) => void
 }
 
-export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: WorkoutSessionViewProps) {
+export function WorkoutSessionView({
+    plan,
+    planId,
+    sessionDate,
+    planWeek,
+    recordingLock,
+    onRecordedWorkoutChange,
+}: WorkoutSessionViewProps) {
     const outbox = useOutbox()
     const { refreshDayStatus } = useDayStatus()
     const [isLoading, setIsLoading] = useState(true)
@@ -119,7 +145,11 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     const [switchWorkoutErrorMessage, setSwitchWorkoutErrorMessage] = useState<string | null>(null)
     const [isExercisePickerOpen, setIsExercisePickerOpen] = useState(false)
     const [isAddingExercise, setIsAddingExercise] = useState(false)
-    const [restTimer, setRestTimer] = useState<RestTimer | null>(() => loadRestTimer(sessionDate))
+    const canRecord = recordingLock === null
+    const isShowingDeletedDay = recordingLock === 'excluindo'
+    const [restTimer, setRestTimer] = useState<RestTimer | null>(() =>
+        isShowingDeletedDay ? null : loadRestTimer(sessionDate),
+    )
     // Início e fim do treino como a tela enxerga: o que veio do servidor ou,
     // enquanto o envio não acontece, a hora guardada na fila. Ficam aqui
     // porque a sessão carregada não é recarregada depois de cada envio.
@@ -152,8 +182,13 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             setIsLoading(true)
             setLoadErrorMessage(null)
             try {
+                if (isShowingDeletedDay) {
+                    showSuggestedWorkout(null)
+                    return
+                }
+
                 const savedStep = loadSavedWorkoutStep(sessionDate)
-                const existing = await getSessionForDate(sessionDate)
+                const existing = await fetchSessionUnlessDeleted()
                 if (isCancelled) {
                     return
                 }
@@ -175,32 +210,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                     return
                 }
 
-                // Treino já escolhido nesta data, mas ainda sem nada gravado
-                // (nem no servidor nem na fila): o passo guardado lembra qual.
-                const savedWorkout = plan.treinos.find((workout) => workout.id === savedStep?.workoutKey)
-                if (savedWorkout) {
-                    startUnsavedWorkout(savedWorkout, savedStep)
-                    return
-                }
-
-                const weekday = weekdayOfIsoDate(sessionDate)
-                const suggestion = suggestWorkoutForWeekday(plan, weekday)
-
-                if (suggestion.kind === 'single') {
-                    startUnsavedWorkout(suggestion.workout, null)
-                } else if (suggestion.kind === 'choose_one') {
-                    setWorkoutChoices(suggestion.workouts)
-                    setSnapshot(null)
-                    setSession(null)
-                    setSetsByKey(new Map())
-                    setDropsBySetKey(new Map())
-                } else {
-                    setWorkoutChoices(suggestion.availableWorkouts)
-                    setSnapshot(null)
-                    setSession(null)
-                    setSetsByKey(new Map())
-                    setDropsBySetKey(new Map())
-                }
+                showSuggestedWorkout(savedStep)
             } catch (loadError) {
                 if (isCancelled) {
                     return
@@ -220,6 +230,43 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionDate, plan, reloadToken])
+
+    // Uma exclusão ainda na fila vale mais que o servidor: até ela chegar lá,
+    // a sessão que ele devolve já foi apagada no aparelho.
+    async function fetchSessionUnlessDeleted(): Promise<Awaited<ReturnType<typeof getSessionForDate>>> {
+        if (outbox.hasPendingSessionDeletion(sessionDate)) {
+            return null
+        }
+        const existing = await getSessionForDate(sessionDate)
+        if (outbox.hasPendingSessionDeletion(sessionDate)) {
+            return null
+        }
+
+        return existing
+    }
+
+    // Nada gravado na data (nem no servidor nem na fila): o treino já
+    // escolhido nela, que o passo guardado lembra, ou a sugestão do plano.
+    function showSuggestedWorkout(savedStep: SavedWorkoutStep | null) {
+        const savedWorkout = plan.treinos.find((workout) => workout.id === savedStep?.workoutKey)
+        if (savedWorkout) {
+            startUnsavedWorkout(savedWorkout, savedStep)
+            return
+        }
+
+        const weekday = weekdayOfIsoDate(sessionDate)
+        const suggestion = suggestWorkoutForWeekday(plan, weekday)
+        if (suggestion.kind === 'single') {
+            startUnsavedWorkout(suggestion.workout, null)
+            return
+        }
+
+        setWorkoutChoices(suggestion.kind === 'choose_one' ? suggestion.workouts : suggestion.availableWorkouts)
+        setSnapshot(null)
+        setSession(null)
+        setSetsByKey(new Map())
+        setDropsBySetKey(new Map())
+    }
 
     function goToSet(nextPosition: StepPosition | null) {
         setPosition(nextPosition)
@@ -307,7 +354,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         }
 
         const allSetsAlreadyResolved = resumePosition === null
-        if (allSetsAlreadyResolved && !existingSession.finished_at) {
+        if (allSetsAlreadyResolved && !existingSession.finished_at && canRecord) {
             // Fechar o treino só ao reabrir a data não pode carimbar a hora da
             // reabertura: o fim real é a última série concluída, quando existe.
             const activeWindow = deriveSessionActiveWindow(Array.from(overlaidSetsByKey.values()))
@@ -346,7 +393,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             return null
         }
         try {
-            const existing = await getSessionForDate(sessionDate)
+            const existing = await fetchSessionUnlessDeleted()
             const createdSession = existing?.session ?? null
             return createdSession
         } catch {
@@ -373,7 +420,11 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     function switchUnsavedWorkout(workout: Workout) {
         const nextSnapshot = buildWorkoutSnapshot(workout, planWeek, planDefaultRest(plan))
         outbox.discardPendingExtraExercises(sessionDate)
-        updateRestTimer(null)
+        // O timer guardado é um só para o app inteiro: só é zerado quando é o
+        // desta data, para consultar outro dia não fechar o descanso de hoje.
+        if (restTimer) {
+            updateRestTimer(null)
+        }
         showUnsavedSnapshot(nextSnapshot, null)
         if (startedAt) {
             outbox.enqueueStartSession({ sessionDate, planId, snapshot: nextSnapshot, startedAt })
@@ -381,9 +432,15 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     }
 
     async function handleChooseWorkout(workout: Workout) {
+        if (isShowingDeletedDay) {
+            return
+        }
         const currentSession = await resolveCurrentSession()
         if (!currentSession) {
             switchUnsavedWorkout(workout)
+            return
+        }
+        if (!canRecord) {
             return
         }
 
@@ -465,7 +522,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         goToSet(nextPosition)
         setIsExercisePickerOpen(false)
 
-        if (nextPosition === null) {
+        if (nextPosition === null && canRecord) {
             const nowIso = new Date().toISOString()
             // Treino finalizado nunca fica pausado, por qualquer caminho que
             // tenha chegado à última série.
@@ -478,7 +535,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     }
 
     function startWorkoutAt(startIso: string) {
-        if (!snapshot) {
+        if (!snapshot || !canRecord) {
             return
         }
         setStartedAt(startIso)
@@ -490,7 +547,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     }
 
     function handlePauseWorkout() {
-        if (!startedAt || finishedAt) {
+        if (!startedAt || finishedAt || !canRecord) {
             return
         }
         const pausedAtIso = new Date().toISOString()
@@ -503,6 +560,9 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     }
 
     function resumeWorkoutAt(resumedAtIso: string) {
+        if (!canRecord) {
+            return
+        }
         const nextPauseState = resumePauseAt(pauseStateRef.current, resumedAtIso)
         if (nextPauseState === pauseStateRef.current) {
             return
@@ -518,7 +578,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // Volta para antes de "Iniciar treino". Só existe enquanto nenhuma série
     // foi resolvida: depois disso o treino já aconteceu e só pode ser pausado.
     function handleCancelStart() {
-        if (!startedAt || !canCancelStart(currentEffectiveSetsByKey().values())) {
+        if (!startedAt || !canCancelStart(currentEffectiveSetsByKey().values()) || !canRecord) {
             return
         }
         const confirmedCancel = window.confirm('Cancelar o início do treino? O relógio volta para antes de iniciar.')
@@ -649,7 +709,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     }
 
     function skipRemainingSetsOf(exercicio: WorkoutSnapshotExercise, mergedSetsByKey: Map<string, WorkoutSetRow>) {
-        if (!snapshot) {
+        if (!snapshot || !canRecord) {
             return
         }
 
@@ -727,7 +787,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // isso continua sendo o toque em "Iniciar treino" ou a primeira série
     // resolvida.
     function handleAddExtraExercise(exercise: WorkoutSnapshotExercise) {
-        if (!snapshot || finishedAt || session?.finished_at) {
+        if (!snapshot || finishedAt || session?.finished_at || !canRecord) {
             return
         }
         const nextSnapshot = appendExtraExercise(snapshot, exercise)
@@ -757,7 +817,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     // zeram o timer ou pausam) cancelam. Quando o descanso começa, a posição
     // já é a da próxima série, que dá o nome do exercício no aviso.
     useEffect(() => {
-        if (isLoading) {
+        if (isLoading || isShowingDeletedDay) {
             return
         }
         const nextExercise = snapshot && position ? snapshot.exercicios[position.exerciseIndex] : undefined
@@ -770,13 +830,13 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         } else if (action.kind === 'cancel') {
             cancelRestPush()
         }
-    }, [isLoading, restTimer, isPaused, snapshot, position])
+    }, [isLoading, isShowingDeletedDay, restTimer, isPaused, snapshot, position])
 
     // O passo atual fica guardado a cada mudança, para sair da aba (ou fechar
     // o app) e voltar na mesma tela. Com o treino concluído não há passo, e o
     // registro da data é apagado; trocar de treino grava o passo do novo.
     useEffect(() => {
-        if (isLoading || !snapshot || workoutChoices) {
+        if (isLoading || isShowingDeletedDay || !snapshot || workoutChoices) {
             return
         }
         if (!position) {
@@ -784,13 +844,13 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
             return
         }
         saveWorkoutStep(sessionDate, buildSavedWorkoutStep(snapshot, { position, dropPosition }))
-    }, [isLoading, snapshot, workoutChoices, position, dropPosition, sessionDate])
+    }, [isLoading, isShowingDeletedDay, snapshot, workoutChoices, position, dropPosition, sessionDate])
 
     // Treino terminado antes de a sessão ter sido criada no servidor (o dia
     // inteiro foi feito sem sinal): o painel de finalização depende do id real
     // da sessão, então observa a fila até o envio confirmar e revelar esse id.
     useEffect(() => {
-        if (!snapshot || position || session) {
+        if (!snapshot || position || session || isShowingDeletedDay) {
             return
         }
 
@@ -798,7 +858,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
 
         async function refreshSessionAfterSync() {
             try {
-                const existing = await getSessionForDate(sessionDate)
+                const existing = await fetchSessionUnlessDeleted()
                 if (!isCancelled && existing) {
                     setSession(existing.session)
                 }
@@ -812,7 +872,38 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
         return () => {
             isCancelled = true
         }
-    }, [snapshot, position, session, sessionDate, outbox.pendingCount])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [snapshot, position, session, sessionDate, isShowingDeletedDay, outbox.pendingCount])
+
+    const hasExtraExercise = snapshot?.exercicios.some((exercicio) => exercicio.extra === true) ?? false
+    const hasRecordedWorkout =
+        !isLoading &&
+        !isShowingDeletedDay &&
+        (session !== null ||
+            startedAt !== null ||
+            finishedAt !== null ||
+            setsByKey.size > 0 ||
+            hasExtraExercise ||
+            outbox.getOperationsForDate(sessionDate).some((operation) => operation.kind !== 'delete_session'))
+    useEffect(() => {
+        onRecordedWorkoutChange(hasRecordedWorkout)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasRecordedWorkout])
+
+    const lockNotice = recordingLockNotice(recordingLock)
+    const lockNoticeBanner = lockNotice ? (
+        <p className="workout-lock-notice" role="status">
+            {isShowingDeletedDay ? (
+                <Trash2 size={BUTTON_ICON_SIZE} aria-hidden="true" />
+            ) : (
+                <CalendarClock size={BUTTON_ICON_SIZE} aria-hidden="true" />
+            )}
+            <span>{lockNotice}</span>
+        </p>
+    ) : null
+    // Trocar o treino só no aparelho não cria sessão; com uma já gravada, a
+    // troca reescreve o servidor e fica de fora enquanto houver trava.
+    const canSwitchWorkout = canRecord || (recordingLock === 'futuro' && session === null)
 
     if (isLoading) {
         return <p className="text-muted">Carregando treino...</p>
@@ -836,6 +927,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     if (workoutChoices) {
         return (
             <div>
+                {lockNoticeBanner}
                 <h2 className="page-title workout-choice__title">Escolha o treino para este dia</h2>
                 {switchWorkoutErrorMessage && <div className="error-list">{switchWorkoutErrorMessage}</div>}
                 <div className="menu-list">
@@ -844,7 +936,7 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                             key={workout.id}
                             type="button"
                             className="menu-list__item workout-choice__item"
-                            disabled={isSwitchingWorkout}
+                            disabled={isSwitchingWorkout || isShowingDeletedDay}
                             onClick={() => handleChooseWorkout(workout)}
                         >
                             <span className="menu-list__text workout-choice__name">{workout.nome}</span>
@@ -869,7 +961,12 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
     if (session?.finished_at || !position) {
         return (
             <div>
-                <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
+                {lockNoticeBanner}
+                <WorkoutSnapshotHeader
+                    nome={snapshot.nome}
+                    canSwitch={canSwitchWorkout}
+                    onRequestSwitchWorkout={handleRequestSwitchWorkout}
+                />
                 {startedAt && effectiveFinishedAt && (
                     <SessionClock
                         startedAt={startedAt}
@@ -915,17 +1012,26 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
 
     return (
         <div>
-            <WorkoutSnapshotHeader nome={snapshot.nome} onRequestSwitchWorkout={handleRequestSwitchWorkout} />
-            <SessionClock
-                startedAt={startedAt}
-                finishedAt={null}
-                pauseState={pauseState}
-                canCancelStart={canCancelStart(effectiveSetsByKey.values())}
-                onStart={handleStartWorkout}
-                onPause={handlePauseWorkout}
-                onResume={handleResumeWorkout}
-                onCancelStart={handleCancelStart}
+            {lockNoticeBanner}
+            <WorkoutSnapshotHeader
+                nome={snapshot.nome}
+                canSwitch={canSwitchWorkout}
+                onRequestSwitchWorkout={handleRequestSwitchWorkout}
             />
+            {/* Um fieldset desativado desliga de uma vez todo botão e campo de
+                dentro, inclusive os dos cronômetros e do intervalado. */}
+            <fieldset className="workout-lock" disabled={!canRecord}>
+                <SessionClock
+                    startedAt={startedAt}
+                    finishedAt={null}
+                    pauseState={pauseState}
+                    canCancelStart={canCancelStart(effectiveSetsByKey.values())}
+                    onStart={handleStartWorkout}
+                    onPause={handlePauseWorkout}
+                    onResume={handleResumeWorkout}
+                    onCancelStart={handleCancelStart}
+                />
+            </fieldset>
             <ExercisePicker
                 progress={summarizeExerciseProgress(snapshot, effectiveSetsByKey)}
                 currentExerciseIndex={position.exerciseIndex}
@@ -935,9 +1041,10 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                     setIsAddingExercise(false)
                 }}
                 onSelect={handleSelectExercise}
+                canAddExercise={canRecord}
                 onRequestAddExercise={() => setIsAddingExercise(true)}
                 addExercisePanel={
-                    isAddingExercise ? (
+                    isAddingExercise && canRecord ? (
                         <AddExtraExercisePanel
                             plan={plan}
                             planWeek={planWeek}
@@ -956,79 +1063,81 @@ export function WorkoutSessionView({ plan, planId, sessionDate, planWeek }: Work
                     onDismiss={() => updateRestTimer(null)}
                 />
             )}
-            <section className="card set-card">
-                <div className="set-card__eyebrow">
-                    <span>
-                        Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length}
-                    </span>
-                    <span className={isOnDropStep ? 'set-card__set-count set-card__set-count--drop' : 'set-card__set-count'}>
-                        {setCountLabel(currentExercicio, position, isOnDropStep ? currentStep.dropPosition : null)}
-                    </span>
-                </div>
-                <h3 className="set-card__exercise-name">{currentExercicio.nome}</h3>
-                <ExerciseDetails exercicio={currentExercicio} />
-                <div className="progress-track">
-                    {segmentStatuses.map((status, segmentIndex) => (
-                        <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
-                    ))}
-                </div>
-                {currentInterval ? (
-                    <IntervalStep
-                        key={currentExercicio.exercise_key}
-                        sessionDate={sessionDate}
-                        planId={planId}
-                        snapshot={snapshot}
-                        exercicio={currentExercicio}
-                        interval={currentInterval}
-                        setsByKey={effectiveSetsByKey}
-                        confirmLabel={
-                            isOnlyUnresolvedExercise(snapshot, effectiveSetsByKey, position.exerciseIndex)
-                                ? 'Confirmar e finalizar treino'
-                                : 'Confirmar rodadas'
-                        }
-                        onConfirmed={handleIntervalConfirmed}
-                        onSkipExercise={handleSkipIntervalExercise}
-                    />
-                ) : isOnDropStep && currentSetRow && currentStep.dropPosition !== null ? (
-                    <DropSetStepRow
-                        key={`${currentSetKey}:queda:${currentStep.dropPosition}`}
-                        sessionDate={sessionDate}
-                        planId={planId}
-                        snapshot={snapshot}
-                        exercicio={currentExercicio}
-                        serie={currentSet}
-                        dropPosition={currentStep.dropPosition}
-                        parentSet={currentSetRow}
-                        drops={effectiveDropsByKey.get(currentSetKey) ?? []}
-                        confirmLabel={dropConfirmLabel(
-                            currentStep.dropPosition === currentSet.quedas.length - 1,
-                            findNextUnresolvedPosition(snapshot, effectiveSetsByKey, position) === null,
-                        )}
-                        onConfirmed={handleDropConfirmed}
-                        onSkipRemainingDrops={handleSkipRemainingDrops}
-                        onLocalDropsSave={(drops) => handleLocalDropsSaved(currentSetKey, drops)}
-                    />
-                ) : (
-                    <ExerciseSetRow
-                        key={currentSetKey}
-                        sessionDate={sessionDate}
-                        planId={planId}
-                        snapshot={snapshot}
-                        exercicio={currentExercicio}
-                        serie={currentSet}
-                        existingSet={currentSetRow}
-                        confirmLabel={
-                            isFinalUnresolvedSet && currentSet.quedas.length === 0
-                                ? 'Confirmar e finalizar treino'
-                                : 'Confirmar'
-                        }
-                        onConfirmed={handleSetConfirmed}
-                        onSkipped={handleSetSkipped}
-                        onSkipExercise={handleSkipExercise}
-                        onLocalSave={handleLocalSetSaved}
-                    />
-                )}
-            </section>
+            <fieldset className="workout-lock" disabled={!canRecord}>
+                <section className="card set-card">
+                    <div className="set-card__eyebrow">
+                        <span>
+                            Exercício {position.exerciseIndex + 1} de {snapshot.exercicios.length}
+                        </span>
+                        <span className={isOnDropStep ? 'set-card__set-count set-card__set-count--drop' : 'set-card__set-count'}>
+                            {setCountLabel(currentExercicio, position, isOnDropStep ? currentStep.dropPosition : null)}
+                        </span>
+                    </div>
+                    <h3 className="set-card__exercise-name">{currentExercicio.nome}</h3>
+                    <ExerciseDetails exercicio={currentExercicio} />
+                    <div className="progress-track">
+                        {segmentStatuses.map((status, segmentIndex) => (
+                            <span key={segmentIndex} className={PROGRESS_SEGMENT_CLASS_BY_STATUS[status]} />
+                        ))}
+                    </div>
+                    {currentInterval ? (
+                        <IntervalStep
+                            key={currentExercicio.exercise_key}
+                            sessionDate={sessionDate}
+                            planId={planId}
+                            snapshot={snapshot}
+                            exercicio={currentExercicio}
+                            interval={currentInterval}
+                            setsByKey={effectiveSetsByKey}
+                            confirmLabel={
+                                isOnlyUnresolvedExercise(snapshot, effectiveSetsByKey, position.exerciseIndex)
+                                    ? 'Confirmar e finalizar treino'
+                                    : 'Confirmar rodadas'
+                            }
+                            onConfirmed={handleIntervalConfirmed}
+                            onSkipExercise={handleSkipIntervalExercise}
+                        />
+                    ) : isOnDropStep && currentSetRow && currentStep.dropPosition !== null ? (
+                        <DropSetStepRow
+                            key={`${currentSetKey}:queda:${currentStep.dropPosition}`}
+                            sessionDate={sessionDate}
+                            planId={planId}
+                            snapshot={snapshot}
+                            exercicio={currentExercicio}
+                            serie={currentSet}
+                            dropPosition={currentStep.dropPosition}
+                            parentSet={currentSetRow}
+                            drops={effectiveDropsByKey.get(currentSetKey) ?? []}
+                            confirmLabel={dropConfirmLabel(
+                                currentStep.dropPosition === currentSet.quedas.length - 1,
+                                findNextUnresolvedPosition(snapshot, effectiveSetsByKey, position) === null,
+                            )}
+                            onConfirmed={handleDropConfirmed}
+                            onSkipRemainingDrops={handleSkipRemainingDrops}
+                            onLocalDropsSave={(drops) => handleLocalDropsSaved(currentSetKey, drops)}
+                        />
+                    ) : (
+                        <ExerciseSetRow
+                            key={currentSetKey}
+                            sessionDate={sessionDate}
+                            planId={planId}
+                            snapshot={snapshot}
+                            exercicio={currentExercicio}
+                            serie={currentSet}
+                            existingSet={currentSetRow}
+                            confirmLabel={
+                                isFinalUnresolvedSet && currentSet.quedas.length === 0
+                                    ? 'Confirmar e finalizar treino'
+                                    : 'Confirmar'
+                            }
+                            onConfirmed={handleSetConfirmed}
+                            onSkipped={handleSetSkipped}
+                            onSkipExercise={handleSkipExercise}
+                            onLocalSave={handleLocalSetSaved}
+                        />
+                    )}
+                </section>
+            </fieldset>
             {!isFirstStep(currentStep) && (
                 <button type="button" className="ghost-button" onClick={handleGoBack}>
                     <ChevronLeft size={BUTTON_ICON_SIZE} aria-hidden="true" />
@@ -1121,6 +1230,7 @@ type ExercisePickerProps = {
     isOpen: boolean
     onToggle: () => void
     onSelect: (exerciseIndex: number) => void
+    canAddExercise: boolean
     onRequestAddExercise: () => void
     // Com o painel aberto, ele ocupa o lugar do botão de adicionar no fim da
     // lista.
@@ -1133,6 +1243,7 @@ function ExercisePicker({
     isOpen,
     onToggle,
     onSelect,
+    canAddExercise,
     onRequestAddExercise,
     addExercisePanel,
 }: ExercisePickerProps) {
@@ -1172,7 +1283,12 @@ function ExercisePicker({
                     {addExercisePanel ? (
                         <div className="exercise-picker__add-panel">{addExercisePanel}</div>
                     ) : (
-                        <button type="button" className="exercise-picker__add" onClick={onRequestAddExercise}>
+                        <button
+                            type="button"
+                            className="exercise-picker__add"
+                            disabled={!canAddExercise}
+                            onClick={onRequestAddExercise}
+                        >
                             <Plus size={BUTTON_ICON_SIZE} aria-hidden="true" />
                             Adicionar exercício
                         </button>
@@ -1231,15 +1347,22 @@ function formatExerciseStatus(exercise: ExerciseProgress): string {
 
 function WorkoutSnapshotHeader({
     nome,
+    canSwitch,
     onRequestSwitchWorkout,
 }: {
     nome: string
+    canSwitch: boolean
     onRequestSwitchWorkout: () => void
 }) {
     return (
         <div className="page-header">
             <h2 className="page-title workout-header__name">{nome}</h2>
-            <button type="button" className="secondary-button workout-header__switch" onClick={onRequestSwitchWorkout}>
+            <button
+                type="button"
+                className="secondary-button workout-header__switch"
+                disabled={!canSwitch}
+                onClick={onRequestSwitchWorkout}
+            >
                 <ArrowLeftRight size={BUTTON_ICON_SIZE} aria-hidden="true" />
                 Trocar treino
             </button>

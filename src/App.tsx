@@ -42,13 +42,13 @@ function AuthGate() {
     return (
         <AppNavigationProvider>
             <SelectedDateProvider>
-                <DayStatusProvider>
-                    <UndoableActionProvider>
-                        <OutboxProvider>
+                <UndoableActionProvider>
+                    <OutboxProvider>
+                        <DayStatusProvider>
                             <AuthenticatedShell />
-                        </OutboxProvider>
-                    </UndoableActionProvider>
-                </DayStatusProvider>
+                        </DayStatusProvider>
+                    </OutboxProvider>
+                </UndoableActionProvider>
             </SelectedDateProvider>
         </AppNavigationProvider>
     )
