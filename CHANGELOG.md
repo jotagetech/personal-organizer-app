@@ -3,6 +3,53 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
+## Não lançado
+
+### Adicionado
+
+- Excluir treino do dia, no menu de três pontos da aba Treino, quando a data
+  tem sessão registrada (no servidor ou só na fila do aparelho), em qualquer
+  data e com o treino em andamento ou concluído. Usa a mesma barra de
+  desfazer das outras exclusões, sem confirmação: enquanto ela está aberta a
+  tela mostra o dia sem treino e sem deixar registrar, e desfazer volta
+  exatamente ao estado anterior, porque nada é mexido até a exclusão ser
+  efetivada (fim do prazo ou app minimizado). Efetivada, a fila troca todas
+  as operações da data, inclusive falhas, pela operação nova
+  `delete_session`, que apaga a sessão no servidor; séries e quedas saem
+  junto pela cascata, e extras e avaliação moram na própria sessão. O passo
+  guardado, os cronômetros de descanso, de série e do intervalado da data e
+  o push de descanso agendado (quando o descanso era dela) somem na hora, e
+  o indicador da aba Treino deixa de contar a data até a exclusão chegar ao
+  servidor. Depois disso a data volta a "nenhum treino iniciado", com o
+  treino sugerido, e dá para recomeçar. Na fila, a exclusão é enviada antes
+  de qualquer outra operação da mesma data; uma operação da data que esteja
+  a caminho do servidor termina antes dela, porque o envio é sequencial, e o
+  que ela gravar é apagado junto; o que ainda estava no plano da passada em
+  andamento não é mais enviado, nem a versão antiga de uma operação
+  recriada com a mesma chave. Uma exclusão que falha segura a data até ser
+  enviada (ou descartada no status de sincronização, se falhar de vez), para
+  o treino recomeçado não cair na sessão antiga. Sem sinal, a exclusão fica
+  guardada no aparelho e sobrevive a fechar e reabrir o app. A passada de
+  envio da fila saiu do contexto React para `outboxSender.ts`, com o
+  transporte injetado, e ganhou testes das corridas. Migração
+  `20260929060000_workout_sessions_delete.sql` (policy e grant de delete em
+  `workout_sessions`, que não existiam).
+
+### Alterado
+
+- Treino em data futura fica só para consulta. Com a data selecionada
+  depois de hoje, a aba Treino continua mostrando o treino sugerido, a lista
+  de exercícios e as séries, mas "Iniciar treino", confirmar, pular, os
+  campos de carga, repetições, RIR e comentário, os cronômetros de série, o
+  intervalado, "Adicionar exercício" e a troca de treino numa sessão já
+  gravada ficam desativados, com um aviso de que o registro abre no próprio
+  dia. A fila também recusa qualquer operação de data futura (menos a
+  exclusão), então nenhum caminho indireto (retomada, finalização
+  automática ao reabrir, efeitos ao abrir a tela) cria sessão ou enfileira
+  algo. Datas passadas continuam aceitando registro retroativo como hoje.
+- Trocar o treino do dia antes de a sessão existir só fecha o descanso na
+  tela quando ele é da própria data.
+
 ## 2026-09-29
 
 ### Adicionado

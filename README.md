@@ -94,6 +94,12 @@ npm run dev
       notificação de fim de descanso, ver a seção Notificações abaixo).
       Aditiva e idempotente. Sem ela o app continua funcionando; só ativar
       notificações e agendar o aviso de descanso falham, em silêncio.
+   17. `20260929060000_workout_sessions_delete.sql` (policy e grant de delete
+      em `workout_sessions`, para excluir o treino do dia; séries e quedas
+      saem junto pela cascata que já existia, ver `CHANGELOG.md`). Aditiva e
+      idempotente. Precisa estar aplicada **antes** do deploy do app desta
+      versão: sem ela a exclusão não chega ao servidor e fica na fila,
+      segurando a data até ser aplicada.
 
    Via `supabase db push`, ou colando cada arquivo no SQL Editor do projeto.
 3. Em **Authentication → Providers**, mantenha e-mail/senha habilitado e crie
@@ -246,6 +252,21 @@ os logs da função no painel.
   (sentimento de 1 a 5 e texto, salvos pelo botão "Salvar avaliação" e
   editáveis depois) e abre o
   registro de cardio do dia.
+  O menu de três pontos tem "Excluir treino do dia" quando a data tem treino
+  registrado (em andamento ou concluído, no servidor ou só no aparelho), em
+  qualquer data. Como nas outras exclusões, a barra de desfazer fica aberta
+  alguns segundos e a tela já mostra o dia sem treino; desfazer volta ao que
+  estava. Efetivada, a exclusão apaga a sessão com séries, quedas, extras e
+  avaliação, descarta o que a data tinha na fila, o passo guardado, os
+  cronômetros e o push de descanso dela, e o dia volta a "nenhum treino
+  iniciado", com o treino sugerido. Ela passa pela fila otimista: sem sinal,
+  fica guardada no aparelho até ser enviada, e nada da data enviado antes ou
+  durante ela recria a sessão depois.
+  Numa data depois de hoje, a aba mostra o treino sugerido e as séries só
+  para consulta, com um aviso de que o registro abre no próprio dia: iniciar,
+  confirmar, pular, os campos, os cronômetros, o intervalado, "Adicionar
+  exercício" e a troca de treino que mexe numa sessão gravada ficam
+  desativados. Datas passadas continuam aceitando registro retroativo.
 - **Ciclo**: marca a data de início de um ciclo de treino (menu de três pontos
   na aba Treino) e mostra "Dia N do ciclo", independente de trocas no plano.
 - **Cardio**: catálogo de atividades cadastrado na hora, registro por dia
