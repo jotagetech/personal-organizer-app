@@ -293,6 +293,7 @@ os logs da função no painel.
 O plano é um JSON importado na aba Treino. Um arquivo completo de exemplo está
 em `examples/plano-exemplo.json` e o JSON Schema em
 `schemas/workout-plan.schema.json` (gerado com `npm run schema:generate`).
+Um teste falha no `npm run test` se esse arquivo ficar diferente do schema Zod.
 
 **Versões.** O contrato atual é a `versao: 2`. Arquivos `versao: 1` (só
 repetições, com `carga_sugerida`) continuam sendo aceitos sem nenhuma
