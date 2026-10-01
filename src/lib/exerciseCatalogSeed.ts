@@ -63,6 +63,10 @@ export const MOVEMENT_PATTERNS = [
 
 export const OWN_SOURCE = 'proprio'
 
+// O banco dá esse prefixo a todo exercício criado por uma conta, para um
+// global novo nunca tomar o slug que um plano usa para um privado.
+export const PRIVATE_SLUG_PREFIX = 'meu_'
+
 const SLUG_PATTERN = /^[a-z0-9]+(_[a-z0-9]+)*$/
 
 export type SeedExercise = {
@@ -132,6 +136,9 @@ function validateExercise(exercise: SeedExercise): string[] {
 
     if (!SLUG_PATTERN.test(exercise.slug)) {
         errors.push(`${where}: slug fora do formato (minúsculas, sem acento, "_" como separador)`)
+    }
+    if (exercise.slug.startsWith(PRIVATE_SLUG_PREFIX)) {
+        errors.push(`${where}: o prefixo "${PRIVATE_SLUG_PREFIX}" é reservado a exercício privado`)
     }
     if (!SLUG_PATTERN.test(exercise.family)) {
         errors.push(`${where}: family fora do formato de slug`)
