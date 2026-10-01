@@ -6,8 +6,9 @@ existe migração que carregue estes arquivos no banco.
 
 | Arquivo | Conteúdo |
 |---|---|
-| `exercises.json` | Um registro por exercício: `slug`, `name_pt`, `family`, `primary_muscle`, `secondary_muscles`, `equipment`, `default_load_form`, `description_pt`, `source`, `source_ref`, `license`, `attribution` |
+| `exercises.json` | Um registro por exercício: `slug`, `name_pt`, `family`, `primary_muscle`, `secondary_muscles`, `equipment`, `pegada`, `largura_pegada`, `acessorio`, `default_load_form`, `description_pt`, `source`, `source_ref`, `license`, `attribution` |
 | `aliases.json` | Apelidos globais: `alias` (como as pessoas escrevem), `alias_norm` (forma de busca) e `slug` do exercício |
+| `generic_names.json` | Nomes que valem para mais de uma variação: `name`, `name_norm` e `families`. A busca por um deles mostra os exercícios dessas famílias para a pessoa escolher |
 
 Apelido de uma conta só (uma sigla pessoal como "sprh", por exemplo) não entra
 aqui: ele mora no banco, ligado ao usuário. Este arquivo guarda só nomes que
@@ -41,9 +42,16 @@ outro.
 
 - Equipamento diferente gera exercício diferente: barra, halteres, máquina,
   smith e polia ficam separados (`supino_reto_barra` e `supino_reto_halteres`).
-- Pegada, acessório, ângulo do banco ou alavanca que mudam a carga também
-  separam: triângulo e barra aberta na puxada, corda e barra reta no tríceps,
-  Copenhagen curta e longa.
+- Pegada, largura, acessório, ângulo do banco ou alavanca que mudam a carga
+  também separam: puxada aberta pronada, fechada pronada, supinada, neutra e
+  com triângulo são cinco exercícios; tríceps na polia com barra reta, barra
+  W, corda e pegada supinada são quatro; Copenhagen curta e longa, dois.
+- Pegada, largura e acessório ficam em campos próprios (`pegada`,
+  `largura_pegada`, `acessorio`), com os mesmos valores do contrato do plano.
+  Na mesma família e equipamento, dois exercícios iguais nos três campos são
+  recusados como duplicata. Quando a diferença está no trajeto e não na
+  pegada (puxada atrás da nuca, remada Pendlay), o exercício ganha família
+  própria.
 - Tempo controlado, pausa, drop, número de séries, "leve" ou "pesado" são
   prescrição do plano e não geram exercício novo.
 - Alternar os braços não muda a carga por halter: rosca alternada é a mesma
@@ -88,20 +96,30 @@ são informativos.
 - `alias_norm`: `normalizeAlias(alias)`, que deixa tudo minúsculo, sem acento e
   troca qualquer pontuação por espaço ("Leg press 45°" vira `leg press 45`).
 - Um `alias_norm` aponta para um exercício só e não pode repetir o nome oficial
-  normalizado de outro exercício. Nome ambíguo (como "flexora", que pode ser
-  mesa ou cadeira) não vira apelido global.
+  normalizado de outro exercício.
+- Nome usado para mais de uma variação não vira apelido de nenhuma delas: vai
+  para `generic_names.json`, ligado às famílias. "Flexora" pode ser mesa ou
+  cadeira; "pull down" e "puxador frente" aparecem nas fichas para várias
+  puxadas; "remada baixa", "tríceps polia" e "rosca direta" também. Quem
+  escreve um desses escolhe a variação, e a escolha pode virar apelido da
+  conta dela. Nome cuja variação padrão é universal continua apelido
+  global: "supino reto" é sempre a pegada média, "barra fixa" é sempre a
+  pronada.
 
 ## Como editar e validar
 
-Os dois JSON são a fonte; não há geração automática a partir de base externa.
+Os três JSON são a fonte; não há geração automática a partir de base externa.
 Para incluir um exercício, acrescente o registro em `exercises.json` e os
-apelidos em `aliases.json`, com `alias_norm` já normalizado. Depois rode:
+apelidos em `aliases.json`, com `alias_norm` já normalizado. Nome genérico
+entra em `generic_names.json`, com `name_norm` normalizado. Depois rode:
 
 ```bash
 npm run test
 ```
 
-O teste `tests/exerciseCatalogSeed.test.ts` passa os dois arquivos por
+O teste `tests/exerciseCatalogSeed.test.ts` passa os três arquivos por
 `validateExerciseSeed` e falha listando cada problema: slug repetido ou fora do
-formato, vocabulário inválido, apelido apontando para slug inexistente,
-`alias_norm` errado ou repetido entre exercícios, e fonte externa sem licença.
+formato, vocabulário inválido (inclusive pegada, largura e acessório), duas
+variações iguais na mesma família, apelido apontando para slug inexistente,
+`alias_norm` errado ou repetido entre exercícios, nome genérico de família
+inexistente ou que já é apelido, e fonte externa sem licença.

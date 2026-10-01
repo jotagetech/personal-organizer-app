@@ -1,0 +1,313 @@
+[
+  {
+    "name": "pulldown",
+    "name_norm": "pulldown",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "pull down",
+    "name_norm": "pull down",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "puxada",
+    "name_norm": "puxada",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "puxada frontal",
+    "name_norm": "puxada frontal",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "puxada frente",
+    "name_norm": "puxada frente",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "puxador",
+    "name_norm": "puxador",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "puxador frente",
+    "name_norm": "puxador frente",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "puxador frente pronado",
+    "name_norm": "puxador frente pronado",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "puxada alta",
+    "name_norm": "puxada alta",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "lat pulldown",
+    "name_norm": "lat pulldown",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "puxador neutro",
+    "name_norm": "puxador neutro",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "puxada neutra",
+    "name_norm": "puxada neutra",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "pulldown neutro",
+    "name_norm": "pulldown neutro",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "pulldown pegada neutra",
+    "name_norm": "pulldown pegada neutra",
+    "families": [
+      "puxada"
+    ]
+  },
+  {
+    "name": "remada baixa",
+    "name_norm": "remada baixa",
+    "families": [
+      "remada_baixa"
+    ]
+  },
+  {
+    "name": "remada baixa cabo",
+    "name_norm": "remada baixa cabo",
+    "families": [
+      "remada_baixa"
+    ]
+  },
+  {
+    "name": "remada baixa no cabo",
+    "name_norm": "remada baixa no cabo",
+    "families": [
+      "remada_baixa"
+    ]
+  },
+  {
+    "name": "remada sentada no cabo",
+    "name_norm": "remada sentada no cabo",
+    "families": [
+      "remada_baixa"
+    ]
+  },
+  {
+    "name": "remada no pulley",
+    "name_norm": "remada no pulley",
+    "families": [
+      "remada_baixa"
+    ]
+  },
+  {
+    "name": "remada baixa neutra",
+    "name_norm": "remada baixa neutra",
+    "families": [
+      "remada_baixa"
+    ]
+  },
+  {
+    "name": "remada sentada",
+    "name_norm": "remada sentada",
+    "families": [
+      "remada_baixa",
+      "remada_maquina"
+    ]
+  },
+  {
+    "name": "tríceps polia",
+    "name_norm": "triceps polia",
+    "families": [
+      "triceps_polia"
+    ]
+  },
+  {
+    "name": "tríceps na polia",
+    "name_norm": "triceps na polia",
+    "families": [
+      "triceps_polia"
+    ]
+  },
+  {
+    "name": "tríceps pulley",
+    "name_norm": "triceps pulley",
+    "families": [
+      "triceps_polia"
+    ]
+  },
+  {
+    "name": "tríceps pulldown",
+    "name_norm": "triceps pulldown",
+    "families": [
+      "triceps_polia"
+    ]
+  },
+  {
+    "name": "tríceps barra",
+    "name_norm": "triceps barra",
+    "families": [
+      "triceps_polia"
+    ]
+  },
+  {
+    "name": "tríceps polia barra",
+    "name_norm": "triceps polia barra",
+    "families": [
+      "triceps_polia"
+    ]
+  },
+  {
+    "name": "rosca direta",
+    "name_norm": "rosca direta",
+    "families": [
+      "rosca_direta"
+    ]
+  },
+  {
+    "name": "rosca com barra",
+    "name_norm": "rosca com barra",
+    "families": [
+      "rosca_direta"
+    ]
+  },
+  {
+    "name": "rosca direta barra",
+    "name_norm": "rosca direta barra",
+    "families": [
+      "rosca_direta"
+    ]
+  },
+  {
+    "name": "barra fixa assistida",
+    "name_norm": "barra fixa assistida",
+    "families": [
+      "barra_fixa"
+    ]
+  },
+  {
+    "name": "barra assistida",
+    "name_norm": "barra assistida",
+    "families": [
+      "barra_fixa"
+    ]
+  },
+  {
+    "name": "gravitron",
+    "name_norm": "gravitron",
+    "families": [
+      "barra_fixa"
+    ]
+  },
+  {
+    "name": "graviton",
+    "name_norm": "graviton",
+    "families": [
+      "barra_fixa"
+    ]
+  },
+  {
+    "name": "flexora",
+    "name_norm": "flexora",
+    "families": [
+      "flexora"
+    ]
+  },
+  {
+    "name": "leg curl",
+    "name_norm": "leg curl",
+    "families": [
+      "flexora"
+    ]
+  },
+  {
+    "name": "desenvolvimento",
+    "name_norm": "desenvolvimento",
+    "families": [
+      "desenvolvimento"
+    ]
+  },
+  {
+    "name": "desenvolvimento ombro",
+    "name_norm": "desenvolvimento ombro",
+    "families": [
+      "desenvolvimento"
+    ]
+  },
+  {
+    "name": "elevação frontal",
+    "name_norm": "elevacao frontal",
+    "families": [
+      "elevacao_frontal"
+    ]
+  },
+  {
+    "name": "supino inclinado",
+    "name_norm": "supino inclinado",
+    "families": [
+      "supino_inclinado"
+    ]
+  },
+  {
+    "name": "trapézio",
+    "name_norm": "trapezio",
+    "families": [
+      "encolhimento"
+    ]
+  },
+  {
+    "name": "antebraço",
+    "name_norm": "antebraco",
+    "families": [
+      "rosca_punho"
+    ]
+  },
+  {
+    "name": "panturrilha",
+    "name_norm": "panturrilha",
+    "families": [
+      "panturrilha_em_pe",
+      "panturrilha_sentado"
+    ]
+  },
+  {
+    "name": "gêmeos",
+    "name_norm": "gemeos",
+    "families": [
+      "panturrilha_em_pe",
+      "panturrilha_sentado"
+    ]
+  }
+]

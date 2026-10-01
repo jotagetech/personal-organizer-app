@@ -7,13 +7,22 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
-- Seed do catálogo global de exercícios em `supabase/seed/exercises/`: 194
+- Pegada, largura da pegada e acessório no exercício de séries (`pegada`,
+  `largura_pegada`, `acessorio` no JSON do plano), para separar variações
+  como puxada aberta pronada, puxada supinada e puxada com triângulo. O
+  montador ganhou os três campos (tocar de novo na pegada marcada tira a
+  escolha), o card do exercício mostra as etiquetas e a exportação leva
+  `grip`, `grip_width` e `attachment`. Planos e treinos já gravados seguem
+  iguais.
+- Seed do catálogo global de exercícios em `supabase/seed/exercises/`: 201
   exercícios com nome e descrição em pt-BR de academia, família, músculos,
-  equipamento e forma de carga sugerida, mais os apelidos globais com a forma
-  normalizada de busca. Texto todo próprio, sem cópia de base externa. Um
-  validador roda no `npm run test` e recusa slug repetido, vocabulário fora da
-  lista, apelido apontando para exercício inexistente e o mesmo apelido em
-  dois exercícios. Ainda não carregado no banco.
+  equipamento, pegada, largura, acessório e forma de carga sugerida, os
+  apelidos globais com a forma normalizada de busca e os nomes genéricos
+  ("pull down", "remada baixa") ligados à família, para a pessoa escolher a
+  variação. Texto todo próprio, sem cópia de base externa. Um validador roda
+  no `npm run test` e recusa slug repetido, vocabulário fora da lista, duas
+  variações iguais na mesma família, apelido apontando para exercício
+  inexistente e o mesmo nome em dois lugares. Ainda não carregado no banco.
 - Gráficos no detalhe do exercício: carga máxima (repetições em peso
   corporal, assistência com "menor é melhor"), 1RM estimado e volume por
   sessão, seguindo o filtro Ciclo ou Tudo. Tocar num ponto mostra data e

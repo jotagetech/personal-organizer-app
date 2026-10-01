@@ -430,48 +430,13 @@
     "slug": "pullover_polia"
   },
   {
-    "alias": "puxada frontal",
-    "alias_norm": "puxada frontal",
-    "slug": "puxada_frontal_aberta"
-  },
-  {
-    "alias": "puxada frente",
-    "alias_norm": "puxada frente",
-    "slug": "puxada_frontal_aberta"
-  },
-  {
     "alias": "puxada aberta",
     "alias_norm": "puxada aberta",
     "slug": "puxada_frontal_aberta"
   },
   {
-    "alias": "puxador frente",
-    "alias_norm": "puxador frente",
-    "slug": "puxada_frontal_aberta"
-  },
-  {
-    "alias": "puxador frente pronado",
-    "alias_norm": "puxador frente pronado",
-    "slug": "puxada_frontal_aberta"
-  },
-  {
-    "alias": "pulldown",
-    "alias_norm": "pulldown",
-    "slug": "puxada_frontal_aberta"
-  },
-  {
-    "alias": "pull down",
-    "alias_norm": "pull down",
-    "slug": "puxada_frontal_aberta"
-  },
-  {
     "alias": "pulldown pegada aberta",
     "alias_norm": "pulldown pegada aberta",
-    "slug": "puxada_frontal_aberta"
-  },
-  {
-    "alias": "puxada alta",
-    "alias_norm": "puxada alta",
     "slug": "puxada_frontal_aberta"
   },
   {
@@ -482,11 +447,6 @@
   {
     "alias": "pulldown pegada larga",
     "alias_norm": "pulldown pegada larga",
-    "slug": "puxada_frontal_aberta"
-  },
-  {
-    "alias": "lat pulldown",
-    "alias_norm": "lat pulldown",
     "slug": "puxada_frontal_aberta"
   },
   {
@@ -523,26 +483,6 @@
     "alias": "puxada neutra fechada",
     "alias_norm": "puxada neutra fechada",
     "slug": "puxada_triangulo"
-  },
-  {
-    "alias": "puxador neutro",
-    "alias_norm": "puxador neutro",
-    "slug": "puxada_neutra_aberta"
-  },
-  {
-    "alias": "puxada neutra",
-    "alias_norm": "puxada neutra",
-    "slug": "puxada_neutra_aberta"
-  },
-  {
-    "alias": "pulldown neutro",
-    "alias_norm": "pulldown neutro",
-    "slug": "puxada_neutra_aberta"
-  },
-  {
-    "alias": "pulldown pegada neutra",
-    "alias_norm": "pulldown pegada neutra",
-    "slug": "puxada_neutra_aberta"
   },
   {
     "alias": "puxada nuca",
@@ -615,23 +555,8 @@
     "slug": "barra_fixa_neutra"
   },
   {
-    "alias": "barra fixa assistida",
-    "alias_norm": "barra fixa assistida",
-    "slug": "barra_fixa_assistida_maquina"
-  },
-  {
-    "alias": "barra assistida",
-    "alias_norm": "barra assistida",
-    "slug": "barra_fixa_assistida_maquina"
-  },
-  {
-    "alias": "gravitron",
-    "alias_norm": "gravitron",
-    "slug": "barra_fixa_assistida_maquina"
-  },
-  {
-    "alias": "graviton",
-    "alias_norm": "graviton",
+    "alias": "barra fixa assistida na máquina",
+    "alias_norm": "barra fixa assistida na maquina",
     "slug": "barra_fixa_assistida_maquina"
   },
   {
@@ -765,21 +690,6 @@
     "slug": "remada_unilateral_halter"
   },
   {
-    "alias": "remada baixa",
-    "alias_norm": "remada baixa",
-    "slug": "remada_baixa_triangulo"
-  },
-  {
-    "alias": "remada baixa cabo",
-    "alias_norm": "remada baixa cabo",
-    "slug": "remada_baixa_triangulo"
-  },
-  {
-    "alias": "remada baixa no cabo",
-    "alias_norm": "remada baixa no cabo",
-    "slug": "remada_baixa_triangulo"
-  },
-  {
     "alias": "remada baixa triângulo",
     "alias_norm": "remada baixa triangulo",
     "slug": "remada_baixa_triangulo"
@@ -787,21 +697,6 @@
   {
     "alias": "remada sentada triângulo",
     "alias_norm": "remada sentada triangulo",
-    "slug": "remada_baixa_triangulo"
-  },
-  {
-    "alias": "remada baixa neutra",
-    "alias_norm": "remada baixa neutra",
-    "slug": "remada_baixa_triangulo"
-  },
-  {
-    "alias": "remada sentada no cabo",
-    "alias_norm": "remada sentada no cabo",
-    "slug": "remada_baixa_triangulo"
-  },
-  {
-    "alias": "remada no pulley",
-    "alias_norm": "remada no pulley",
     "slug": "remada_baixa_triangulo"
   },
   {
@@ -1365,23 +1260,8 @@
     "slug": "rotacao_externa_polia"
   },
   {
-    "alias": "rosca direta",
-    "alias_norm": "rosca direta",
-    "slug": "rosca_direta_barra"
-  },
-  {
-    "alias": "rosca direta barra",
-    "alias_norm": "rosca direta barra",
-    "slug": "rosca_direta_barra"
-  },
-  {
     "alias": "rosca direta barra reta",
     "alias_norm": "rosca direta barra reta",
-    "slug": "rosca_direta_barra"
-  },
-  {
-    "alias": "rosca com barra",
-    "alias_norm": "rosca com barra",
     "slug": "rosca_direta_barra"
   },
   {
@@ -1615,38 +1495,8 @@
     "slug": "rosca_inversa_polia"
   },
   {
-    "alias": "tríceps polia",
-    "alias_norm": "triceps polia",
-    "slug": "triceps_polia_barra"
-  },
-  {
-    "alias": "tríceps na polia",
-    "alias_norm": "triceps na polia",
-    "slug": "triceps_polia_barra"
-  },
-  {
-    "alias": "tríceps pulley",
-    "alias_norm": "triceps pulley",
-    "slug": "triceps_polia_barra"
-  },
-  {
-    "alias": "tríceps barra",
-    "alias_norm": "triceps barra",
-    "slug": "triceps_polia_barra"
-  },
-  {
-    "alias": "tríceps polia barra",
-    "alias_norm": "triceps polia barra",
-    "slug": "triceps_polia_barra"
-  },
-  {
     "alias": "tríceps polia barra reta",
     "alias_norm": "triceps polia barra reta",
-    "slug": "triceps_polia_barra"
-  },
-  {
-    "alias": "tríceps pulldown",
-    "alias_norm": "triceps pulldown",
     "slug": "triceps_polia_barra"
   },
   {
@@ -3123,5 +2973,110 @@
     "alias": "segurar mala",
     "alias_norm": "segurar mala",
     "slug": "sustentacao_mala"
+  },
+  {
+    "alias": "puxada pronada fechada",
+    "alias_norm": "puxada pronada fechada",
+    "slug": "puxada_frontal_fechada"
+  },
+  {
+    "alias": "pulldown pegada fechada",
+    "alias_norm": "pulldown pegada fechada",
+    "slug": "puxada_frontal_fechada"
+  },
+  {
+    "alias": "puxada frontal fechada",
+    "alias_norm": "puxada frontal fechada",
+    "slug": "puxada_frontal_fechada"
+  },
+  {
+    "alias": "puxador frente fechado",
+    "alias_norm": "puxador frente fechado",
+    "slug": "puxada_frontal_fechada"
+  },
+  {
+    "alias": "puxada barra neutra média",
+    "alias_norm": "puxada barra neutra media",
+    "slug": "puxada_neutra_media"
+  },
+  {
+    "alias": "puxador neutro médio",
+    "alias_norm": "puxador neutro medio",
+    "slug": "puxada_neutra_media"
+  },
+  {
+    "alias": "remada sentada supinada",
+    "alias_norm": "remada sentada supinada",
+    "slug": "remada_baixa_supinada"
+  },
+  {
+    "alias": "remada baixa pegada supinada",
+    "alias_norm": "remada baixa pegada supinada",
+    "slug": "remada_baixa_supinada"
+  },
+  {
+    "alias": "remada baixa corda",
+    "alias_norm": "remada baixa corda",
+    "slug": "remada_baixa_corda"
+  },
+  {
+    "alias": "remada sentada com corda",
+    "alias_norm": "remada sentada com corda",
+    "slug": "remada_baixa_corda"
+  },
+  {
+    "alias": "remada unilateral na polia",
+    "alias_norm": "remada unilateral na polia",
+    "slug": "remada_baixa_unilateral"
+  },
+  {
+    "alias": "remada baixa unilateral",
+    "alias_norm": "remada baixa unilateral",
+    "slug": "remada_baixa_unilateral"
+  },
+  {
+    "alias": "remada unilateral no cabo",
+    "alias_norm": "remada unilateral no cabo",
+    "slug": "remada_baixa_unilateral"
+  },
+  {
+    "alias": "tríceps inverso",
+    "alias_norm": "triceps inverso",
+    "slug": "triceps_polia_supinado"
+  },
+  {
+    "alias": "tríceps polia inverso",
+    "alias_norm": "triceps polia inverso",
+    "slug": "triceps_polia_supinado"
+  },
+  {
+    "alias": "tríceps supinado",
+    "alias_norm": "triceps supinado",
+    "slug": "triceps_polia_supinado"
+  },
+  {
+    "alias": "tríceps pegada invertida",
+    "alias_norm": "triceps pegada invertida",
+    "slug": "triceps_polia_supinado"
+  },
+  {
+    "alias": "tríceps polia supinado",
+    "alias_norm": "triceps polia supinado",
+    "slug": "triceps_polia_supinado"
+  },
+  {
+    "alias": "barra fixa assistida neutra",
+    "alias_norm": "barra fixa assistida neutra",
+    "slug": "barra_fixa_assistida_neutra"
+  },
+  {
+    "alias": "barra assistida neutra",
+    "alias_norm": "barra assistida neutra",
+    "slug": "barra_fixa_assistida_neutra"
+  },
+  {
+    "alias": "graviton neutro",
+    "alias_norm": "graviton neutro",
+    "slug": "barra_fixa_assistida_neutra"
   }
 ]

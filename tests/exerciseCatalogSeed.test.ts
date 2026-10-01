@@ -8,6 +8,7 @@ import {
     type ExerciseSeed,
     type SeedAlias,
     type SeedExercise,
+    type SeedGenericName,
 } from '@/lib/exerciseCatalogSeed'
 
 const SEED_DIR = new URL('../supabase/seed/exercises/', import.meta.url)
@@ -19,6 +20,9 @@ const BENCH: SeedExercise = {
     primary_muscle: 'peito',
     secondary_muscles: ['triceps'],
     equipment: 'barra',
+    pegada: null,
+    largura_pegada: null,
+    acessorio: null,
     default_load_form: 'total',
     description_pt: 'Deitado no banco, desça a barra até o peito e empurre de volta.',
     source: 'proprio',
@@ -35,8 +39,25 @@ const DUMBBELL_BENCH: SeedExercise = {
     default_load_form: 'por_halter',
 }
 
-function buildSeed(exercises: SeedExercise[], aliases: SeedAlias[] = []): ExerciseSeed {
-    const seed = { exercises, aliases }
+const WIDE_PULLDOWN: SeedExercise = {
+    ...BENCH,
+    slug: 'puxada_frontal_aberta',
+    name_pt: 'Puxada frontal aberta',
+    family: 'puxada',
+    primary_muscle: 'costas',
+    secondary_muscles: ['biceps'],
+    equipment: 'cabo',
+    pegada: 'pronada',
+    largura_pegada: 'aberta',
+    acessorio: 'barra_reta',
+}
+
+function buildSeed(
+    exercises: SeedExercise[],
+    aliases: SeedAlias[] = [],
+    genericNames: SeedGenericName[] = [],
+): ExerciseSeed {
+    const seed = { exercises, aliases, genericNames }
 
     return seed
 }
@@ -111,6 +132,43 @@ describe('validateExerciseSeed', () => {
         expect(errors).toContain('"supino reto com barra" já pertence a supino_reto_barra')
     })
 
+    it('recusa pegada, largura e acessório fora do contrato', () => {
+        const seed = buildSeed([{ ...WIDE_PULLDOWN, pegada: 'mista', largura_pegada: 'larga', acessorio: 'v' }])
+        const errors = validateExerciseSeed(seed).join('\n')
+
+        expect(errors).toContain('pegada "mista"')
+        expect(errors).toContain('largura_pegada "larga"')
+        expect(errors).toContain('acessorio "v"')
+    })
+
+    it('recusa duas variações iguais em família, equipamento, pegada, largura e acessório', () => {
+        const duplicate = { ...WIDE_PULLDOWN, slug: 'pulldown_aberto', name_pt: 'Pulldown aberto' }
+        const supinated = { ...WIDE_PULLDOWN, slug: 'puxada_supinada', name_pt: 'Puxada supinada', pegada: 'supinada' }
+        const errors = validateExerciseSeed(buildSeed([WIDE_PULLDOWN, duplicate, supinated]))
+
+        expect(errors).toEqual([
+            'pulldown_aberto e puxada_frontal_aberta: mesma família, equipamento, pegada, largura e acessório',
+        ])
+    })
+
+    it('aceita nome genérico ligado a famílias existentes', () => {
+        const generic = { name: 'Pull down', name_norm: 'pull down', families: ['puxada'] }
+
+        expect(validateExerciseSeed(buildSeed([WIDE_PULLDOWN], [], [generic]))).toEqual([])
+    })
+
+    it('recusa nome genérico de família inexistente ou que já é apelido', () => {
+        const alias = { alias: 'Pull down', alias_norm: 'pull down', slug: 'puxada_frontal_aberta' }
+        const generics = [
+            { name: 'pull down', name_norm: 'pull down', families: ['puxada'] },
+            { name: 'Remada baixa', name_norm: 'remada baixa', families: ['remada_baixa'] },
+        ]
+        const errors = validateExerciseSeed(buildSeed([WIDE_PULLDOWN], [alias], generics)).join('\n')
+
+        expect(errors).toContain('"pull down" já pertence a puxada_frontal_aberta')
+        expect(errors).toContain('famílias inexistentes ou vazias (remada_baixa)')
+    })
+
     it('exige licença e atribuição de fonte externa', () => {
         const seed = buildSeed([{ ...BENCH, source: 'wger', license: null }])
 
@@ -123,6 +181,7 @@ describe('seed de exercícios do repositório', () => {
         const seed = buildSeed(
             readSeedFile<SeedExercise[]>('exercises.json'),
             readSeedFile<SeedAlias[]>('aliases.json'),
+            readSeedFile<SeedGenericName[]>('generic_names.json'),
         )
 
         expect(validateExerciseSeed(seed)).toEqual([])
