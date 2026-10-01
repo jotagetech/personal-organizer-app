@@ -39,6 +39,23 @@ export const EQUIPMENT_TYPES = [
     'outro',
 ] as const
 
+// Pegada, largura e acessório mudam a carga possível (puxada aberta pronada
+// e puxada com triângulo não se comparam), então são o que separa variações
+// do mesmo movimento. Como o equipamento, são etiquetas: o id do exercício
+// continua sendo a chave do histórico.
+export const GRIP_TYPES = ['pronada', 'supinada', 'neutra'] as const
+
+export const GRIP_WIDTHS = ['fechada', 'media', 'aberta'] as const
+
+export const ATTACHMENT_TYPES = [
+    'barra_reta',
+    'barra_w',
+    'barra_neutra',
+    'triangulo',
+    'corda',
+    'alca',
+] as const
+
 export const SET_METRICS = ['repeticoes', 'tempo', 'distancia'] as const
 
 // Ausente no arquivo, o exercício é de séries, como sempre foi.
@@ -70,6 +87,9 @@ const nonEmptyText = z.string().trim().min(1)
 export type Weekday = (typeof WEEKDAYS)[number]
 export type LoadConvention = (typeof LOAD_CONVENTIONS)[number]
 export type EquipmentType = (typeof EQUIPMENT_TYPES)[number]
+export type GripType = (typeof GRIP_TYPES)[number]
+export type GripWidth = (typeof GRIP_WIDTHS)[number]
+export type AttachmentType = (typeof ATTACHMENT_TYPES)[number]
 export type SetMetric = (typeof SET_METRICS)[number]
 export type ExerciseKind = (typeof EXERCISE_KINDS)[number]
 
@@ -294,6 +314,15 @@ const seriesExerciseV2Schema = z
         id: nonEmptyText,
         nome: nonEmptyText,
         equipamento: z.enum(EQUIPMENT_TYPES).optional(),
+        pegada: z
+            .enum(GRIP_TYPES)
+            .optional()
+            .describe('Orientação das mãos. Junto com largura_pegada e acessorio diferencia variações como puxada aberta pronada e puxada supinada.'),
+        largura_pegada: z.enum(GRIP_WIDTHS).optional(),
+        acessorio: z
+            .enum(ATTACHMENT_TYPES)
+            .optional()
+            .describe('Pegador preso ao cabo ou barra usada: triângulo, corda, barra W.'),
         forma_carga: z
             .enum(LOAD_CONVENTIONS)
             .describe(
@@ -407,6 +436,9 @@ const intervalExerciseV2Schema = z
         series: notApplicableToInterval(INTERVAL_FIELDS_HINT),
         forma_carga: notApplicableToInterval('exercício intervalado não registra carga'),
         equipamento: notApplicableToInterval('use modalidade'),
+        pegada: notApplicableToInterval(),
+        largura_pegada: notApplicableToInterval(),
+        acessorio: notApplicableToInterval(),
         por_lado: notApplicableToInterval(),
         descanso_segundos_min: notApplicableToInterval('a pausa entre rodadas é recuperacao_segundos_min/max'),
         descanso_segundos_max: notApplicableToInterval('a pausa entre rodadas é recuperacao_segundos_min/max'),
@@ -553,6 +585,9 @@ export type Exercise = {
     tipo: ExerciseKind
     intervalado: IntervalPrescription | null
     equipamento: EquipmentType | null
+    pegada: GripType | null
+    largura_pegada: GripWidth | null
+    acessorio: AttachmentType | null
     forma_carga: LoadConvention
     por_lado: boolean
     descanso_segundos_min: number | null
@@ -632,6 +667,9 @@ function normalizeV1Plan(document: WorkoutPlanV1Document): WorkoutPlan {
                 tipo: 'series' as const,
                 intervalado: null,
                 equipamento: null,
+                pegada: null,
+                largura_pegada: null,
+                acessorio: null,
                 forma_carga: exercise.forma_carga,
                 por_lado: false,
                 descanso_segundos_min: null,
@@ -736,6 +774,9 @@ export function buildIntervalExercise(
         tipo: 'intervalado',
         intervalado: prescription,
         equipamento: null,
+        pegada: null,
+        largura_pegada: null,
+        acessorio: null,
         forma_carga: 'peso_corporal',
         por_lado: false,
         descanso_segundos_min: null,
@@ -781,6 +822,9 @@ function normalizeV2Exercise(exercise: V2Exercise): Exercise {
         tipo: 'series',
         intervalado: null,
         equipamento: exercise.equipamento ?? null,
+        pegada: exercise.pegada ?? null,
+        largura_pegada: exercise.largura_pegada ?? null,
+        acessorio: exercise.acessorio ?? null,
         forma_carga: exercise.forma_carga,
         por_lado: exercise.por_lado ?? false,
         descanso_segundos_min: exercise.descanso_segundos_min ?? null,

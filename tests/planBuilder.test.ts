@@ -220,6 +220,30 @@ describe('conversão do montador para o JSON v2', () => {
         expect(workout.exercicios[0]).toMatchObject({ equipamento: 'maquina', forma_carga: 'assistencia' })
     })
 
+    it('leva pegada, largura e acessório ao arquivo e os traz de volta ao carregar', () => {
+        const exercise = filledExercise('Puxada frontal')
+        exercise.equipamento = 'cabo'
+        exercise.pegada = 'pronada'
+        exercise.largura_pegada = 'aberta'
+        exercise.acessorio = 'barra_reta'
+        const document = builderPlanToDocument(planWithExercises([exercise]))
+        const [workout] = document.treinos as { exercicios: Record<string, unknown>[] }[]
+        const reloaded = builderPlanFromWorkoutPlan(normalizedPlanOf(document)).treinos[0].exercicios[0]
+
+        expect(workout.exercicios[0]).toMatchObject({ pegada: 'pronada', largura_pegada: 'aberta', acessorio: 'barra_reta' })
+        expect(reloaded).toMatchObject({ pegada: 'pronada', largura_pegada: 'aberta', acessorio: 'barra_reta' })
+    })
+
+    it('pegada não informada não aparece no arquivo', () => {
+        const [workout] = builderPlanToDocument(planWithExercises([filledExercise('Supino')])).treinos as {
+            exercicios: Record<string, unknown>[]
+        }[]
+
+        expect(workout.exercicios[0]).not.toHaveProperty('pegada')
+        expect(workout.exercicios[0]).not.toHaveProperty('largura_pegada')
+        expect(workout.exercicios[0]).not.toHaveProperty('acessorio')
+    })
+
     it('intervalado não leva campos de série, carga, descanso nem RIR', () => {
         const exercise = filledExercise('Tiros')
         exercise.tipo = 'intervalado'

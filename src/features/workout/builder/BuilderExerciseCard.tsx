@@ -5,10 +5,17 @@ import { BuilderPrescriptionFields } from '@/features/workout/builder/BuilderPre
 import { segmentClassName } from '@/features/workout/builder/BuilderRangeField'
 import { BuilderVariations } from '@/features/workout/builder/BuilderVariations'
 import { exerciseIdStatus } from '@/features/workout/builder/builderIds'
-import { EQUIPMENT_CHOICES, LOAD_CONVENTION_OPTIONS, suggestLoadConvention } from '@/features/workout/builder/builderState'
+import {
+    ATTACHMENT_CHOICES,
+    EQUIPMENT_CHOICES,
+    GRIP_CHOICES,
+    GRIP_WIDTH_CHOICES,
+    LOAD_CONVENTION_OPTIONS,
+    suggestLoadConvention,
+} from '@/features/workout/builder/builderState'
 import type { BuilderExercise, EquipmentChoice } from '@/features/workout/builder/builderTypes'
 import { builderFieldId } from '@/features/workout/builder/builderValidation'
-import type { LoadConvention } from '@/lib/workoutPlanSchema'
+import type { AttachmentType, LoadConvention } from '@/lib/workoutPlanSchema'
 
 const ACTION_ICON_SIZE = 18
 const HEADER_ICON_SIZE = 20
@@ -85,7 +92,10 @@ export function BuilderExerciseCard(props: BuilderExerciseCardProps) {
                     {exercise.tipo === 'intervalado' ? (
                         <IntervalIdentityFields {...props} />
                     ) : (
-                        <SeriesIdentityFields {...props} />
+                        <>
+                            <SeriesIdentityFields {...props} />
+                            <GripFields {...props} />
+                        </>
                     )}
                     <BuilderPrescriptionFields
                         fieldPath={fieldPath}
@@ -191,6 +201,83 @@ function ExerciseNameField({ fieldPath, exercise, resolvedId, onChange }: Builde
                 </button>
             )}
         </div>
+    )
+}
+
+type ChoiceSegmentsProps<T extends string> = {
+    id: string
+    label: string
+    choices: { value: T; label: string }[]
+    value: T | ''
+    onChange: (value: T | '') => void
+}
+
+// Tocar de novo na opção marcada tira a escolha: pegada é opcional e a
+// maioria dos exercícios não precisa dela.
+function ChoiceSegments<T extends string>({ id, label, choices, value, onChange }: ChoiceSegmentsProps<T>) {
+    return (
+        <div className="field" id={id}>
+            <span className="builder-range__label">{label}</span>
+            <div className="builder-segmented builder-segmented--full" role="group" aria-label={label}>
+                {choices.map((choice) => {
+                    const isSelected = value === choice.value
+                    const nextValue = isSelected ? '' : choice.value
+
+                    return (
+                        <button
+                            key={choice.value}
+                            type="button"
+                            className={segmentClassName(isSelected)}
+                            aria-pressed={isSelected}
+                            onClick={() => onChange(nextValue)}
+                        >
+                            {choice.label}
+                        </button>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
+// Pegada, largura e acessório separam variações do mesmo movimento (puxada
+// aberta pronada, supinada, com triângulo), que não têm carga comparável.
+function GripFields({ fieldPath, exercise, onChange }: BuilderExerciseCardProps) {
+    const attachmentId = builderFieldId([...fieldPath, 'acessorio'])
+
+    return (
+        <>
+            <ChoiceSegments
+                id={builderFieldId([...fieldPath, 'pegada'])}
+                label="Pegada"
+                choices={GRIP_CHOICES}
+                value={exercise.pegada}
+                onChange={(pegada) => onChange({ ...exercise, pegada })}
+            />
+            <ChoiceSegments
+                id={builderFieldId([...fieldPath, 'largura_pegada'])}
+                label="Largura da pegada"
+                choices={GRIP_WIDTH_CHOICES}
+                value={exercise.largura_pegada}
+                onChange={(largura_pegada) => onChange({ ...exercise, largura_pegada })}
+            />
+            <div className="field">
+                <label htmlFor={attachmentId}>Acessório</label>
+                <select
+                    id={attachmentId}
+                    value={exercise.acessorio}
+                    onChange={(event) => onChange({ ...exercise, acessorio: event.target.value as AttachmentType | '' })}
+                >
+                    <option value="">Não informar</option>
+                    {ATTACHMENT_CHOICES.map((choice) => (
+                        <option key={choice.value} value={choice.value}>
+                            {choice.label}
+                        </option>
+                    ))}
+                </select>
+                <span className="builder-hint">Toque de novo numa pegada marcada para tirar.</span>
+            </div>
+        </>
     )
 }
 

@@ -83,8 +83,22 @@ describe('prescrição', () => {
 
 describe('exerciseTags', () => {
     it('mostra equipamento e execução unilateral, sem etiqueta para "outro"', () => {
-        expect(exerciseTags('halteres', true)).toEqual(['Halteres', 'Unilateral, cada lado'])
-        expect(exerciseTags('outro', false)).toEqual([])
-        expect(exerciseTags(null, false)).toEqual([])
+        expect(exerciseTags({ equipamento: 'halteres', por_lado: true })).toEqual(['Halteres', 'Unilateral, cada lado'])
+        expect(exerciseTags({ equipamento: 'outro', por_lado: false })).toEqual([])
+        expect(exerciseTags({ equipamento: null, por_lado: false })).toEqual([])
+    })
+
+    it('mostra acessório e junta orientação e largura numa etiqueta de pegada', () => {
+        const pulldown = {
+            equipamento: 'cabo',
+            acessorio: 'barra_reta',
+            pegada: 'pronada',
+            largura_pegada: 'aberta',
+            por_lado: false,
+        } as const
+
+        expect(exerciseTags(pulldown)).toEqual(['Cabo', 'Barra reta', 'Pegada pronada aberta'])
+        expect(exerciseTags({ equipamento: null, largura_pegada: 'media', por_lado: false })).toEqual(['Pegada média'])
+        expect(exerciseTags({ equipamento: null, pegada: 'neutra', por_lado: false })).toEqual(['Pegada neutra'])
     })
 })

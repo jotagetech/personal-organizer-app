@@ -134,6 +134,9 @@ describe('parseWorkoutPlanJson com versao 1 (normalização)', () => {
             tipo: 'series',
             intervalado: null,
             equipamento: null,
+            pegada: null,
+            largura_pegada: null,
+            acessorio: null,
             forma_carga: 'total',
             por_lado: false,
             descanso_segundos_min: null,
@@ -358,6 +361,56 @@ describe('parseWorkoutPlanJson com versao 2', () => {
         const inverted = validV2PlanObject()
         Object.assign(firstExerciseOf(inverted), { rir_alvo_min: 3, rir_alvo_max: 2 })
         expectFailureAt(parseWorkoutPlanJson(JSON.stringify(inverted)), 'treinos[0].exercicios[0].rir_alvo_max')
+    })
+
+    it('aceita pegada, largura e acessório e os leva para o exercício normalizado', () => {
+        const plan = validV2PlanObject()
+        Object.assign(firstExerciseOf(plan), {
+            equipamento: 'cabo',
+            pegada: 'pronada',
+            largura_pegada: 'aberta',
+            acessorio: 'barra_reta',
+        })
+        const result = parseWorkoutPlanJson(JSON.stringify(plan))
+
+        expect(result.success).toBe(true)
+        if (!result.success) {
+            return
+        }
+        expect(result.plan.treinos[0].exercicios[0]).toMatchObject({
+            pegada: 'pronada',
+            largura_pegada: 'aberta',
+            acessorio: 'barra_reta',
+        })
+    })
+
+    it('rejeita pegada, largura e acessório fora da lista', () => {
+        const fields = { pegada: 'mista', largura_pegada: 'larga', acessorio: 'v' }
+
+        for (const [field, value] of Object.entries(fields)) {
+            const plan = validV2PlanObject()
+            Object.assign(firstExerciseOf(plan), { [field]: value })
+
+            expectFailureAt(parseWorkoutPlanJson(JSON.stringify(plan)), `treinos[0].exercicios[0].${field}`)
+        }
+    })
+
+    it('rejeita pegada em exercício intervalado', () => {
+        const plan = validV2PlanObject()
+        plan.treinos[0].exercicios[0] = {
+            tipo: 'intervalado',
+            id: 'tiros',
+            nome: 'Tiros',
+            modalidade: 'bike',
+            rodadas: 4,
+            trabalho_segundos_min: 30,
+            trabalho_segundos_max: 30,
+            recuperacao_segundos_min: 60,
+            recuperacao_segundos_max: 60,
+            pegada: 'neutra',
+        } as unknown as LooseExercise
+
+        expectFailureAt(parseWorkoutPlanJson(JSON.stringify(plan)), 'treinos[0].exercicios[0].pegada')
     })
 
     it('rejeita equipamento fora da lista', () => {

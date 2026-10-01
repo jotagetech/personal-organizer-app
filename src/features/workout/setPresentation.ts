@@ -2,7 +2,14 @@
 // aqui que mora a ambiguidade que mais gera registro errado (o que digitar no
 // campo de carga), e isso precisa de teste sem montar a tela.
 
-import type { EquipmentType, LoadConvention, SetMetric } from '@/lib/workoutPlanSchema'
+import type {
+    AttachmentType,
+    EquipmentType,
+    GripType,
+    GripWidth,
+    LoadConvention,
+    SetMetric,
+} from '@/lib/workoutPlanSchema'
 
 const METRIC_UNIT: Record<SetMetric, string> = {
     repeticoes: 'reps',
@@ -32,6 +39,35 @@ const EQUIPMENT_LABEL: Record<EquipmentType, string | null> = {
     elastico: 'Elástico',
     peso_corporal: 'Peso corporal',
     outro: null,
+}
+
+const GRIP_LABEL: Record<GripType, string> = {
+    pronada: 'pronada',
+    supinada: 'supinada',
+    neutra: 'neutra',
+}
+
+const GRIP_WIDTH_LABEL: Record<GripWidth, string> = {
+    fechada: 'fechada',
+    media: 'média',
+    aberta: 'aberta',
+}
+
+export const ATTACHMENT_LABEL: Record<AttachmentType, string> = {
+    barra_reta: 'Barra reta',
+    barra_w: 'Barra W',
+    barra_neutra: 'Barra neutra',
+    triangulo: 'Triângulo',
+    corda: 'Corda',
+    alca: 'Alça',
+}
+
+export type ExerciseTagSource = {
+    equipamento: EquipmentType | null
+    pegada?: GripType | null
+    largura_pegada?: GripWidth | null
+    acessorio?: AttachmentType | null
+    por_lado: boolean
 }
 
 export function formatDecimal(value: number): string {
@@ -150,13 +186,29 @@ export function formatRestPrescription(min: number | null, max: number | null): 
     return rest
 }
 
-export function exerciseTags(equipamento: EquipmentType | null, porLado: boolean): string[] {
+// Orientação e largura viram uma etiqueta só ("Pegada pronada aberta"),
+// que é como a ficha costuma escrever.
+function gripTag(pegada: GripType | null, largura: GripWidth | null): string | null {
+    const parts = [pegada && GRIP_LABEL[pegada], largura && GRIP_WIDTH_LABEL[largura]].filter(Boolean)
+    const tag = parts.length === 0 ? null : `Pegada ${parts.join(' ')}`
+
+    return tag
+}
+
+export function exerciseTags(exercise: ExerciseTagSource): string[] {
     const tags: string[] = []
-    const equipmentLabel = equipamento === null ? null : EQUIPMENT_LABEL[equipamento]
+    const equipmentLabel = exercise.equipamento === null ? null : EQUIPMENT_LABEL[exercise.equipamento]
+    const grip = gripTag(exercise.pegada ?? null, exercise.largura_pegada ?? null)
     if (equipmentLabel) {
         tags.push(equipmentLabel)
     }
-    if (porLado) {
+    if (exercise.acessorio) {
+        tags.push(ATTACHMENT_LABEL[exercise.acessorio])
+    }
+    if (grip) {
+        tags.push(grip)
+    }
+    if (exercise.por_lado) {
         tags.push('Unilateral, cada lado')
     }
 

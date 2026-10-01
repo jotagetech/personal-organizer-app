@@ -10,7 +10,14 @@ import type {
     BuilderWorkout,
     EquipmentChoice,
 } from '@/features/workout/builder/builderTypes'
-import { MAX_BLOCK_WEEKS, type LoadConvention, type SetMetric } from '@/lib/workoutPlanSchema'
+import {
+    MAX_BLOCK_WEEKS,
+    type AttachmentType,
+    type GripType,
+    type GripWidth,
+    type LoadConvention,
+    type SetMetric,
+} from '@/lib/workoutPlanSchema'
 
 const WORKOUT_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -26,6 +33,27 @@ export const EQUIPMENT_CHOICES: { value: EquipmentChoice; label: string }[] = [
     { value: 'elastico', label: 'Elástico' },
     { value: 'peso_corporal', label: 'Peso corporal' },
     { value: 'outro', label: 'Outro' },
+]
+
+export const GRIP_CHOICES: { value: GripType; label: string }[] = [
+    { value: 'pronada', label: 'Pronada' },
+    { value: 'supinada', label: 'Supinada' },
+    { value: 'neutra', label: 'Neutra' },
+]
+
+export const GRIP_WIDTH_CHOICES: { value: GripWidth; label: string }[] = [
+    { value: 'fechada', label: 'Fechada' },
+    { value: 'media', label: 'Média' },
+    { value: 'aberta', label: 'Aberta' },
+]
+
+export const ATTACHMENT_CHOICES: { value: AttachmentType; label: string }[] = [
+    { value: 'barra_reta', label: 'Barra reta' },
+    { value: 'barra_w', label: 'Barra W' },
+    { value: 'barra_neutra', label: 'Barra neutra (paralela)' },
+    { value: 'triangulo', label: 'Triângulo' },
+    { value: 'corda', label: 'Corda' },
+    { value: 'alca', label: 'Alça (pegador de uma mão)' },
 ]
 
 // Escolher o equipamento já acerta a forma de carga mais comum dele; a
@@ -92,6 +120,9 @@ export function createExercise(): BuilderExercise {
         nome: '',
         tipo: 'series',
         equipamento: '',
+        pegada: '',
+        largura_pegada: '',
+        acessorio: '',
         forma_carga: 'total',
         por_lado: false,
         modalidade: '',

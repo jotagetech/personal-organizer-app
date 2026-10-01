@@ -311,8 +311,9 @@ hash, o plano salvo vira o ativo); nada muda na forma como o plano é lido.
 
 - Treinos com nome e dias da semana; exercícios com adicionar, remover,
   subir, descer e duplicar, cada treino e cada exercício recolhível.
-- Exercício de séries (equipamento, forma de carga com explicação curta,
-  unilateral, descanso, RIR alvo, observações e a lista de séries com
+- Exercício de séries (equipamento, pegada, largura da pegada, acessório,
+  forma de carga com explicação curta, unilateral, descanso, RIR alvo,
+  observações e a lista de séries com
   métrica, alvo, carga sugerida, duplicar e drop set) ou cardio intervalado
   (modalidade, rodadas, trabalho, recuperação, RPE alvo). Escolher o
   equipamento sugere a forma de carga (halteres: por halter; barra: total;
@@ -507,6 +508,19 @@ e sessões antigas continuam lendo o descanso do exercício como antes.
 { "equipamento": "cabo" }
 ```
 
+**Pegada, largura e acessório** (`pegada`, `largura_pegada`, `acessorio`):
+etiquetas que separam variações do mesmo movimento sem carga comparável, como
+puxada aberta pronada, puxada supinada e puxada com triângulo. `pegada` aceita
+`pronada`, `supinada` ou `neutra`; `largura_pegada`, `fechada`, `media` ou
+`aberta`; `acessorio`, `barra_reta`, `barra_w`, `barra_neutra`, `triangulo`,
+`corda` ou `alca`. Os três são opcionais e independentes, aparecem no card do
+exercício e vão para a exportação (`grip`, `grip_width`, `attachment`). Trocar
+a pegada de um exercício pede `id` novo, como trocar o equipamento:
+
+```json
+{ "equipamento": "cabo", "pegada": "pronada", "largura_pegada": "aberta", "acessorio": "barra_reta" }
+```
+
 **Observações** (`observacoes`): texto livre do exercício, mostrado no card:
 
 ```json
@@ -530,7 +544,7 @@ Toda faixa segue a regra do resto do contrato: sempre o par, e valor fixo
 repete o número. Com faixa de trabalho (3 a 4 min, por exemplo), quem treina
 encerra cada trabalho dentro dela. Campos de série não se aplicam e são
 recusados com o caminho do campo: `series`, `forma_carga`, `equipamento`,
-`por_lado`, `descanso_segundos_min/max` (a pausa é a recuperação) e
+`pegada`, `largura_pegada`, `acessorio`, `por_lado`, `descanso_segundos_min/max` (a pausa é a recuperação) e
 `rir_alvo_min/max` (use o RPE). Tiros de 30 s forte e 90 s leve, 6 na semana
 1, 8 na 2, 10 na 3 e 6 na 4:
 
@@ -707,13 +721,15 @@ CHANGELOG.md           histórico de mudanças, por data
 ## Catálogo de exercícios (seed)
 
 `supabase/seed/exercises/` guarda a base do futuro catálogo compartilhado de
-exercícios: 194 exercícios com nome, família, músculo primário e secundários,
-equipamento, forma de carga sugerida e descrição curta, mais os apelidos
-globais (ex: "stiff" e "levantamento terra romeno", "puxador frente" e "pull
-down"). O texto é todo próprio, em pt-BR de academia. A regra de identidade
-(barra e halter são exercícios diferentes, tempo e pausa não), os vocabulários
-e a licença estão no `README.md` da pasta. `validateExerciseSeed`
-(`src/lib/exerciseCatalogSeed.ts`) confere os dois arquivos dentro do
+exercícios: 201 exercícios com nome, família, músculo primário e secundários,
+equipamento, pegada, largura, acessório, forma de carga sugerida e descrição
+curta, os apelidos globais (ex: "stiff" e "levantamento terra romeno") e os
+nomes genéricos que valem para mais de uma variação ("pull down", "remada
+baixa", "tríceps polia"), ligados à família para a pessoa escolher. O texto é
+todo próprio, em pt-BR de academia. A regra de identidade (barra e halter são
+exercícios diferentes, pegada que muda a carga também, tempo e pausa não), os
+vocabulários e a licença estão no `README.md` da pasta. `validateExerciseSeed`
+(`src/lib/exerciseCatalogSeed.ts`) confere os três arquivos dentro do
 `npm run test`. O seed ainda não vai para o banco: falta a migração das
 tabelas `exercises` e `exercise_aliases`.
 

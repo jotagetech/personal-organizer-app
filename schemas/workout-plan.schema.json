@@ -116,6 +116,35 @@
                             "outro"
                           ]
                         },
+                        "pegada": {
+                          "type": "string",
+                          "enum": [
+                            "pronada",
+                            "supinada",
+                            "neutra"
+                          ],
+                          "description": "Orientação das mãos. Junto com largura_pegada e acessorio diferencia variações como puxada aberta pronada e puxada supinada."
+                        },
+                        "largura_pegada": {
+                          "type": "string",
+                          "enum": [
+                            "fechada",
+                            "media",
+                            "aberta"
+                          ]
+                        },
+                        "acessorio": {
+                          "type": "string",
+                          "enum": [
+                            "barra_reta",
+                            "barra_w",
+                            "barra_neutra",
+                            "triangulo",
+                            "corda",
+                            "alca"
+                          ],
+                          "description": "Pegador preso ao cabo ou barra usada: triângulo, corda, barra W."
+                        },
                         "forma_carga": {
                           "type": "string",
                           "enum": [
@@ -523,6 +552,15 @@
                           "not": {}
                         },
                         "equipamento": {
+                          "not": {}
+                        },
+                        "pegada": {
+                          "not": {}
+                        },
+                        "largura_pegada": {
+                          "not": {}
+                        },
+                        "acessorio": {
                           "not": {}
                         },
                         "por_lado": {

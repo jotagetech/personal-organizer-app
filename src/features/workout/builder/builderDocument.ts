@@ -151,12 +151,23 @@ function equipmentToJson(choice: EquipmentChoice | ''): EquipmentType | undefine
     return equipment
 }
 
+function optionalChoice<T extends string>(choice: T | ''): T | undefined {
+    const value = choice === '' ? undefined : choice
+
+    return value
+}
+
 function seriesExerciseToJson(exercise: BuilderExercise, id: string, includeVariations: boolean): JsonObject {
     const prescription = seriesPrescriptionFields(exercise)
     const exerciseJson = {
         id,
         nome: exercise.nome.trim(),
         ...definedFields({ equipamento: equipmentToJson(exercise.equipamento) }),
+        ...definedFields({
+            pegada: optionalChoice(exercise.pegada),
+            largura_pegada: optionalChoice(exercise.largura_pegada),
+            acessorio: optionalChoice(exercise.acessorio),
+        }),
         forma_carga: exercise.forma_carga,
         ...(exercise.por_lado ? { por_lado: true } : {}),
         ...prescription.descanso,
@@ -366,6 +377,9 @@ function exerciseFromPlan(exercise: Exercise): BuilderExercise {
         nome: exercise.nome,
         tipo: exercise.tipo,
         equipamento: isInterval ? '' : equipmentChoiceFrom(exercise),
+        pegada: exercise.pegada ?? '',
+        largura_pegada: exercise.largura_pegada ?? '',
+        acessorio: exercise.acessorio ?? '',
         forma_carga: isInterval ? 'total' : exercise.forma_carga,
         por_lado: isInterval ? false : exercise.por_lado,
         modalidade: exercise.intervalado?.modalidade ?? '',

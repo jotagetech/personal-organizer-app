@@ -17,7 +17,15 @@ import { groupDropsBySetKey } from '@/features/workout/setDrops'
 import { setStatusOf, type SetStatus } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSessionRow, type WorkoutSetDropRow, type WorkoutSetRow } from '@/features/workout/types'
 import type { IsoDate } from '@/lib/dateUtils'
-import type { EquipmentType, ExerciseKind, LoadConvention, SetMetric } from '@/lib/workoutPlanSchema'
+import type {
+    AttachmentType,
+    EquipmentType,
+    ExerciseKind,
+    GripType,
+    GripWidth,
+    LoadConvention,
+    SetMetric,
+} from '@/lib/workoutPlanSchema'
 
 export const EXPORT_FORMAT_VERSION = 1
 
@@ -120,6 +128,9 @@ export type ExportedExercise = {
     interval: ExportedInterval | null
     load_convention: LoadConvention
     equipment: EquipmentType | null
+    grip: GripType | null
+    grip_width: GripWidth | null
+    attachment: AttachmentType | null
     per_side: boolean
     rest_seconds_min: number | null
     rest_seconds_max: number | null
@@ -273,6 +284,9 @@ function buildWorkout(
             : null,
         load_convention: exercicio.forma_carga,
         equipment: exercicio.equipamento,
+        grip: exercicio.pegada ?? null,
+        grip_width: exercicio.largura_pegada ?? null,
+        attachment: exercicio.acessorio ?? null,
         per_side: exercicio.por_lado,
         rest_seconds_min: exercicio.descanso_segundos_min,
         rest_seconds_max: exercicio.descanso_segundos_max,

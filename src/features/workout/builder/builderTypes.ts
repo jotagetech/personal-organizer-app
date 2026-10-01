@@ -2,7 +2,15 @@
 // digita (campo vazio, "62,5" ou um valor pela metade são estados válidos da
 // tela); só a conversão para o JSON do contrato transforma em número.
 
-import type { ExerciseKind, LoadConvention, SetMetric, Weekday } from '@/lib/workoutPlanSchema'
+import type {
+    AttachmentType,
+    ExerciseKind,
+    GripType,
+    GripWidth,
+    LoadConvention,
+    SetMetric,
+    Weekday,
+} from '@/lib/workoutPlanSchema'
 
 // Par mínimo/máximo do contrato. Com `fixo`, a tela mostra um campo só e
 // grava o mesmo número nos dois lados.
@@ -69,6 +77,9 @@ export type BuilderExercise = BuilderPrescription & {
     nome: string
     tipo: ExerciseKind
     equipamento: EquipmentChoice | ''
+    pegada: GripType | ''
+    largura_pegada: GripWidth | ''
+    acessorio: AttachmentType | ''
     forma_carga: LoadConvention
     por_lado: boolean
     modalidade: string

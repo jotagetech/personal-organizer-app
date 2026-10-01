@@ -66,6 +66,9 @@ const FIELD_LABELS: Record<string, string> = {
     dias_semana: 'dias da semana',
     forma_carga: 'forma de carga',
     equipamento: 'equipamento',
+    pegada: 'pegada',
+    largura_pegada: 'largura da pegada',
+    acessorio: 'acessório',
     grupo: 'grupo',
 }
 

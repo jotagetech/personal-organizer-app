@@ -1317,7 +1317,7 @@ function dropConfirmLabel(isLastDrop: boolean, isWorkoutOtherwiseDone: boolean):
 function ExerciseDetails({ exercicio }: { exercicio: WorkoutSnapshotExercise }) {
     const tags = exercicio.intervalado
         ? [exercicio.intervalado.modalidade]
-        : exerciseTags(exercicio.equipamento, exercicio.por_lado)
+        : exerciseTags(exercicio)
     if (tags.length === 0 && !exercicio.observacoes) {
         return null
     }

@@ -128,7 +128,7 @@ export function planExerciseLines(
 }
 
 export function exerciseTagsText(exercise: Exercise): string[] {
-    const tags = exerciseTags(exercise.equipamento, exercise.por_lado)
+    const tags = exerciseTags(exercise)
 
     return tags
 }

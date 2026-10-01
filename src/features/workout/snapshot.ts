@@ -64,6 +64,18 @@ function snapshotSetOf(
     return snapshotSet
 }
 
+// Só os campos informados entram, para o snapshot de uma ficha sem pegada
+// continuar igual ao de antes.
+function gripFieldsOf(exercise: Exercise): Pick<WorkoutSnapshotExercise, 'pegada' | 'largura_pegada' | 'acessorio'> {
+    const gripFields = {
+        ...(exercise.pegada === null ? {} : { pegada: exercise.pegada }),
+        ...(exercise.largura_pegada === null ? {} : { largura_pegada: exercise.largura_pegada }),
+        ...(exercise.acessorio === null ? {} : { acessorio: exercise.acessorio }),
+    }
+
+    return gripFields
+}
+
 // O descanso do exercício no snapshot já é o resolvido para o dia (variação
 // da semana, exercício ou padrão do plano), então o histórico não muda
 // quando a ficha muda depois. O grupo só entra quando existe, para o snapshot
@@ -78,6 +90,7 @@ function snapshotExerciseOf(input: SnapshotExerciseInput): WorkoutSnapshotExerci
         tipo: exercicio.tipo,
         intervalado: exercicio.intervalado ? { ...exercicio.intervalado } : null,
         equipamento: exercicio.equipamento,
+        ...gripFieldsOf(exercicio),
         forma_carga: exercicio.forma_carga,
         por_lado: exercicio.por_lado,
         ...restFieldsOf(exerciseRest),
