@@ -243,21 +243,34 @@ revoke execute on function follow_exercise_merge(uuid) from public, anon, authen
 
 -- O vínculo vem sempre do snapshot da sessão, nunca do cliente: o envio das
 -- séries não muda, e uma série não consegue apontar para exercício de outra
--- conta.
+-- conta. Ligar ao catálogo nunca pode impedir a série de ser salva: snapshot
+-- fora do formato ou qualquer falha na busca deixa a série sem vínculo, que a
+-- tela de exercícios do histórico resolve depois.
 create function workout_sets_set_exercise_id() returns trigger as $$
 declare
     v_user_id uuid;
     v_snapshot_exercise jsonb;
 begin
-    select s.user_id, item into v_user_id, v_snapshot_exercise
-    from workout_sessions s
-    cross join lateral jsonb_array_elements(coalesce(s.workout_snapshot -> 'exercicios', '[]'::jsonb)) as item
-    where s.id = new.session_id and item ->> 'exercise_key' = new.exercise_key
-    limit 1;
+    new.exercise_id := null;
+    begin
+        select s.user_id, item into v_user_id, v_snapshot_exercise
+        from workout_sessions s
+        cross join lateral jsonb_array_elements(
+            case
+                when jsonb_typeof(s.workout_snapshot -> 'exercicios') = 'array' then s.workout_snapshot -> 'exercicios'
+                else '[]'::jsonb
+            end
+        ) as item
+        where s.id = new.session_id and item ->> 'exercise_key' = new.exercise_key
+        limit 1;
 
-    new.exercise_id := case
-        when v_user_id is null then null
-        else resolve_exercise_id(v_user_id, v_snapshot_exercise ->> 'catalogo', v_snapshot_exercise ->> 'nome')
+        if v_user_id is not null then
+            new.exercise_id := resolve_exercise_id(
+                v_user_id, v_snapshot_exercise ->> 'catalogo', v_snapshot_exercise ->> 'nome'
+            );
+        end if;
+    exception when others then
+        new.exercise_id := null;
     end;
     return new;
 end;
@@ -274,7 +287,12 @@ begin
     update workout_sets ws
     set exercise_id = resolve_exercise_id(s.user_id, item ->> 'catalogo', item ->> 'nome')
     from workout_sessions s
-    cross join lateral jsonb_array_elements(coalesce(s.workout_snapshot -> 'exercicios', '[]'::jsonb)) as item
+    cross join lateral jsonb_array_elements(
+        case
+            when jsonb_typeof(s.workout_snapshot -> 'exercicios') = 'array' then s.workout_snapshot -> 'exercicios'
+            else '[]'::jsonb
+        end
+    ) as item
     where ws.session_id = s.id
         and item ->> 'exercise_key' = ws.exercise_key
         and (p_user_id is null or s.user_id = p_user_id)
@@ -373,7 +391,12 @@ returns table (match_key text, example_name text, set_count bigint, last_session
         max(s.session_date) as last_session_date
     from workout_sets ws
     join workout_sessions s on s.id = ws.session_id
-    cross join lateral jsonb_array_elements(coalesce(s.workout_snapshot -> 'exercicios', '[]'::jsonb)) as item
+    cross join lateral jsonb_array_elements(
+        case
+            when jsonb_typeof(s.workout_snapshot -> 'exercicios') = 'array' then s.workout_snapshot -> 'exercicios'
+            else '[]'::jsonb
+        end
+    ) as item
     where s.user_id = auth.uid()
         and ws.exercise_id is null
         and item ->> 'exercise_key' = ws.exercise_key

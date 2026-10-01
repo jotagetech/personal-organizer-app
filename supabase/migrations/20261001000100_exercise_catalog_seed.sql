@@ -909,5 +909,10 @@ on conflict (name_norm) do update set
 update workout_sets ws
 set exercise_id = resolve_exercise_id(s.user_id, item ->> 'catalogo', item ->> 'nome')
 from workout_sessions s
-cross join lateral jsonb_array_elements(coalesce(s.workout_snapshot -> 'exercicios', '[]'::jsonb)) as item
+cross join lateral jsonb_array_elements(
+    case
+        when jsonb_typeof(s.workout_snapshot -> 'exercicios') = 'array' then s.workout_snapshot -> 'exercicios'
+        else '[]'::jsonb
+    end
+) as item
 where ws.session_id = s.id and item ->> 'exercise_key' = ws.exercise_key;
