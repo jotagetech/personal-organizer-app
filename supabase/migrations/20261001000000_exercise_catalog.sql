@@ -322,8 +322,9 @@ alter table exercises enable row level security;
 alter table exercise_aliases enable row level security;
 alter table exercise_generic_names enable row level security;
 
+-- Só quem está logado lê o catálogo; a chave pública sozinha não lista nada.
 create policy exercises_select_visible on exercises
-    for select using (owner_user_id is null or owner_user_id = auth.uid());
+    for select using (auth.uid() is not null and (owner_user_id is null or owner_user_id = auth.uid()));
 create policy exercises_insert_own on exercises
     for insert with check (owner_user_id = auth.uid());
 create policy exercises_update_own on exercises
@@ -333,7 +334,7 @@ create policy exercises_delete_own on exercises
 
 -- Apelido da conta só aponta para exercício que a conta enxerga.
 create policy exercise_aliases_select_visible on exercise_aliases
-    for select using (owner_user_id is null or owner_user_id = auth.uid());
+    for select using (auth.uid() is not null and (owner_user_id is null or owner_user_id = auth.uid()));
 create policy exercise_aliases_insert_own on exercise_aliases
     for insert with check (
         owner_user_id = auth.uid()
