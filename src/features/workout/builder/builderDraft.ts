@@ -40,14 +40,15 @@ function withDefaultRest(plan: BuilderPlan): BuilderPlan {
     return upgradedPlan
 }
 
-// Exercício de rascunho antigo não tem `grupo` nem os campos de pegada;
-// ausente vale como sem grupo e pegada não informada.
+// Exercício de rascunho antigo não tem `grupo`, catálogo nem os campos de
+// pegada; ausente vale como sem grupo, nome digitado e pegada não informada.
 function withDefaultGroups(plan: BuilderPlan): BuilderPlan {
     const treinos = plan.treinos.map((workout) => ({
         ...workout,
         exercicios: workout.exercicios.map((exercise) => ({
             ...exercise,
             grupo: exercise.grupo ?? null,
+            catalogo: exercise.catalogo ?? null,
             pegada: exercise.pegada ?? '',
             largura_pegada: exercise.largura_pegada ?? '',
             acessorio: exercise.acessorio ?? '',

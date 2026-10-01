@@ -57,13 +57,15 @@ const snapshotIntervalSchema = z.object({
 // plano. Ausente é exercício do plano, que é o que todo snapshot antigo tem.
 // `grupo` é o rótulo do bi-set, tri-set ou circuito copiado da ficha; ausente
 // é exercício feito sozinho, como em todo snapshot anterior aos grupos.
-// Pegada, largura e acessório seguem a mesma regra: ausente é não informado.
+// Pegada, largura, acessório e o slug do catálogo seguem a mesma regra:
+// ausente é não informado.
 export const snapshotExerciseSchema = z.object({
     exercise_key: z.string(),
     nome: z.string(),
     tipo: z.enum(EXERCISE_KINDS).default('series'),
     intervalado: snapshotIntervalSchema.nullable().default(null),
     equipamento: z.enum(EQUIPMENT_TYPES).nullable().default(null),
+    catalogo: z.string().optional(),
     pegada: z.enum(GRIP_TYPES).optional(),
     largura_pegada: z.enum(GRIP_WIDTHS).optional(),
     acessorio: z.enum(ATTACHMENT_TYPES).optional(),

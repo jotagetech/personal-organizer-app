@@ -162,6 +162,7 @@ function seriesExerciseToJson(exercise: BuilderExercise, id: string, includeVari
     const exerciseJson = {
         id,
         nome: exercise.nome.trim(),
+        ...definedFields({ catalogo: exercise.catalogo ?? undefined }),
         ...definedFields({ equipamento: equipmentToJson(exercise.equipamento) }),
         ...definedFields({
             pegada: optionalChoice(exercise.pegada),
@@ -376,6 +377,7 @@ function exerciseFromPlan(exercise: Exercise): BuilderExercise {
         tratarComoNovo: false,
         nome: exercise.nome,
         tipo: exercise.tipo,
+        catalogo: isInterval ? null : exercise.catalogo,
         equipamento: isInterval ? '' : equipmentChoiceFrom(exercise),
         pegada: exercise.pegada ?? '',
         largura_pegada: exercise.largura_pegada ?? '',

@@ -76,6 +76,8 @@ export type BuilderExercise = BuilderPrescription & {
     tratarComoNovo: boolean
     nome: string
     tipo: ExerciseKind
+    // Slug do exercício escolhido no catálogo; nulo é nome digitado à mão.
+    catalogo: string | null
     equipamento: EquipmentChoice | ''
     pegada: GripType | ''
     largura_pegada: GripWidth | ''

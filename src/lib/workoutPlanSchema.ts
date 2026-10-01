@@ -58,6 +58,11 @@ export const ATTACHMENT_TYPES = [
 
 export const SET_METRICS = ['repeticoes', 'tempo', 'distancia'] as const
 
+// Slug do exercício no catálogo compartilhado: minúsculas, sem acento, "_"
+// como separador. O de um exercício criado pela conta começa com "meu_".
+export const CATALOG_SLUG_PATTERN = /^[a-z0-9]+(_[a-z0-9]+)*$/
+export const MAX_CATALOG_SLUG_LENGTH = 80
+
 // Ausente no arquivo, o exercício é de séries, como sempre foi.
 export const EXERCISE_KINDS = ['series', 'intervalado'] as const
 
@@ -313,6 +318,12 @@ const seriesExerciseV2Schema = z
         tipo: z.literal('series').optional().describe('Ausente vale como series.'),
         id: nonEmptyText,
         nome: nonEmptyText,
+        catalogo: z
+            .string()
+            .max(MAX_CATALOG_SLUG_LENGTH)
+            .regex(CATALOG_SLUG_PATTERN, 'use o slug do catálogo: minúsculas, sem acento, "_" como separador')
+            .optional()
+            .describe('Slug do exercício no catálogo do app (ex: supino_reto_barra). Liga o histórico entre planos; o id continua sendo a chave da sessão.'),
         equipamento: z.enum(EQUIPMENT_TYPES).optional(),
         pegada: z
             .enum(GRIP_TYPES)
@@ -436,6 +447,7 @@ const intervalExerciseV2Schema = z
         series: notApplicableToInterval(INTERVAL_FIELDS_HINT),
         forma_carga: notApplicableToInterval('exercício intervalado não registra carga'),
         equipamento: notApplicableToInterval('use modalidade'),
+        catalogo: notApplicableToInterval('cardio intervalado não entra no catálogo de exercícios'),
         pegada: notApplicableToInterval(),
         largura_pegada: notApplicableToInterval(),
         acessorio: notApplicableToInterval(),
@@ -584,6 +596,7 @@ export type Exercise = {
     nome: string
     tipo: ExerciseKind
     intervalado: IntervalPrescription | null
+    catalogo: string | null
     equipamento: EquipmentType | null
     pegada: GripType | null
     largura_pegada: GripWidth | null
@@ -666,6 +679,7 @@ function normalizeV1Plan(document: WorkoutPlanV1Document): WorkoutPlan {
                 nome: exercise.nome,
                 tipo: 'series' as const,
                 intervalado: null,
+                catalogo: null,
                 equipamento: null,
                 pegada: null,
                 largura_pegada: null,
@@ -773,6 +787,7 @@ export function buildIntervalExercise(
         nome: base.nome,
         tipo: 'intervalado',
         intervalado: prescription,
+        catalogo: null,
         equipamento: null,
         pegada: null,
         largura_pegada: null,
@@ -821,6 +836,7 @@ function normalizeV2Exercise(exercise: V2Exercise): Exercise {
         nome: exercise.nome,
         tipo: 'series',
         intervalado: null,
+        catalogo: exercise.catalogo ?? null,
         equipamento: exercise.equipamento ?? null,
         pegada: exercise.pegada ?? null,
         largura_pegada: exercise.largura_pegada ?? null,

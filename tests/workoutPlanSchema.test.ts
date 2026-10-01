@@ -133,6 +133,7 @@ describe('parseWorkoutPlanJson com versao 1 (normalização)', () => {
             nome: 'Supino reto',
             tipo: 'series',
             intervalado: null,
+            catalogo: null,
             equipamento: null,
             pegada: null,
             largura_pegada: null,
@@ -382,6 +383,22 @@ describe('parseWorkoutPlanJson com versao 2', () => {
             largura_pegada: 'aberta',
             acessorio: 'barra_reta',
         })
+    })
+
+    it('aceita o slug do catálogo e recusa slug fora do formato', () => {
+        const valid = validV2PlanObject()
+        Object.assign(firstExerciseOf(valid), { catalogo: 'supino_reto_barra' })
+        const result = parseWorkoutPlanJson(JSON.stringify(valid))
+
+        expect(result.success).toBe(true)
+        if (!result.success) {
+            return
+        }
+        expect(result.plan.treinos[0].exercicios[0].catalogo).toBe('supino_reto_barra')
+
+        const invalid = validV2PlanObject()
+        Object.assign(firstExerciseOf(invalid), { catalogo: 'Supino Reto' })
+        expectFailureAt(parseWorkoutPlanJson(JSON.stringify(invalid)), 'treinos[0].exercicios[0].catalogo')
     })
 
     it('rejeita pegada, largura e acessório fora da lista', () => {

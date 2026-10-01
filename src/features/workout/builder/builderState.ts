@@ -119,6 +119,7 @@ export function createExercise(): BuilderExercise {
         tratarComoNovo: false,
         nome: '',
         tipo: 'series',
+        catalogo: null,
         equipamento: '',
         pegada: '',
         largura_pegada: '',

@@ -127,6 +127,7 @@ export type ExportedExercise = {
     exercise_type: ExerciseKind
     interval: ExportedInterval | null
     load_convention: LoadConvention
+    catalog_slug: string | null
     equipment: EquipmentType | null
     grip: GripType | null
     grip_width: GripWidth | null
@@ -283,6 +284,7 @@ function buildWorkout(
               }
             : null,
         load_convention: exercicio.forma_carga,
+        catalog_slug: exercicio.catalogo ?? null,
         equipment: exercicio.equipamento,
         grip: exercicio.pegada ?? null,
         grip_width: exercicio.largura_pegada ?? null,

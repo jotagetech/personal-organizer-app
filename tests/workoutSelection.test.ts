@@ -24,6 +24,7 @@ function planWithWorkouts(
                     nome: 'Exercício 1',
                     tipo: 'series',
                     intervalado: null,
+                    catalogo: null,
                     equipamento: null,
                     pegada: null,
                     largura_pegada: null,
