@@ -1,0 +1,3127 @@
+[
+  {
+    "alias": "supino reto",
+    "alias_norm": "supino reto",
+    "slug": "supino_reto_barra"
+  },
+  {
+    "alias": "supino reto barra",
+    "alias_norm": "supino reto barra",
+    "slug": "supino_reto_barra"
+  },
+  {
+    "alias": "supino com barra",
+    "alias_norm": "supino com barra",
+    "slug": "supino_reto_barra"
+  },
+  {
+    "alias": "bench press",
+    "alias_norm": "bench press",
+    "slug": "supino_reto_barra"
+  },
+  {
+    "alias": "supino reto halter",
+    "alias_norm": "supino reto halter",
+    "slug": "supino_reto_halteres"
+  },
+  {
+    "alias": "supino reto halteres",
+    "alias_norm": "supino reto halteres",
+    "slug": "supino_reto_halteres"
+  },
+  {
+    "alias": "supino reto com halter",
+    "alias_norm": "supino reto com halter",
+    "slug": "supino_reto_halteres"
+  },
+  {
+    "alias": "supino com halteres",
+    "alias_norm": "supino com halteres",
+    "slug": "supino_reto_halteres"
+  },
+  {
+    "alias": "supino halteres",
+    "alias_norm": "supino halteres",
+    "slug": "supino_reto_halteres"
+  },
+  {
+    "alias": "supino inclinado barra",
+    "alias_norm": "supino inclinado barra",
+    "slug": "supino_inclinado_barra"
+  },
+  {
+    "alias": "supino inclinado halter",
+    "alias_norm": "supino inclinado halter",
+    "slug": "supino_inclinado_halteres"
+  },
+  {
+    "alias": "supino inclinado halteres",
+    "alias_norm": "supino inclinado halteres",
+    "slug": "supino_inclinado_halteres"
+  },
+  {
+    "alias": "supino inclinado com halter",
+    "alias_norm": "supino inclinado com halter",
+    "slug": "supino_inclinado_halteres"
+  },
+  {
+    "alias": "supino declinado",
+    "alias_norm": "supino declinado",
+    "slug": "supino_declinado_barra"
+  },
+  {
+    "alias": "supino declinado barra",
+    "alias_norm": "supino declinado barra",
+    "slug": "supino_declinado_barra"
+  },
+  {
+    "alias": "supino declinado halteres",
+    "alias_norm": "supino declinado halteres",
+    "slug": "supino_declinado_halteres"
+  },
+  {
+    "alias": "supino declinado com halter",
+    "alias_norm": "supino declinado com halter",
+    "slug": "supino_declinado_halteres"
+  },
+  {
+    "alias": "supino smith",
+    "alias_norm": "supino smith",
+    "slug": "supino_reto_smith"
+  },
+  {
+    "alias": "supino reto smith",
+    "alias_norm": "supino reto smith",
+    "slug": "supino_reto_smith"
+  },
+  {
+    "alias": "supino no smith",
+    "alias_norm": "supino no smith",
+    "slug": "supino_reto_smith"
+  },
+  {
+    "alias": "supino inclinado smith",
+    "alias_norm": "supino inclinado smith",
+    "slug": "supino_inclinado_smith"
+  },
+  {
+    "alias": "supino máquina",
+    "alias_norm": "supino maquina",
+    "slug": "supino_vertical_maquina"
+  },
+  {
+    "alias": "supino maquina vertical",
+    "alias_norm": "supino maquina vertical",
+    "slug": "supino_vertical_maquina"
+  },
+  {
+    "alias": "supino vertical",
+    "alias_norm": "supino vertical",
+    "slug": "supino_vertical_maquina"
+  },
+  {
+    "alias": "supino sentado na máquina",
+    "alias_norm": "supino sentado na maquina",
+    "slug": "supino_vertical_maquina"
+  },
+  {
+    "alias": "chest press",
+    "alias_norm": "chest press",
+    "slug": "supino_vertical_maquina"
+  },
+  {
+    "alias": "supino inclinado máquina",
+    "alias_norm": "supino inclinado maquina",
+    "slug": "supino_inclinado_maquina"
+  },
+  {
+    "alias": "supino inclinado articulado",
+    "alias_norm": "supino inclinado articulado",
+    "slug": "supino_inclinado_maquina"
+  },
+  {
+    "alias": "supino fechado",
+    "alias_norm": "supino fechado",
+    "slug": "supino_reto_pegada_fechada"
+  },
+  {
+    "alias": "supino pegada fechada",
+    "alias_norm": "supino pegada fechada",
+    "slug": "supino_reto_pegada_fechada"
+  },
+  {
+    "alias": "crucifixo reto",
+    "alias_norm": "crucifixo reto",
+    "slug": "crucifixo_reto_halteres"
+  },
+  {
+    "alias": "crucifixo reto halteres",
+    "alias_norm": "crucifixo reto halteres",
+    "slug": "crucifixo_reto_halteres"
+  },
+  {
+    "alias": "crucifixo",
+    "alias_norm": "crucifixo",
+    "slug": "crucifixo_reto_halteres"
+  },
+  {
+    "alias": "crucifixo com halteres",
+    "alias_norm": "crucifixo com halteres",
+    "slug": "crucifixo_reto_halteres"
+  },
+  {
+    "alias": "crucifixo inclinado",
+    "alias_norm": "crucifixo inclinado",
+    "slug": "crucifixo_inclinado_halteres"
+  },
+  {
+    "alias": "crucifixo inclinado halteres",
+    "alias_norm": "crucifixo inclinado halteres",
+    "slug": "crucifixo_inclinado_halteres"
+  },
+  {
+    "alias": "voador",
+    "alias_norm": "voador",
+    "slug": "peck_deck"
+  },
+  {
+    "alias": "peck deck",
+    "alias_norm": "peck deck",
+    "slug": "peck_deck"
+  },
+  {
+    "alias": "fly na máquina",
+    "alias_norm": "fly na maquina",
+    "slug": "peck_deck"
+  },
+  {
+    "alias": "crucifixo na máquina",
+    "alias_norm": "crucifixo na maquina",
+    "slug": "peck_deck"
+  },
+  {
+    "alias": "crucifixo máquina",
+    "alias_norm": "crucifixo maquina",
+    "slug": "peck_deck"
+  },
+  {
+    "alias": "crossover",
+    "alias_norm": "crossover",
+    "slug": "crossover_polia_alta"
+  },
+  {
+    "alias": "cross over",
+    "alias_norm": "cross over",
+    "slug": "crossover_polia_alta"
+  },
+  {
+    "alias": "crossover polia alta",
+    "alias_norm": "crossover polia alta",
+    "slug": "crossover_polia_alta"
+  },
+  {
+    "alias": "crucifixo na polia",
+    "alias_norm": "crucifixo na polia",
+    "slug": "crossover_polia_alta"
+  },
+  {
+    "alias": "crucifixo no cross",
+    "alias_norm": "crucifixo no cross",
+    "slug": "crossover_polia_alta"
+  },
+  {
+    "alias": "crossover polia baixa",
+    "alias_norm": "crossover polia baixa",
+    "slug": "crossover_polia_baixa"
+  },
+  {
+    "alias": "crossover de baixo para cima",
+    "alias_norm": "crossover de baixo para cima",
+    "slug": "crossover_polia_baixa"
+  },
+  {
+    "alias": "crossover baixo para alto",
+    "alias_norm": "crossover baixo para alto",
+    "slug": "crossover_polia_baixa"
+  },
+  {
+    "alias": "cross over polia baixa",
+    "alias_norm": "cross over polia baixa",
+    "slug": "crossover_polia_baixa"
+  },
+  {
+    "alias": "crossover polia média",
+    "alias_norm": "crossover polia media",
+    "slug": "crossover_polia_media"
+  },
+  {
+    "alias": "crucifixo na polia média",
+    "alias_norm": "crucifixo na polia media",
+    "slug": "crossover_polia_media"
+  },
+  {
+    "alias": "flexão",
+    "alias_norm": "flexao",
+    "slug": "flexao_bracos"
+  },
+  {
+    "alias": "flexão de braço",
+    "alias_norm": "flexao de braco",
+    "slug": "flexao_bracos"
+  },
+  {
+    "alias": "flexão solo",
+    "alias_norm": "flexao solo",
+    "slug": "flexao_bracos"
+  },
+  {
+    "alias": "flexão no solo",
+    "alias_norm": "flexao no solo",
+    "slug": "flexao_bracos"
+  },
+  {
+    "alias": "apoio",
+    "alias_norm": "apoio",
+    "slug": "flexao_bracos"
+  },
+  {
+    "alias": "push up",
+    "alias_norm": "push up",
+    "slug": "flexao_bracos"
+  },
+  {
+    "alias": "flexão inclinada",
+    "alias_norm": "flexao inclinada",
+    "slug": "flexao_bracos_inclinada"
+  },
+  {
+    "alias": "flexão com mãos elevadas",
+    "alias_norm": "flexao com maos elevadas",
+    "slug": "flexao_bracos_inclinada"
+  },
+  {
+    "alias": "flexão declinada",
+    "alias_norm": "flexao declinada",
+    "slug": "flexao_bracos_declinada"
+  },
+  {
+    "alias": "flexão com pés elevados",
+    "alias_norm": "flexao com pes elevados",
+    "slug": "flexao_bracos_declinada"
+  },
+  {
+    "alias": "flexão fechada",
+    "alias_norm": "flexao fechada",
+    "slug": "flexao_diamante"
+  },
+  {
+    "alias": "flexão triângulo",
+    "alias_norm": "flexao triangulo",
+    "slug": "flexao_diamante"
+  },
+  {
+    "alias": "paralelas",
+    "alias_norm": "paralelas",
+    "slug": "mergulho_paralelas"
+  },
+  {
+    "alias": "paralela",
+    "alias_norm": "paralela",
+    "slug": "mergulho_paralelas"
+  },
+  {
+    "alias": "mergulho",
+    "alias_norm": "mergulho",
+    "slug": "mergulho_paralelas"
+  },
+  {
+    "alias": "dips",
+    "alias_norm": "dips",
+    "slug": "mergulho_paralelas"
+  },
+  {
+    "alias": "mergulho na paralela",
+    "alias_norm": "mergulho na paralela",
+    "slug": "mergulho_paralelas"
+  },
+  {
+    "alias": "paralela assistida",
+    "alias_norm": "paralela assistida",
+    "slug": "mergulho_assistido_maquina"
+  },
+  {
+    "alias": "mergulho assistido",
+    "alias_norm": "mergulho assistido",
+    "slug": "mergulho_assistido_maquina"
+  },
+  {
+    "alias": "paralelas assistida",
+    "alias_norm": "paralelas assistida",
+    "slug": "mergulho_assistido_maquina"
+  },
+  {
+    "alias": "mergulho máquina",
+    "alias_norm": "mergulho maquina",
+    "slug": "mergulho_maquina"
+  },
+  {
+    "alias": "paralela na máquina",
+    "alias_norm": "paralela na maquina",
+    "slug": "mergulho_maquina"
+  },
+  {
+    "alias": "dips na máquina",
+    "alias_norm": "dips na maquina",
+    "slug": "mergulho_maquina"
+  },
+  {
+    "alias": "tríceps banco",
+    "alias_norm": "triceps banco",
+    "slug": "mergulho_banco"
+  },
+  {
+    "alias": "tríceps no banco",
+    "alias_norm": "triceps no banco",
+    "slug": "mergulho_banco"
+  },
+  {
+    "alias": "mergulho entre bancos",
+    "alias_norm": "mergulho entre bancos",
+    "slug": "mergulho_banco"
+  },
+  {
+    "alias": "tríceps mergulho",
+    "alias_norm": "triceps mergulho",
+    "slug": "mergulho_banco"
+  },
+  {
+    "alias": "pullover",
+    "alias_norm": "pullover",
+    "slug": "pullover_halter"
+  },
+  {
+    "alias": "pull over",
+    "alias_norm": "pull over",
+    "slug": "pullover_halter"
+  },
+  {
+    "alias": "pullover halter",
+    "alias_norm": "pullover halter",
+    "slug": "pullover_halter"
+  },
+  {
+    "alias": "pulldown braços estendidos",
+    "alias_norm": "pulldown bracos estendidos",
+    "slug": "pullover_polia"
+  },
+  {
+    "alias": "puxada com braços estendidos",
+    "alias_norm": "puxada com bracos estendidos",
+    "slug": "pullover_polia"
+  },
+  {
+    "alias": "pullover no cabo",
+    "alias_norm": "pullover no cabo",
+    "slug": "pullover_polia"
+  },
+  {
+    "alias": "straight arm pulldown",
+    "alias_norm": "straight arm pulldown",
+    "slug": "pullover_polia"
+  },
+  {
+    "alias": "puxada frontal",
+    "alias_norm": "puxada frontal",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "puxada frente",
+    "alias_norm": "puxada frente",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "puxada aberta",
+    "alias_norm": "puxada aberta",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "puxador frente",
+    "alias_norm": "puxador frente",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "puxador frente pronado",
+    "alias_norm": "puxador frente pronado",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "pulldown",
+    "alias_norm": "pulldown",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "pull down",
+    "alias_norm": "pull down",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "pulldown pegada aberta",
+    "alias_norm": "pulldown pegada aberta",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "puxada alta",
+    "alias_norm": "puxada alta",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "puxada aberta frontal",
+    "alias_norm": "puxada aberta frontal",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "pulldown pegada larga",
+    "alias_norm": "pulldown pegada larga",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "lat pulldown",
+    "alias_norm": "lat pulldown",
+    "slug": "puxada_frontal_aberta"
+  },
+  {
+    "alias": "puxador supinado",
+    "alias_norm": "puxador supinado",
+    "slug": "puxada_frontal_supinada"
+  },
+  {
+    "alias": "puxada supinada",
+    "alias_norm": "puxada supinada",
+    "slug": "puxada_frontal_supinada"
+  },
+  {
+    "alias": "pulldown supinado",
+    "alias_norm": "pulldown supinado",
+    "slug": "puxada_frontal_supinada"
+  },
+  {
+    "alias": "puxador triângulo",
+    "alias_norm": "puxador triangulo",
+    "slug": "puxada_triangulo"
+  },
+  {
+    "alias": "puxada triângulo",
+    "alias_norm": "puxada triangulo",
+    "slug": "puxada_triangulo"
+  },
+  {
+    "alias": "pulldown triângulo",
+    "alias_norm": "pulldown triangulo",
+    "slug": "puxada_triangulo"
+  },
+  {
+    "alias": "puxada neutra fechada",
+    "alias_norm": "puxada neutra fechada",
+    "slug": "puxada_triangulo"
+  },
+  {
+    "alias": "puxador neutro",
+    "alias_norm": "puxador neutro",
+    "slug": "puxada_neutra_aberta"
+  },
+  {
+    "alias": "puxada neutra",
+    "alias_norm": "puxada neutra",
+    "slug": "puxada_neutra_aberta"
+  },
+  {
+    "alias": "pulldown neutro",
+    "alias_norm": "pulldown neutro",
+    "slug": "puxada_neutra_aberta"
+  },
+  {
+    "alias": "pulldown pegada neutra",
+    "alias_norm": "pulldown pegada neutra",
+    "slug": "puxada_neutra_aberta"
+  },
+  {
+    "alias": "puxada nuca",
+    "alias_norm": "puxada nuca",
+    "slug": "puxada_nuca"
+  },
+  {
+    "alias": "pulldown nuca",
+    "alias_norm": "pulldown nuca",
+    "slug": "puxada_nuca"
+  },
+  {
+    "alias": "puxador nuca",
+    "alias_norm": "puxador nuca",
+    "slug": "puxada_nuca"
+  },
+  {
+    "alias": "puxada unilateral",
+    "alias_norm": "puxada unilateral",
+    "slug": "puxada_unilateral_polia"
+  },
+  {
+    "alias": "pulldown unilateral",
+    "alias_norm": "pulldown unilateral",
+    "slug": "puxada_unilateral_polia"
+  },
+  {
+    "alias": "puxada articulada",
+    "alias_norm": "puxada articulada",
+    "slug": "puxada_maquina"
+  },
+  {
+    "alias": "pulldown máquina",
+    "alias_norm": "pulldown maquina",
+    "slug": "puxada_maquina"
+  },
+  {
+    "alias": "puxada máquina",
+    "alias_norm": "puxada maquina",
+    "slug": "puxada_maquina"
+  },
+  {
+    "alias": "barra fixa",
+    "alias_norm": "barra fixa",
+    "slug": "barra_fixa_pronada"
+  },
+  {
+    "alias": "pull up",
+    "alias_norm": "pull up",
+    "slug": "barra_fixa_pronada"
+  },
+  {
+    "alias": "barra supinada",
+    "alias_norm": "barra supinada",
+    "slug": "barra_fixa_supinada"
+  },
+  {
+    "alias": "chin up",
+    "alias_norm": "chin up",
+    "slug": "barra_fixa_supinada"
+  },
+  {
+    "alias": "barra fixa pegada neutra",
+    "alias_norm": "barra fixa pegada neutra",
+    "slug": "barra_fixa_neutra"
+  },
+  {
+    "alias": "barra neutra",
+    "alias_norm": "barra neutra",
+    "slug": "barra_fixa_neutra"
+  },
+  {
+    "alias": "barra fixa assistida",
+    "alias_norm": "barra fixa assistida",
+    "slug": "barra_fixa_assistida_maquina"
+  },
+  {
+    "alias": "barra assistida",
+    "alias_norm": "barra assistida",
+    "slug": "barra_fixa_assistida_maquina"
+  },
+  {
+    "alias": "gravitron",
+    "alias_norm": "gravitron",
+    "slug": "barra_fixa_assistida_maquina"
+  },
+  {
+    "alias": "graviton",
+    "alias_norm": "graviton",
+    "slug": "barra_fixa_assistida_maquina"
+  },
+  {
+    "alias": "barra fixa com elástico",
+    "alias_norm": "barra fixa com elastico",
+    "slug": "barra_fixa_assistida_elastico"
+  },
+  {
+    "alias": "barra assistida com elástico",
+    "alias_norm": "barra assistida com elastico",
+    "slug": "barra_fixa_assistida_elastico"
+  },
+  {
+    "alias": "negativa de barra fixa",
+    "alias_norm": "negativa de barra fixa",
+    "slug": "barra_fixa_negativa"
+  },
+  {
+    "alias": "negativa na barra",
+    "alias_norm": "negativa na barra",
+    "slug": "barra_fixa_negativa"
+  },
+  {
+    "alias": "barra negativa",
+    "alias_norm": "barra negativa",
+    "slug": "barra_fixa_negativa"
+  },
+  {
+    "alias": "dead hang",
+    "alias_norm": "dead hang",
+    "slug": "dead_hang"
+  },
+  {
+    "alias": "dead hang ativo",
+    "alias_norm": "dead hang ativo",
+    "slug": "dead_hang"
+  },
+  {
+    "alias": "suspensão na barra",
+    "alias_norm": "suspensao na barra",
+    "slug": "dead_hang"
+  },
+  {
+    "alias": "pendurar na barra",
+    "alias_norm": "pendurar na barra",
+    "slug": "dead_hang"
+  },
+  {
+    "alias": "remada curvada",
+    "alias_norm": "remada curvada",
+    "slug": "remada_curvada_barra"
+  },
+  {
+    "alias": "remada curvada pronada",
+    "alias_norm": "remada curvada pronada",
+    "slug": "remada_curvada_barra"
+  },
+  {
+    "alias": "remada curvada barra",
+    "alias_norm": "remada curvada barra",
+    "slug": "remada_curvada_barra"
+  },
+  {
+    "alias": "bent over row",
+    "alias_norm": "bent over row",
+    "slug": "remada_curvada_barra"
+  },
+  {
+    "alias": "remada curvada supinada",
+    "alias_norm": "remada curvada supinada",
+    "slug": "remada_curvada_supinada"
+  },
+  {
+    "alias": "remada supinada",
+    "alias_norm": "remada supinada",
+    "slug": "remada_curvada_supinada"
+  },
+  {
+    "alias": "remada yates",
+    "alias_norm": "remada yates",
+    "slug": "remada_curvada_supinada"
+  },
+  {
+    "alias": "pendlay row",
+    "alias_norm": "pendlay row",
+    "slug": "remada_pendlay"
+  },
+  {
+    "alias": "remada pendlay com barra",
+    "alias_norm": "remada pendlay com barra",
+    "slug": "remada_pendlay"
+  },
+  {
+    "alias": "pendlay",
+    "alias_norm": "pendlay",
+    "slug": "remada_pendlay"
+  },
+  {
+    "alias": "remada curvada halteres",
+    "alias_norm": "remada curvada halteres",
+    "slug": "remada_curvada_halteres"
+  },
+  {
+    "alias": "remada curvada com halter",
+    "alias_norm": "remada curvada com halter",
+    "slug": "remada_curvada_halteres"
+  },
+  {
+    "alias": "remada unilateral",
+    "alias_norm": "remada unilateral",
+    "slug": "remada_unilateral_halter"
+  },
+  {
+    "alias": "serrote",
+    "alias_norm": "serrote",
+    "slug": "remada_unilateral_halter"
+  },
+  {
+    "alias": "remada serrote",
+    "alias_norm": "remada serrote",
+    "slug": "remada_unilateral_halter"
+  },
+  {
+    "alias": "remada unilateral halter",
+    "alias_norm": "remada unilateral halter",
+    "slug": "remada_unilateral_halter"
+  },
+  {
+    "alias": "remada unilateral com halter",
+    "alias_norm": "remada unilateral com halter",
+    "slug": "remada_unilateral_halter"
+  },
+  {
+    "alias": "remada baixa",
+    "alias_norm": "remada baixa",
+    "slug": "remada_baixa_triangulo"
+  },
+  {
+    "alias": "remada baixa cabo",
+    "alias_norm": "remada baixa cabo",
+    "slug": "remada_baixa_triangulo"
+  },
+  {
+    "alias": "remada baixa no cabo",
+    "alias_norm": "remada baixa no cabo",
+    "slug": "remada_baixa_triangulo"
+  },
+  {
+    "alias": "remada baixa triângulo",
+    "alias_norm": "remada baixa triangulo",
+    "slug": "remada_baixa_triangulo"
+  },
+  {
+    "alias": "remada sentada triângulo",
+    "alias_norm": "remada sentada triangulo",
+    "slug": "remada_baixa_triangulo"
+  },
+  {
+    "alias": "remada baixa neutra",
+    "alias_norm": "remada baixa neutra",
+    "slug": "remada_baixa_triangulo"
+  },
+  {
+    "alias": "remada sentada no cabo",
+    "alias_norm": "remada sentada no cabo",
+    "slug": "remada_baixa_triangulo"
+  },
+  {
+    "alias": "remada no pulley",
+    "alias_norm": "remada no pulley",
+    "slug": "remada_baixa_triangulo"
+  },
+  {
+    "alias": "remada baixa aberta",
+    "alias_norm": "remada baixa aberta",
+    "slug": "remada_baixa_aberta"
+  },
+  {
+    "alias": "remada sentada aberta",
+    "alias_norm": "remada sentada aberta",
+    "slug": "remada_baixa_aberta"
+  },
+  {
+    "alias": "remada máquina",
+    "alias_norm": "remada maquina",
+    "slug": "remada_maquina"
+  },
+  {
+    "alias": "remada articulada",
+    "alias_norm": "remada articulada",
+    "slug": "remada_maquina"
+  },
+  {
+    "alias": "remada sentada máquina",
+    "alias_norm": "remada sentada maquina",
+    "slug": "remada_maquina"
+  },
+  {
+    "alias": "remada na máquina",
+    "alias_norm": "remada na maquina",
+    "slug": "remada_maquina"
+  },
+  {
+    "alias": "remada máquina unilateral",
+    "alias_norm": "remada maquina unilateral",
+    "slug": "remada_maquina_unilateral"
+  },
+  {
+    "alias": "remada unilateral máquina",
+    "alias_norm": "remada unilateral maquina",
+    "slug": "remada_maquina_unilateral"
+  },
+  {
+    "alias": "remada articulada unilateral",
+    "alias_norm": "remada articulada unilateral",
+    "slug": "remada_maquina_unilateral"
+  },
+  {
+    "alias": "remada com peito apoiado",
+    "alias_norm": "remada com peito apoiado",
+    "slug": "remada_apoiada_halteres"
+  },
+  {
+    "alias": "remada no banco inclinado",
+    "alias_norm": "remada no banco inclinado",
+    "slug": "remada_apoiada_halteres"
+  },
+  {
+    "alias": "remada apoiada no banco",
+    "alias_norm": "remada apoiada no banco",
+    "slug": "remada_apoiada_halteres"
+  },
+  {
+    "alias": "remada apoiada halteres",
+    "alias_norm": "remada apoiada halteres",
+    "slug": "remada_apoiada_halteres"
+  },
+  {
+    "alias": "remada apoiada máquina",
+    "alias_norm": "remada apoiada maquina",
+    "slug": "remada_apoiada_maquina"
+  },
+  {
+    "alias": "remada apoiada na máquina",
+    "alias_norm": "remada apoiada na maquina",
+    "slug": "remada_apoiada_maquina"
+  },
+  {
+    "alias": "remada t",
+    "alias_norm": "remada t",
+    "slug": "remada_cavalinho"
+  },
+  {
+    "alias": "remada barra t",
+    "alias_norm": "remada barra t",
+    "slug": "remada_cavalinho"
+  },
+  {
+    "alias": "t bar row",
+    "alias_norm": "t bar row",
+    "slug": "remada_cavalinho"
+  },
+  {
+    "alias": "remada cavalinho barra t",
+    "alias_norm": "remada cavalinho barra t",
+    "slug": "remada_cavalinho"
+  },
+  {
+    "alias": "remada australiana",
+    "alias_norm": "remada australiana",
+    "slug": "remada_invertida"
+  },
+  {
+    "alias": "inverted row",
+    "alias_norm": "inverted row",
+    "slug": "remada_invertida"
+  },
+  {
+    "alias": "levantamento terra com barra",
+    "alias_norm": "levantamento terra com barra",
+    "slug": "levantamento_terra_barra"
+  },
+  {
+    "alias": "terra",
+    "alias_norm": "terra",
+    "slug": "levantamento_terra_barra"
+  },
+  {
+    "alias": "terra convencional",
+    "alias_norm": "terra convencional",
+    "slug": "levantamento_terra_barra"
+  },
+  {
+    "alias": "deadlift",
+    "alias_norm": "deadlift",
+    "slug": "levantamento_terra_barra"
+  },
+  {
+    "alias": "terra sumô",
+    "alias_norm": "terra sumo",
+    "slug": "levantamento_terra_sumo"
+  },
+  {
+    "alias": "sumo deadlift",
+    "alias_norm": "sumo deadlift",
+    "slug": "levantamento_terra_sumo"
+  },
+  {
+    "alias": "terra hexagonal",
+    "alias_norm": "terra hexagonal",
+    "slug": "levantamento_terra_hexagonal"
+  },
+  {
+    "alias": "trap bar deadlift",
+    "alias_norm": "trap bar deadlift",
+    "slug": "levantamento_terra_hexagonal"
+  },
+  {
+    "alias": "terra com trap bar",
+    "alias_norm": "terra com trap bar",
+    "slug": "levantamento_terra_hexagonal"
+  },
+  {
+    "alias": "terra com kettlebell",
+    "alias_norm": "terra com kettlebell",
+    "slug": "levantamento_terra_kettlebell"
+  },
+  {
+    "alias": "levantamento terra kettlebell",
+    "alias_norm": "levantamento terra kettlebell",
+    "slug": "levantamento_terra_kettlebell"
+  },
+  {
+    "alias": "extensão lombar a 45 graus",
+    "alias_norm": "extensao lombar a 45 graus",
+    "slug": "extensao_lombar_45"
+  },
+  {
+    "alias": "extensão lombar 45",
+    "alias_norm": "extensao lombar 45",
+    "slug": "extensao_lombar_45"
+  },
+  {
+    "alias": "extensão lombar",
+    "alias_norm": "extensao lombar",
+    "slug": "extensao_lombar_45"
+  },
+  {
+    "alias": "hiperextensão lombar",
+    "alias_norm": "hiperextensao lombar",
+    "slug": "extensao_lombar_45"
+  },
+  {
+    "alias": "banco romano",
+    "alias_norm": "banco romano",
+    "slug": "extensao_lombar_45"
+  },
+  {
+    "alias": "lombar no banco",
+    "alias_norm": "lombar no banco",
+    "slug": "extensao_lombar_45"
+  },
+  {
+    "alias": "bom dia",
+    "alias_norm": "bom dia",
+    "slug": "bom_dia_barra"
+  },
+  {
+    "alias": "good morning",
+    "alias_norm": "good morning",
+    "slug": "bom_dia_barra"
+  },
+  {
+    "alias": "encolhimento",
+    "alias_norm": "encolhimento",
+    "slug": "encolhimento_halteres"
+  },
+  {
+    "alias": "encolhimento de ombros",
+    "alias_norm": "encolhimento de ombros",
+    "slug": "encolhimento_halteres"
+  },
+  {
+    "alias": "encolhimento halteres",
+    "alias_norm": "encolhimento halteres",
+    "slug": "encolhimento_halteres"
+  },
+  {
+    "alias": "trapézio com halteres",
+    "alias_norm": "trapezio com halteres",
+    "slug": "encolhimento_halteres"
+  },
+  {
+    "alias": "encolhimento barra",
+    "alias_norm": "encolhimento barra",
+    "slug": "encolhimento_barra"
+  },
+  {
+    "alias": "trapézio com barra",
+    "alias_norm": "trapezio com barra",
+    "slug": "encolhimento_barra"
+  },
+  {
+    "alias": "encolhimento máquina",
+    "alias_norm": "encolhimento maquina",
+    "slug": "encolhimento_maquina"
+  },
+  {
+    "alias": "encolhimento no smith",
+    "alias_norm": "encolhimento no smith",
+    "slug": "encolhimento_maquina"
+  },
+  {
+    "alias": "desenvolvimento militar",
+    "alias_norm": "desenvolvimento militar",
+    "slug": "desenvolvimento_militar_barra"
+  },
+  {
+    "alias": "militar",
+    "alias_norm": "militar",
+    "slug": "desenvolvimento_militar_barra"
+  },
+  {
+    "alias": "press militar",
+    "alias_norm": "press militar",
+    "slug": "desenvolvimento_militar_barra"
+  },
+  {
+    "alias": "desenvolvimento em pé com barra",
+    "alias_norm": "desenvolvimento em pe com barra",
+    "slug": "desenvolvimento_militar_barra"
+  },
+  {
+    "alias": "desenvolvimento barra sentado",
+    "alias_norm": "desenvolvimento barra sentado",
+    "slug": "desenvolvimento_barra_sentado"
+  },
+  {
+    "alias": "desenvolvimento com barra",
+    "alias_norm": "desenvolvimento com barra",
+    "slug": "desenvolvimento_barra_sentado"
+  },
+  {
+    "alias": "desenvolvimento barra",
+    "alias_norm": "desenvolvimento barra",
+    "slug": "desenvolvimento_barra_sentado"
+  },
+  {
+    "alias": "desenvolvimento halter",
+    "alias_norm": "desenvolvimento halter",
+    "slug": "desenvolvimento_halteres"
+  },
+  {
+    "alias": "desenvolvimento halteres",
+    "alias_norm": "desenvolvimento halteres",
+    "slug": "desenvolvimento_halteres"
+  },
+  {
+    "alias": "desenvolvimento com halter",
+    "alias_norm": "desenvolvimento com halter",
+    "slug": "desenvolvimento_halteres"
+  },
+  {
+    "alias": "desenvolvimento sentado com halteres",
+    "alias_norm": "desenvolvimento sentado com halteres",
+    "slug": "desenvolvimento_halteres"
+  },
+  {
+    "alias": "desenvolvimento alternado com halteres",
+    "alias_norm": "desenvolvimento alternado com halteres",
+    "slug": "desenvolvimento_halteres"
+  },
+  {
+    "alias": "desenvolvimento alternado",
+    "alias_norm": "desenvolvimento alternado",
+    "slug": "desenvolvimento_halteres"
+  },
+  {
+    "alias": "desenvolvimento em pé com halteres",
+    "alias_norm": "desenvolvimento em pe com halteres",
+    "slug": "desenvolvimento_halteres_em_pe"
+  },
+  {
+    "alias": "desenvolvimento alternado com halteres em pé",
+    "alias_norm": "desenvolvimento alternado com halteres em pe",
+    "slug": "desenvolvimento_halteres_em_pe"
+  },
+  {
+    "alias": "desenvolvimento halteres em pé",
+    "alias_norm": "desenvolvimento halteres em pe",
+    "slug": "desenvolvimento_halteres_em_pe"
+  },
+  {
+    "alias": "desenvolvimento unilateral com halter em meio ajoelhado",
+    "alias_norm": "desenvolvimento unilateral com halter em meio ajoelhado",
+    "slug": "desenvolvimento_unilateral_ajoelhado"
+  },
+  {
+    "alias": "desenvolvimento meio ajoelhado",
+    "alias_norm": "desenvolvimento meio ajoelhado",
+    "slug": "desenvolvimento_unilateral_ajoelhado"
+  },
+  {
+    "alias": "half kneeling press",
+    "alias_norm": "half kneeling press",
+    "slug": "desenvolvimento_unilateral_ajoelhado"
+  },
+  {
+    "alias": "arnold press",
+    "alias_norm": "arnold press",
+    "slug": "desenvolvimento_arnold"
+  },
+  {
+    "alias": "desenvolvimento máquina",
+    "alias_norm": "desenvolvimento maquina",
+    "slug": "desenvolvimento_maquina"
+  },
+  {
+    "alias": "desenvolvimento articulado",
+    "alias_norm": "desenvolvimento articulado",
+    "slug": "desenvolvimento_maquina"
+  },
+  {
+    "alias": "shoulder press",
+    "alias_norm": "shoulder press",
+    "slug": "desenvolvimento_maquina"
+  },
+  {
+    "alias": "desenvolvimento smith",
+    "alias_norm": "desenvolvimento smith",
+    "slug": "desenvolvimento_smith"
+  },
+  {
+    "alias": "elevação lateral",
+    "alias_norm": "elevacao lateral",
+    "slug": "elevacao_lateral_halteres"
+  },
+  {
+    "alias": "elevação lateral halteres",
+    "alias_norm": "elevacao lateral halteres",
+    "slug": "elevacao_lateral_halteres"
+  },
+  {
+    "alias": "elevação lateral com halter",
+    "alias_norm": "elevacao lateral com halter",
+    "slug": "elevacao_lateral_halteres"
+  },
+  {
+    "alias": "elevação lateral sentado",
+    "alias_norm": "elevacao lateral sentado",
+    "slug": "elevacao_lateral_halteres"
+  },
+  {
+    "alias": "elevação lateral polia",
+    "alias_norm": "elevacao lateral polia",
+    "slug": "elevacao_lateral_polia"
+  },
+  {
+    "alias": "elevação lateral no cabo",
+    "alias_norm": "elevacao lateral no cabo",
+    "slug": "elevacao_lateral_polia"
+  },
+  {
+    "alias": "elevação unilateral na polia",
+    "alias_norm": "elevacao unilateral na polia",
+    "slug": "elevacao_lateral_polia"
+  },
+  {
+    "alias": "elevação lateral unilateral na polia",
+    "alias_norm": "elevacao lateral unilateral na polia",
+    "slug": "elevacao_lateral_polia"
+  },
+  {
+    "alias": "elevação lateral cross",
+    "alias_norm": "elevacao lateral cross",
+    "slug": "elevacao_lateral_polia"
+  },
+  {
+    "alias": "elevação lateral máquina",
+    "alias_norm": "elevacao lateral maquina",
+    "slug": "elevacao_lateral_maquina"
+  },
+  {
+    "alias": "elevação frontal halteres",
+    "alias_norm": "elevacao frontal halteres",
+    "slug": "elevacao_frontal_halteres"
+  },
+  {
+    "alias": "elevação frontal com halter",
+    "alias_norm": "elevacao frontal com halter",
+    "slug": "elevacao_frontal_halteres"
+  },
+  {
+    "alias": "elevação frontal alternada",
+    "alias_norm": "elevacao frontal alternada",
+    "slug": "elevacao_frontal_halteres"
+  },
+  {
+    "alias": "elevação frontal alternado",
+    "alias_norm": "elevacao frontal alternado",
+    "slug": "elevacao_frontal_halteres"
+  },
+  {
+    "alias": "elevação frontal anilha",
+    "alias_norm": "elevacao frontal anilha",
+    "slug": "elevacao_frontal_anilha"
+  },
+  {
+    "alias": "elevação frontal barra",
+    "alias_norm": "elevacao frontal barra",
+    "slug": "elevacao_frontal_barra"
+  },
+  {
+    "alias": "elevação frontal polia",
+    "alias_norm": "elevacao frontal polia",
+    "slug": "elevacao_frontal_polia"
+  },
+  {
+    "alias": "elevação frontal no cabo",
+    "alias_norm": "elevacao frontal no cabo",
+    "slug": "elevacao_frontal_polia"
+  },
+  {
+    "alias": "crucifixo invertido",
+    "alias_norm": "crucifixo invertido",
+    "slug": "crucifixo_invertido_halteres"
+  },
+  {
+    "alias": "crucifixo inverso",
+    "alias_norm": "crucifixo inverso",
+    "slug": "crucifixo_invertido_halteres"
+  },
+  {
+    "alias": "crucifixo invertido halteres",
+    "alias_norm": "crucifixo invertido halteres",
+    "slug": "crucifixo_invertido_halteres"
+  },
+  {
+    "alias": "posterior de ombro com halteres",
+    "alias_norm": "posterior de ombro com halteres",
+    "slug": "crucifixo_invertido_halteres"
+  },
+  {
+    "alias": "peck deck invertido",
+    "alias_norm": "peck deck invertido",
+    "slug": "crucifixo_invertido_maquina"
+  },
+  {
+    "alias": "voador invertido",
+    "alias_norm": "voador invertido",
+    "slug": "crucifixo_invertido_maquina"
+  },
+  {
+    "alias": "crucifixo inverso máquina",
+    "alias_norm": "crucifixo inverso maquina",
+    "slug": "crucifixo_invertido_maquina"
+  },
+  {
+    "alias": "crucifixo invertido máquina",
+    "alias_norm": "crucifixo invertido maquina",
+    "slug": "crucifixo_invertido_maquina"
+  },
+  {
+    "alias": "posterior de ombro na polia",
+    "alias_norm": "posterior de ombro na polia",
+    "slug": "crucifixo_invertido_polia"
+  },
+  {
+    "alias": "crucifixo invertido no cabo",
+    "alias_norm": "crucifixo invertido no cabo",
+    "slug": "crucifixo_invertido_polia"
+  },
+  {
+    "alias": "crossover invertido",
+    "alias_norm": "crossover invertido",
+    "slug": "crucifixo_invertido_polia"
+  },
+  {
+    "alias": "crucifixo invertido polia",
+    "alias_norm": "crucifixo invertido polia",
+    "slug": "crucifixo_invertido_polia"
+  },
+  {
+    "alias": "face pull",
+    "alias_norm": "face pull",
+    "slug": "face_pull"
+  },
+  {
+    "alias": "face pull corda",
+    "alias_norm": "face pull corda",
+    "slug": "face_pull"
+  },
+  {
+    "alias": "puxada para o rosto",
+    "alias_norm": "puxada para o rosto",
+    "slug": "face_pull"
+  },
+  {
+    "alias": "remada alta",
+    "alias_norm": "remada alta",
+    "slug": "remada_alta_barra"
+  },
+  {
+    "alias": "remada alta barra",
+    "alias_norm": "remada alta barra",
+    "slug": "remada_alta_barra"
+  },
+  {
+    "alias": "remada alta polia",
+    "alias_norm": "remada alta polia",
+    "slug": "remada_alta_polia"
+  },
+  {
+    "alias": "remada alta no cabo",
+    "alias_norm": "remada alta no cabo",
+    "slug": "remada_alta_polia"
+  },
+  {
+    "alias": "rotação externa",
+    "alias_norm": "rotacao externa",
+    "slug": "rotacao_externa_polia"
+  },
+  {
+    "alias": "rotação externa polia",
+    "alias_norm": "rotacao externa polia",
+    "slug": "rotacao_externa_polia"
+  },
+  {
+    "alias": "rotação externa de ombro",
+    "alias_norm": "rotacao externa de ombro",
+    "slug": "rotacao_externa_polia"
+  },
+  {
+    "alias": "rosca direta",
+    "alias_norm": "rosca direta",
+    "slug": "rosca_direta_barra"
+  },
+  {
+    "alias": "rosca direta barra",
+    "alias_norm": "rosca direta barra",
+    "slug": "rosca_direta_barra"
+  },
+  {
+    "alias": "rosca direta barra reta",
+    "alias_norm": "rosca direta barra reta",
+    "slug": "rosca_direta_barra"
+  },
+  {
+    "alias": "rosca com barra",
+    "alias_norm": "rosca com barra",
+    "slug": "rosca_direta_barra"
+  },
+  {
+    "alias": "rosca barra reta",
+    "alias_norm": "rosca barra reta",
+    "slug": "rosca_direta_barra"
+  },
+  {
+    "alias": "rosca barra w",
+    "alias_norm": "rosca barra w",
+    "slug": "rosca_direta_barra_w"
+  },
+  {
+    "alias": "rosca w",
+    "alias_norm": "rosca w",
+    "slug": "rosca_direta_barra_w"
+  },
+  {
+    "alias": "rosca direta barra w",
+    "alias_norm": "rosca direta barra w",
+    "slug": "rosca_direta_barra_w"
+  },
+  {
+    "alias": "rosca barra ez",
+    "alias_norm": "rosca barra ez",
+    "slug": "rosca_direta_barra_w"
+  },
+  {
+    "alias": "rosca alternada",
+    "alias_norm": "rosca alternada",
+    "slug": "rosca_direta_halteres"
+  },
+  {
+    "alias": "rosca alternada com halteres",
+    "alias_norm": "rosca alternada com halteres",
+    "slug": "rosca_direta_halteres"
+  },
+  {
+    "alias": "rosca alternada halteres",
+    "alias_norm": "rosca alternada halteres",
+    "slug": "rosca_direta_halteres"
+  },
+  {
+    "alias": "rosca direta halteres",
+    "alias_norm": "rosca direta halteres",
+    "slug": "rosca_direta_halteres"
+  },
+  {
+    "alias": "rosca direta alternada",
+    "alias_norm": "rosca direta alternada",
+    "slug": "rosca_direta_halteres"
+  },
+  {
+    "alias": "rosca simultânea",
+    "alias_norm": "rosca simultanea",
+    "slug": "rosca_direta_halteres"
+  },
+  {
+    "alias": "rosca halteres",
+    "alias_norm": "rosca halteres",
+    "slug": "rosca_direta_halteres"
+  },
+  {
+    "alias": "rosca martelo",
+    "alias_norm": "rosca martelo",
+    "slug": "rosca_martelo_halteres"
+  },
+  {
+    "alias": "martelo",
+    "alias_norm": "martelo",
+    "slug": "rosca_martelo_halteres"
+  },
+  {
+    "alias": "rosca martelo alternada",
+    "alias_norm": "rosca martelo alternada",
+    "slug": "rosca_martelo_halteres"
+  },
+  {
+    "alias": "rosca martelo halteres",
+    "alias_norm": "rosca martelo halteres",
+    "slug": "rosca_martelo_halteres"
+  },
+  {
+    "alias": "rosca martelo cross corda",
+    "alias_norm": "rosca martelo cross corda",
+    "slug": "rosca_martelo_polia_corda"
+  },
+  {
+    "alias": "rosca martelo corda",
+    "alias_norm": "rosca martelo corda",
+    "slug": "rosca_martelo_polia_corda"
+  },
+  {
+    "alias": "rosca martelo na polia",
+    "alias_norm": "rosca martelo na polia",
+    "slug": "rosca_martelo_polia_corda"
+  },
+  {
+    "alias": "rosca corda",
+    "alias_norm": "rosca corda",
+    "slug": "rosca_martelo_polia_corda"
+  },
+  {
+    "alias": "rosca scott",
+    "alias_norm": "rosca scott",
+    "slug": "rosca_scott_barra"
+  },
+  {
+    "alias": "scott",
+    "alias_norm": "scott",
+    "slug": "rosca_scott_barra"
+  },
+  {
+    "alias": "rosca scott barra",
+    "alias_norm": "rosca scott barra",
+    "slug": "rosca_scott_barra"
+  },
+  {
+    "alias": "rosca scott barra w",
+    "alias_norm": "rosca scott barra w",
+    "slug": "rosca_scott_barra"
+  },
+  {
+    "alias": "rosca scott halter",
+    "alias_norm": "rosca scott halter",
+    "slug": "rosca_scott_halter"
+  },
+  {
+    "alias": "scott unilateral",
+    "alias_norm": "scott unilateral",
+    "slug": "rosca_scott_halter"
+  },
+  {
+    "alias": "rosca scott unilateral",
+    "alias_norm": "rosca scott unilateral",
+    "slug": "rosca_scott_halter"
+  },
+  {
+    "alias": "rosca scott máquina",
+    "alias_norm": "rosca scott maquina",
+    "slug": "rosca_scott_maquina"
+  },
+  {
+    "alias": "rosca na máquina",
+    "alias_norm": "rosca na maquina",
+    "slug": "rosca_scott_maquina"
+  },
+  {
+    "alias": "rosca bíceps máquina",
+    "alias_norm": "rosca biceps maquina",
+    "slug": "rosca_scott_maquina"
+  },
+  {
+    "alias": "rosca concentrada halter",
+    "alias_norm": "rosca concentrada halter",
+    "slug": "rosca_concentrada"
+  },
+  {
+    "alias": "concentrada",
+    "alias_norm": "concentrada",
+    "slug": "rosca_concentrada"
+  },
+  {
+    "alias": "rosca inclinada",
+    "alias_norm": "rosca inclinada",
+    "slug": "rosca_inclinada_halteres"
+  },
+  {
+    "alias": "rosca banco inclinado",
+    "alias_norm": "rosca banco inclinado",
+    "slug": "rosca_inclinada_halteres"
+  },
+  {
+    "alias": "rosca polia",
+    "alias_norm": "rosca polia",
+    "slug": "rosca_direta_polia"
+  },
+  {
+    "alias": "rosca na polia",
+    "alias_norm": "rosca na polia",
+    "slug": "rosca_direta_polia"
+  },
+  {
+    "alias": "rosca no cabo",
+    "alias_norm": "rosca no cabo",
+    "slug": "rosca_direta_polia"
+  },
+  {
+    "alias": "rosca direta cross",
+    "alias_norm": "rosca direta cross",
+    "slug": "rosca_direta_polia"
+  },
+  {
+    "alias": "rosca cross",
+    "alias_norm": "rosca cross",
+    "slug": "rosca_direta_polia"
+  },
+  {
+    "alias": "rosca direta polia",
+    "alias_norm": "rosca direta polia",
+    "slug": "rosca_direta_polia"
+  },
+  {
+    "alias": "rosca inversa",
+    "alias_norm": "rosca inversa",
+    "slug": "rosca_inversa_barra"
+  },
+  {
+    "alias": "rosca pronada",
+    "alias_norm": "rosca pronada",
+    "slug": "rosca_inversa_barra"
+  },
+  {
+    "alias": "rosca inversa barra",
+    "alias_norm": "rosca inversa barra",
+    "slug": "rosca_inversa_barra"
+  },
+  {
+    "alias": "rosca inversa cross",
+    "alias_norm": "rosca inversa cross",
+    "slug": "rosca_inversa_polia"
+  },
+  {
+    "alias": "rosca inversa no cabo",
+    "alias_norm": "rosca inversa no cabo",
+    "slug": "rosca_inversa_polia"
+  },
+  {
+    "alias": "rosca inversa polia",
+    "alias_norm": "rosca inversa polia",
+    "slug": "rosca_inversa_polia"
+  },
+  {
+    "alias": "tríceps polia",
+    "alias_norm": "triceps polia",
+    "slug": "triceps_polia_barra"
+  },
+  {
+    "alias": "tríceps na polia",
+    "alias_norm": "triceps na polia",
+    "slug": "triceps_polia_barra"
+  },
+  {
+    "alias": "tríceps pulley",
+    "alias_norm": "triceps pulley",
+    "slug": "triceps_polia_barra"
+  },
+  {
+    "alias": "tríceps barra",
+    "alias_norm": "triceps barra",
+    "slug": "triceps_polia_barra"
+  },
+  {
+    "alias": "tríceps polia barra",
+    "alias_norm": "triceps polia barra",
+    "slug": "triceps_polia_barra"
+  },
+  {
+    "alias": "tríceps polia barra reta",
+    "alias_norm": "triceps polia barra reta",
+    "slug": "triceps_polia_barra"
+  },
+  {
+    "alias": "tríceps pulldown",
+    "alias_norm": "triceps pulldown",
+    "slug": "triceps_polia_barra"
+  },
+  {
+    "alias": "tríceps barra w",
+    "alias_norm": "triceps barra w",
+    "slug": "triceps_polia_barra_w"
+  },
+  {
+    "alias": "tríceps polia barra w",
+    "alias_norm": "triceps polia barra w",
+    "slug": "triceps_polia_barra_w"
+  },
+  {
+    "alias": "tríceps w",
+    "alias_norm": "triceps w",
+    "slug": "triceps_polia_barra_w"
+  },
+  {
+    "alias": "tríceps corda",
+    "alias_norm": "triceps corda",
+    "slug": "triceps_polia_corda"
+  },
+  {
+    "alias": "tríceps polia corda",
+    "alias_norm": "triceps polia corda",
+    "slug": "triceps_polia_corda"
+  },
+  {
+    "alias": "tríceps na corda",
+    "alias_norm": "triceps na corda",
+    "slug": "triceps_polia_corda"
+  },
+  {
+    "alias": "tríceps unilateral cross",
+    "alias_norm": "triceps unilateral cross",
+    "slug": "triceps_polia_unilateral"
+  },
+  {
+    "alias": "tríceps unilateral polia",
+    "alias_norm": "triceps unilateral polia",
+    "slug": "triceps_polia_unilateral"
+  },
+  {
+    "alias": "tríceps unilateral",
+    "alias_norm": "triceps unilateral",
+    "slug": "triceps_polia_unilateral"
+  },
+  {
+    "alias": "tríceps testa",
+    "alias_norm": "triceps testa",
+    "slug": "triceps_testa_barra"
+  },
+  {
+    "alias": "testa",
+    "alias_norm": "testa",
+    "slug": "triceps_testa_barra"
+  },
+  {
+    "alias": "tríceps testa barra",
+    "alias_norm": "triceps testa barra",
+    "slug": "triceps_testa_barra"
+  },
+  {
+    "alias": "tríceps francês deitado",
+    "alias_norm": "triceps frances deitado",
+    "slug": "triceps_testa_barra"
+  },
+  {
+    "alias": "skull crusher",
+    "alias_norm": "skull crusher",
+    "slug": "triceps_testa_barra"
+  },
+  {
+    "alias": "tríceps testa halteres",
+    "alias_norm": "triceps testa halteres",
+    "slug": "triceps_testa_halteres"
+  },
+  {
+    "alias": "tríceps testa com halter",
+    "alias_norm": "triceps testa com halter",
+    "slug": "triceps_testa_halteres"
+  },
+  {
+    "alias": "tríceps testa cross",
+    "alias_norm": "triceps testa cross",
+    "slug": "triceps_testa_polia"
+  },
+  {
+    "alias": "tríceps testa no cabo",
+    "alias_norm": "triceps testa no cabo",
+    "slug": "triceps_testa_polia"
+  },
+  {
+    "alias": "tríceps testa polia",
+    "alias_norm": "triceps testa polia",
+    "slug": "triceps_testa_polia"
+  },
+  {
+    "alias": "tríceps francês",
+    "alias_norm": "triceps frances",
+    "slug": "triceps_frances_halter"
+  },
+  {
+    "alias": "francês",
+    "alias_norm": "frances",
+    "slug": "triceps_frances_halter"
+  },
+  {
+    "alias": "tríceps francês halter",
+    "alias_norm": "triceps frances halter",
+    "slug": "triceps_frances_halter"
+  },
+  {
+    "alias": "tríceps francês sentado",
+    "alias_norm": "triceps frances sentado",
+    "slug": "triceps_frances_halter"
+  },
+  {
+    "alias": "tríceps francês unilateral",
+    "alias_norm": "triceps frances unilateral",
+    "slug": "triceps_frances_unilateral"
+  },
+  {
+    "alias": "francês unilateral",
+    "alias_norm": "frances unilateral",
+    "slug": "triceps_frances_unilateral"
+  },
+  {
+    "alias": "tríceps francês polia",
+    "alias_norm": "triceps frances polia",
+    "slug": "triceps_frances_polia"
+  },
+  {
+    "alias": "tríceps francês corda",
+    "alias_norm": "triceps frances corda",
+    "slug": "triceps_frances_polia"
+  },
+  {
+    "alias": "tríceps acima da cabeça na polia",
+    "alias_norm": "triceps acima da cabeca na polia",
+    "slug": "triceps_frances_polia"
+  },
+  {
+    "alias": "tríceps coice",
+    "alias_norm": "triceps coice",
+    "slug": "triceps_coice_halter"
+  },
+  {
+    "alias": "coice",
+    "alias_norm": "coice",
+    "slug": "triceps_coice_halter"
+  },
+  {
+    "alias": "tríceps coice unilateral",
+    "alias_norm": "triceps coice unilateral",
+    "slug": "triceps_coice_halter"
+  },
+  {
+    "alias": "kickback",
+    "alias_norm": "kickback",
+    "slug": "triceps_coice_halter"
+  },
+  {
+    "alias": "tríceps kickback",
+    "alias_norm": "triceps kickback",
+    "slug": "triceps_coice_halter"
+  },
+  {
+    "alias": "tríceps coice polia",
+    "alias_norm": "triceps coice polia",
+    "slug": "triceps_coice_polia"
+  },
+  {
+    "alias": "coice na polia tríceps",
+    "alias_norm": "coice na polia triceps",
+    "slug": "triceps_coice_polia"
+  },
+  {
+    "alias": "kickback na polia",
+    "alias_norm": "kickback na polia",
+    "slug": "triceps_coice_polia"
+  },
+  {
+    "alias": "tríceps máquina",
+    "alias_norm": "triceps maquina",
+    "slug": "triceps_maquina"
+  },
+  {
+    "alias": "extensão de tríceps na máquina",
+    "alias_norm": "extensao de triceps na maquina",
+    "slug": "triceps_maquina"
+  },
+  {
+    "alias": "rosca punho",
+    "alias_norm": "rosca punho",
+    "slug": "rosca_punho_barra"
+  },
+  {
+    "alias": "rosca de punho",
+    "alias_norm": "rosca de punho",
+    "slug": "rosca_punho_barra"
+  },
+  {
+    "alias": "flexão de punho",
+    "alias_norm": "flexao de punho",
+    "slug": "rosca_punho_barra"
+  },
+  {
+    "alias": "flexão de punho com barra",
+    "alias_norm": "flexao de punho com barra",
+    "slug": "rosca_punho_barra"
+  },
+  {
+    "alias": "antebraço com barra",
+    "alias_norm": "antebraco com barra",
+    "slug": "rosca_punho_barra"
+  },
+  {
+    "alias": "rosca punho inversa",
+    "alias_norm": "rosca punho inversa",
+    "slug": "rosca_punho_inversa_barra"
+  },
+  {
+    "alias": "extensão de punho",
+    "alias_norm": "extensao de punho",
+    "slug": "rosca_punho_inversa_barra"
+  },
+  {
+    "alias": "extensão de punho com barra",
+    "alias_norm": "extensao de punho com barra",
+    "slug": "rosca_punho_inversa_barra"
+  },
+  {
+    "alias": "rosca punho halter",
+    "alias_norm": "rosca punho halter",
+    "slug": "rosca_punho_halter"
+  },
+  {
+    "alias": "flexão de punho com halter",
+    "alias_norm": "flexao de punho com halter",
+    "slug": "rosca_punho_halter"
+  },
+  {
+    "alias": "plate pinch",
+    "alias_norm": "plate pinch",
+    "slug": "pinca_anilhas"
+  },
+  {
+    "alias": "pinça com anilha",
+    "alias_norm": "pinca com anilha",
+    "slug": "pinca_anilhas"
+  },
+  {
+    "alias": "pinça de anilha",
+    "alias_norm": "pinca de anilha",
+    "slug": "pinca_anilhas"
+  },
+  {
+    "alias": "segurar anilha",
+    "alias_norm": "segurar anilha",
+    "slug": "pinca_anilhas"
+  },
+  {
+    "alias": "wrist roller",
+    "alias_norm": "wrist roller",
+    "slug": "rolo_punho"
+  },
+  {
+    "alias": "enrolar corda",
+    "alias_norm": "enrolar corda",
+    "slug": "rolo_punho"
+  },
+  {
+    "alias": "rolinho de punho",
+    "alias_norm": "rolinho de punho",
+    "slug": "rolo_punho"
+  },
+  {
+    "alias": "agachamento livre",
+    "alias_norm": "agachamento livre",
+    "slug": "agachamento_livre_barra"
+  },
+  {
+    "alias": "agachamento",
+    "alias_norm": "agachamento",
+    "slug": "agachamento_livre_barra"
+  },
+  {
+    "alias": "agachamento com barra",
+    "alias_norm": "agachamento com barra",
+    "slug": "agachamento_livre_barra"
+  },
+  {
+    "alias": "agachamento livre barra",
+    "alias_norm": "agachamento livre barra",
+    "slug": "agachamento_livre_barra"
+  },
+  {
+    "alias": "back squat",
+    "alias_norm": "back squat",
+    "slug": "agachamento_livre_barra"
+  },
+  {
+    "alias": "agachamento frontal",
+    "alias_norm": "agachamento frontal",
+    "slug": "agachamento_frontal_barra"
+  },
+  {
+    "alias": "front squat",
+    "alias_norm": "front squat",
+    "slug": "agachamento_frontal_barra"
+  },
+  {
+    "alias": "zercher squat",
+    "alias_norm": "zercher squat",
+    "slug": "agachamento_zercher"
+  },
+  {
+    "alias": "agachamento zercher com barra",
+    "alias_norm": "agachamento zercher com barra",
+    "slug": "agachamento_zercher"
+  },
+  {
+    "alias": "zercher",
+    "alias_norm": "zercher",
+    "slug": "agachamento_zercher"
+  },
+  {
+    "alias": "agachamento smith",
+    "alias_norm": "agachamento smith",
+    "slug": "agachamento_smith"
+  },
+  {
+    "alias": "agachamento guiado",
+    "alias_norm": "agachamento guiado",
+    "slug": "agachamento_smith"
+  },
+  {
+    "alias": "agachamento no guiado",
+    "alias_norm": "agachamento no guiado",
+    "slug": "agachamento_smith"
+  },
+  {
+    "alias": "agachamento hack",
+    "alias_norm": "agachamento hack",
+    "slug": "agachamento_hack"
+  },
+  {
+    "alias": "hack",
+    "alias_norm": "hack",
+    "slug": "agachamento_hack"
+  },
+  {
+    "alias": "hack squat",
+    "alias_norm": "hack squat",
+    "slug": "agachamento_hack"
+  },
+  {
+    "alias": "hack machine",
+    "alias_norm": "hack machine",
+    "slug": "agachamento_hack"
+  },
+  {
+    "alias": "agachamento hack máquina",
+    "alias_norm": "agachamento hack maquina",
+    "slug": "agachamento_hack"
+  },
+  {
+    "alias": "pêndulo",
+    "alias_norm": "pendulo",
+    "slug": "agachamento_pendulo"
+  },
+  {
+    "alias": "pendulum squat",
+    "alias_norm": "pendulum squat",
+    "slug": "agachamento_pendulo"
+  },
+  {
+    "alias": "agachamento goblet",
+    "alias_norm": "agachamento goblet",
+    "slug": "agachamento_goblet_halter"
+  },
+  {
+    "alias": "goblet squat",
+    "alias_norm": "goblet squat",
+    "slug": "agachamento_goblet_halter"
+  },
+  {
+    "alias": "agachamento taça",
+    "alias_norm": "agachamento taca",
+    "slug": "agachamento_goblet_halter"
+  },
+  {
+    "alias": "goblet com kettlebell",
+    "alias_norm": "goblet com kettlebell",
+    "slug": "agachamento_goblet_kettlebell"
+  },
+  {
+    "alias": "agachamento goblet kettlebell",
+    "alias_norm": "agachamento goblet kettlebell",
+    "slug": "agachamento_goblet_kettlebell"
+  },
+  {
+    "alias": "agachamento sumô",
+    "alias_norm": "agachamento sumo",
+    "slug": "agachamento_sumo_halter"
+  },
+  {
+    "alias": "sumô com halter",
+    "alias_norm": "sumo com halter",
+    "slug": "agachamento_sumo_halter"
+  },
+  {
+    "alias": "agachamento sem peso",
+    "alias_norm": "agachamento sem peso",
+    "slug": "agachamento_peso_corporal"
+  },
+  {
+    "alias": "agachamento livre sem carga",
+    "alias_norm": "agachamento livre sem carga",
+    "slug": "agachamento_peso_corporal"
+  },
+  {
+    "alias": "air squat",
+    "alias_norm": "air squat",
+    "slug": "agachamento_peso_corporal"
+  },
+  {
+    "alias": "agachamento corporal",
+    "alias_norm": "agachamento corporal",
+    "slug": "agachamento_peso_corporal"
+  },
+  {
+    "alias": "agachamento búlgaro",
+    "alias_norm": "agachamento bulgaro",
+    "slug": "agachamento_bulgaro_halteres"
+  },
+  {
+    "alias": "búlgaro",
+    "alias_norm": "bulgaro",
+    "slug": "agachamento_bulgaro_halteres"
+  },
+  {
+    "alias": "bulgarian split squat",
+    "alias_norm": "bulgarian split squat",
+    "slug": "agachamento_bulgaro_halteres"
+  },
+  {
+    "alias": "bulgarian split squat com halteres",
+    "alias_norm": "bulgarian split squat com halteres",
+    "slug": "agachamento_bulgaro_halteres"
+  },
+  {
+    "alias": "afundo búlgaro",
+    "alias_norm": "afundo bulgaro",
+    "slug": "agachamento_bulgaro_halteres"
+  },
+  {
+    "alias": "búlgaro sem carga",
+    "alias_norm": "bulgaro sem carga",
+    "slug": "agachamento_bulgaro_peso_corporal"
+  },
+  {
+    "alias": "bulgarian split squat sem carga",
+    "alias_norm": "bulgarian split squat sem carga",
+    "slug": "agachamento_bulgaro_peso_corporal"
+  },
+  {
+    "alias": "afundo",
+    "alias_norm": "afundo",
+    "slug": "afundo_halteres"
+  },
+  {
+    "alias": "afundo halteres",
+    "alias_norm": "afundo halteres",
+    "slug": "afundo_halteres"
+  },
+  {
+    "alias": "split squat",
+    "alias_norm": "split squat",
+    "slug": "afundo_halteres"
+  },
+  {
+    "alias": "afundo estático",
+    "alias_norm": "afundo estatico",
+    "slug": "afundo_halteres"
+  },
+  {
+    "alias": "afundo barra",
+    "alias_norm": "afundo barra",
+    "slug": "afundo_barra"
+  },
+  {
+    "alias": "afundo smith",
+    "alias_norm": "afundo smith",
+    "slug": "afundo_smith"
+  },
+  {
+    "alias": "afundo no guiado",
+    "alias_norm": "afundo no guiado",
+    "slug": "afundo_smith"
+  },
+  {
+    "alias": "avanço",
+    "alias_norm": "avanco",
+    "slug": "avanco_halteres"
+  },
+  {
+    "alias": "passada",
+    "alias_norm": "passada",
+    "slug": "avanco_halteres"
+  },
+  {
+    "alias": "passada com halteres",
+    "alias_norm": "passada com halteres",
+    "slug": "avanco_halteres"
+  },
+  {
+    "alias": "avanço caminhando",
+    "alias_norm": "avanco caminhando",
+    "slug": "avanco_halteres"
+  },
+  {
+    "alias": "lunge",
+    "alias_norm": "lunge",
+    "slug": "avanco_halteres"
+  },
+  {
+    "alias": "walking lunge",
+    "alias_norm": "walking lunge",
+    "slug": "avanco_halteres"
+  },
+  {
+    "alias": "reverse lunge",
+    "alias_norm": "reverse lunge",
+    "slug": "afundo_reverso_halteres"
+  },
+  {
+    "alias": "reverse lunge com halteres",
+    "alias_norm": "reverse lunge com halteres",
+    "slug": "afundo_reverso_halteres"
+  },
+  {
+    "alias": "afundo reverso",
+    "alias_norm": "afundo reverso",
+    "slug": "afundo_reverso_halteres"
+  },
+  {
+    "alias": "recuo",
+    "alias_norm": "recuo",
+    "slug": "afundo_reverso_halteres"
+  },
+  {
+    "alias": "passada para trás",
+    "alias_norm": "passada para tras",
+    "slug": "afundo_reverso_halteres"
+  },
+  {
+    "alias": "step up",
+    "alias_norm": "step up",
+    "slug": "subida_banco_halteres"
+  },
+  {
+    "alias": "subida no step",
+    "alias_norm": "subida no step",
+    "slug": "subida_banco_halteres"
+  },
+  {
+    "alias": "subida no caixote",
+    "alias_norm": "subida no caixote",
+    "slug": "subida_banco_halteres"
+  },
+  {
+    "alias": "subida no banco",
+    "alias_norm": "subida no banco",
+    "slug": "subida_banco_halteres"
+  },
+  {
+    "alias": "leg press",
+    "alias_norm": "leg press",
+    "slug": "leg_press_45"
+  },
+  {
+    "alias": "leg 45",
+    "alias_norm": "leg 45",
+    "slug": "leg_press_45"
+  },
+  {
+    "alias": "leg press 45 graus",
+    "alias_norm": "leg press 45 graus",
+    "slug": "leg_press_45"
+  },
+  {
+    "alias": "leg horizontal",
+    "alias_norm": "leg horizontal",
+    "slug": "leg_press_horizontal"
+  },
+  {
+    "alias": "leg press sentado",
+    "alias_norm": "leg press sentado",
+    "slug": "leg_press_horizontal"
+  },
+  {
+    "alias": "leg press unilateral",
+    "alias_norm": "leg press unilateral",
+    "slug": "leg_press_unilateral"
+  },
+  {
+    "alias": "leg unilateral",
+    "alias_norm": "leg unilateral",
+    "slug": "leg_press_unilateral"
+  },
+  {
+    "alias": "extensora",
+    "alias_norm": "extensora",
+    "slug": "cadeira_extensora"
+  },
+  {
+    "alias": "extensão de pernas",
+    "alias_norm": "extensao de pernas",
+    "slug": "cadeira_extensora"
+  },
+  {
+    "alias": "extensão de joelhos",
+    "alias_norm": "extensao de joelhos",
+    "slug": "cadeira_extensora"
+  },
+  {
+    "alias": "leg extension",
+    "alias_norm": "leg extension",
+    "slug": "cadeira_extensora"
+  },
+  {
+    "alias": "extensora unilateral",
+    "alias_norm": "extensora unilateral",
+    "slug": "cadeira_extensora_unilateral"
+  },
+  {
+    "alias": "sissy squat",
+    "alias_norm": "sissy squat",
+    "slug": "agachamento_sissy"
+  },
+  {
+    "alias": "sissy",
+    "alias_norm": "sissy",
+    "slug": "agachamento_sissy"
+  },
+  {
+    "alias": "flexora deitada",
+    "alias_norm": "flexora deitada",
+    "slug": "mesa_flexora"
+  },
+  {
+    "alias": "flexora deitado",
+    "alias_norm": "flexora deitado",
+    "slug": "mesa_flexora"
+  },
+  {
+    "alias": "leg curl deitado",
+    "alias_norm": "leg curl deitado",
+    "slug": "mesa_flexora"
+  },
+  {
+    "alias": "flexora sentada",
+    "alias_norm": "flexora sentada",
+    "slug": "cadeira_flexora"
+  },
+  {
+    "alias": "flexora sentado",
+    "alias_norm": "flexora sentado",
+    "slug": "cadeira_flexora"
+  },
+  {
+    "alias": "leg curl sentado",
+    "alias_norm": "leg curl sentado",
+    "slug": "cadeira_flexora"
+  },
+  {
+    "alias": "flexora em pé",
+    "alias_norm": "flexora em pe",
+    "slug": "flexora_em_pe"
+  },
+  {
+    "alias": "flexora unilateral em pé",
+    "alias_norm": "flexora unilateral em pe",
+    "slug": "flexora_em_pe"
+  },
+  {
+    "alias": "stiff",
+    "alias_norm": "stiff",
+    "slug": "stiff_barra"
+  },
+  {
+    "alias": "stiff barra",
+    "alias_norm": "stiff barra",
+    "slug": "stiff_barra"
+  },
+  {
+    "alias": "levantamento terra romeno",
+    "alias_norm": "levantamento terra romeno",
+    "slug": "stiff_barra"
+  },
+  {
+    "alias": "levantamento terra romeno com barra",
+    "alias_norm": "levantamento terra romeno com barra",
+    "slug": "stiff_barra"
+  },
+  {
+    "alias": "terra romeno",
+    "alias_norm": "terra romeno",
+    "slug": "stiff_barra"
+  },
+  {
+    "alias": "rdl",
+    "alias_norm": "rdl",
+    "slug": "stiff_barra"
+  },
+  {
+    "alias": "romanian deadlift",
+    "alias_norm": "romanian deadlift",
+    "slug": "stiff_barra"
+  },
+  {
+    "alias": "levantamento terra com pernas rígidas",
+    "alias_norm": "levantamento terra com pernas rigidas",
+    "slug": "stiff_barra"
+  },
+  {
+    "alias": "stiff halteres",
+    "alias_norm": "stiff halteres",
+    "slug": "stiff_halteres"
+  },
+  {
+    "alias": "stiff com halter",
+    "alias_norm": "stiff com halter",
+    "slug": "stiff_halteres"
+  },
+  {
+    "alias": "stiff halter",
+    "alias_norm": "stiff halter",
+    "slug": "stiff_halteres"
+  },
+  {
+    "alias": "terra romeno com halteres",
+    "alias_norm": "terra romeno com halteres",
+    "slug": "stiff_halteres"
+  },
+  {
+    "alias": "rdl com halteres",
+    "alias_norm": "rdl com halteres",
+    "slug": "stiff_halteres"
+  },
+  {
+    "alias": "stiff unilateral",
+    "alias_norm": "stiff unilateral",
+    "slug": "stiff_unilateral_halter"
+  },
+  {
+    "alias": "terra romeno unilateral",
+    "alias_norm": "terra romeno unilateral",
+    "slug": "stiff_unilateral_halter"
+  },
+  {
+    "alias": "nordic curl",
+    "alias_norm": "nordic curl",
+    "slug": "flexao_nordica"
+  },
+  {
+    "alias": "nórdico",
+    "alias_norm": "nordico",
+    "slug": "flexao_nordica"
+  },
+  {
+    "alias": "nordica",
+    "alias_norm": "nordica",
+    "slug": "flexao_nordica"
+  },
+  {
+    "alias": "hip thrust",
+    "alias_norm": "hip thrust",
+    "slug": "elevacao_pelvica_barra"
+  },
+  {
+    "alias": "elevação pélvica",
+    "alias_norm": "elevacao pelvica",
+    "slug": "elevacao_pelvica_barra"
+  },
+  {
+    "alias": "hip thrust com barra",
+    "alias_norm": "hip thrust com barra",
+    "slug": "elevacao_pelvica_barra"
+  },
+  {
+    "alias": "elevação de quadril",
+    "alias_norm": "elevacao de quadril",
+    "slug": "elevacao_pelvica_barra"
+  },
+  {
+    "alias": "elevação pélvica barra",
+    "alias_norm": "elevacao pelvica barra",
+    "slug": "elevacao_pelvica_barra"
+  },
+  {
+    "alias": "hip thrust máquina",
+    "alias_norm": "hip thrust maquina",
+    "slug": "elevacao_pelvica_maquina"
+  },
+  {
+    "alias": "elevação pélvica máquina",
+    "alias_norm": "elevacao pelvica maquina",
+    "slug": "elevacao_pelvica_maquina"
+  },
+  {
+    "alias": "hip thrust smith",
+    "alias_norm": "hip thrust smith",
+    "slug": "elevacao_pelvica_smith"
+  },
+  {
+    "alias": "elevação pélvica smith",
+    "alias_norm": "elevacao pelvica smith",
+    "slug": "elevacao_pelvica_smith"
+  },
+  {
+    "alias": "hip thrust unilateral",
+    "alias_norm": "hip thrust unilateral",
+    "slug": "elevacao_pelvica_unilateral"
+  },
+  {
+    "alias": "ponte",
+    "alias_norm": "ponte",
+    "slug": "ponte_gluteo"
+  },
+  {
+    "alias": "ponte glútea",
+    "alias_norm": "ponte glutea",
+    "slug": "ponte_gluteo"
+  },
+  {
+    "alias": "ponte de glúteo",
+    "alias_norm": "ponte de gluteo",
+    "slug": "ponte_gluteo"
+  },
+  {
+    "alias": "glute bridge",
+    "alias_norm": "glute bridge",
+    "slug": "ponte_gluteo"
+  },
+  {
+    "alias": "elevação pélvica no solo",
+    "alias_norm": "elevacao pelvica no solo",
+    "slug": "ponte_gluteo"
+  },
+  {
+    "alias": "coice na polia",
+    "alias_norm": "coice na polia",
+    "slug": "gluteo_polia"
+  },
+  {
+    "alias": "glúteo coice polia",
+    "alias_norm": "gluteo coice polia",
+    "slug": "gluteo_polia"
+  },
+  {
+    "alias": "glúteo cross",
+    "alias_norm": "gluteo cross",
+    "slug": "gluteo_polia"
+  },
+  {
+    "alias": "kickback glúteo polia",
+    "alias_norm": "kickback gluteo polia",
+    "slug": "gluteo_polia"
+  },
+  {
+    "alias": "glúteo na polia",
+    "alias_norm": "gluteo na polia",
+    "slug": "gluteo_polia"
+  },
+  {
+    "alias": "glúteo máquina",
+    "alias_norm": "gluteo maquina",
+    "slug": "gluteo_maquina"
+  },
+  {
+    "alias": "coice na máquina",
+    "alias_norm": "coice na maquina",
+    "slug": "gluteo_maquina"
+  },
+  {
+    "alias": "glúteo quatro apoios",
+    "alias_norm": "gluteo quatro apoios",
+    "slug": "gluteo_quatro_apoios"
+  },
+  {
+    "alias": "coice no solo",
+    "alias_norm": "coice no solo",
+    "slug": "gluteo_quatro_apoios"
+  },
+  {
+    "alias": "glúteo 4 apoios",
+    "alias_norm": "gluteo 4 apoios",
+    "slug": "gluteo_quatro_apoios"
+  },
+  {
+    "alias": "abdutora",
+    "alias_norm": "abdutora",
+    "slug": "cadeira_abdutora"
+  },
+  {
+    "alias": "abdutor",
+    "alias_norm": "abdutor",
+    "slug": "cadeira_abdutora"
+  },
+  {
+    "alias": "abdução na máquina",
+    "alias_norm": "abducao na maquina",
+    "slug": "cadeira_abdutora"
+  },
+  {
+    "alias": "adutora",
+    "alias_norm": "adutora",
+    "slug": "cadeira_adutora"
+  },
+  {
+    "alias": "adutor",
+    "alias_norm": "adutor",
+    "slug": "cadeira_adutora"
+  },
+  {
+    "alias": "adução na máquina",
+    "alias_norm": "aducao na maquina",
+    "slug": "cadeira_adutora"
+  },
+  {
+    "alias": "abdução na polia",
+    "alias_norm": "abducao na polia",
+    "slug": "abducao_quadril_polia"
+  },
+  {
+    "alias": "abdução polia",
+    "alias_norm": "abducao polia",
+    "slug": "abducao_quadril_polia"
+  },
+  {
+    "alias": "adução na polia",
+    "alias_norm": "aducao na polia",
+    "slug": "aducao_quadril_polia"
+  },
+  {
+    "alias": "adução polia",
+    "alias_norm": "aducao polia",
+    "slug": "aducao_quadril_polia"
+  },
+  {
+    "alias": "kettlebell swing",
+    "alias_norm": "kettlebell swing",
+    "slug": "swing_kettlebell"
+  },
+  {
+    "alias": "swing",
+    "alias_norm": "swing",
+    "slug": "swing_kettlebell"
+  },
+  {
+    "alias": "swing kettlebell",
+    "alias_norm": "swing kettlebell",
+    "slug": "swing_kettlebell"
+  },
+  {
+    "alias": "balanço com kettlebell",
+    "alias_norm": "balanco com kettlebell",
+    "slug": "swing_kettlebell"
+  },
+  {
+    "alias": "panturrilha em pé",
+    "alias_norm": "panturrilha em pe",
+    "slug": "panturrilha_em_pe_maquina"
+  },
+  {
+    "alias": "panturrilha em pé máquina",
+    "alias_norm": "panturrilha em pe maquina",
+    "slug": "panturrilha_em_pe_maquina"
+  },
+  {
+    "alias": "elevação de panturrilha em pé",
+    "alias_norm": "elevacao de panturrilha em pe",
+    "slug": "panturrilha_em_pe_maquina"
+  },
+  {
+    "alias": "gêmeos em pé",
+    "alias_norm": "gemeos em pe",
+    "slug": "panturrilha_em_pe_maquina"
+  },
+  {
+    "alias": "panturrilha sentado",
+    "alias_norm": "panturrilha sentado",
+    "slug": "panturrilha_sentado"
+  },
+  {
+    "alias": "panturrilha sentada",
+    "alias_norm": "panturrilha sentada",
+    "slug": "panturrilha_sentado"
+  },
+  {
+    "alias": "panturrilha no banco sentado",
+    "alias_norm": "panturrilha no banco sentado",
+    "slug": "panturrilha_sentado"
+  },
+  {
+    "alias": "sóleo",
+    "alias_norm": "soleo",
+    "slug": "panturrilha_sentado"
+  },
+  {
+    "alias": "panturrilha leg press",
+    "alias_norm": "panturrilha leg press",
+    "slug": "panturrilha_leg_press"
+  },
+  {
+    "alias": "gêmeos no leg press",
+    "alias_norm": "gemeos no leg press",
+    "slug": "panturrilha_leg_press"
+  },
+  {
+    "alias": "panturrilha no leg",
+    "alias_norm": "panturrilha no leg",
+    "slug": "panturrilha_leg_press"
+  },
+  {
+    "alias": "panturrilha smith",
+    "alias_norm": "panturrilha smith",
+    "slug": "panturrilha_smith"
+  },
+  {
+    "alias": "panturrilha no smith",
+    "alias_norm": "panturrilha no smith",
+    "slug": "panturrilha_smith"
+  },
+  {
+    "alias": "panturrilha unilateral",
+    "alias_norm": "panturrilha unilateral",
+    "slug": "panturrilha_unilateral_halter"
+  },
+  {
+    "alias": "panturrilha unilateral no degrau",
+    "alias_norm": "panturrilha unilateral no degrau",
+    "slug": "panturrilha_unilateral_halter"
+  },
+  {
+    "alias": "panturrilha no degrau",
+    "alias_norm": "panturrilha no degrau",
+    "slug": "panturrilha_peso_corporal"
+  },
+  {
+    "alias": "panturrilha sem carga",
+    "alias_norm": "panturrilha sem carga",
+    "slug": "panturrilha_peso_corporal"
+  },
+  {
+    "alias": "elevação de panturrilha",
+    "alias_norm": "elevacao de panturrilha",
+    "slug": "panturrilha_peso_corporal"
+  },
+  {
+    "alias": "tibialis raise",
+    "alias_norm": "tibialis raise",
+    "slug": "elevacao_tibial"
+  },
+  {
+    "alias": "tibial",
+    "alias_norm": "tibial",
+    "slug": "elevacao_tibial"
+  },
+  {
+    "alias": "elevação de ponta de pé",
+    "alias_norm": "elevacao de ponta de pe",
+    "slug": "elevacao_tibial"
+  },
+  {
+    "alias": "tibial na parede",
+    "alias_norm": "tibial na parede",
+    "slug": "elevacao_tibial"
+  },
+  {
+    "alias": "abdominal",
+    "alias_norm": "abdominal",
+    "slug": "abdominal_supra"
+  },
+  {
+    "alias": "abdominal supra",
+    "alias_norm": "abdominal supra",
+    "slug": "abdominal_supra"
+  },
+  {
+    "alias": "abdominal reto",
+    "alias_norm": "abdominal reto",
+    "slug": "abdominal_supra"
+  },
+  {
+    "alias": "crunch",
+    "alias_norm": "crunch",
+    "slug": "abdominal_supra"
+  },
+  {
+    "alias": "abdominal infra",
+    "alias_norm": "abdominal infra",
+    "slug": "abdominal_infra"
+  },
+  {
+    "alias": "elevação de pernas deitado",
+    "alias_norm": "elevacao de pernas deitado",
+    "slug": "abdominal_infra"
+  },
+  {
+    "alias": "levantamento de pernas",
+    "alias_norm": "levantamento de pernas",
+    "slug": "abdominal_infra"
+  },
+  {
+    "alias": "abdominal suspenso",
+    "alias_norm": "abdominal suspenso",
+    "slug": "elevacao_pernas_suspenso"
+  },
+  {
+    "alias": "elevação de pernas na barra",
+    "alias_norm": "elevacao de pernas na barra",
+    "slug": "elevacao_pernas_suspenso"
+  },
+  {
+    "alias": "elevação de joelhos na barra",
+    "alias_norm": "elevacao de joelhos na barra",
+    "slug": "elevacao_pernas_suspenso"
+  },
+  {
+    "alias": "hanging leg raise",
+    "alias_norm": "hanging leg raise",
+    "slug": "elevacao_pernas_suspenso"
+  },
+  {
+    "alias": "abdominal na paralela",
+    "alias_norm": "abdominal na paralela",
+    "slug": "elevacao_joelhos_paralelas"
+  },
+  {
+    "alias": "elevação de joelhos no apoio",
+    "alias_norm": "elevacao de joelhos no apoio",
+    "slug": "elevacao_joelhos_paralelas"
+  },
+  {
+    "alias": "abdominal no apoio",
+    "alias_norm": "abdominal no apoio",
+    "slug": "elevacao_joelhos_paralelas"
+  },
+  {
+    "alias": "abdominal na polia",
+    "alias_norm": "abdominal na polia",
+    "slug": "abdominal_polia"
+  },
+  {
+    "alias": "abdominal polia",
+    "alias_norm": "abdominal polia",
+    "slug": "abdominal_polia"
+  },
+  {
+    "alias": "abdominal ajoelhado na polia",
+    "alias_norm": "abdominal ajoelhado na polia",
+    "slug": "abdominal_polia"
+  },
+  {
+    "alias": "crunch na polia",
+    "alias_norm": "crunch na polia",
+    "slug": "abdominal_polia"
+  },
+  {
+    "alias": "abdominal máquina",
+    "alias_norm": "abdominal maquina",
+    "slug": "abdominal_maquina"
+  },
+  {
+    "alias": "oblíquo",
+    "alias_norm": "obliquo",
+    "slug": "abdominal_obliquo"
+  },
+  {
+    "alias": "abdominal cruzado",
+    "alias_norm": "abdominal cruzado",
+    "slug": "abdominal_obliquo"
+  },
+  {
+    "alias": "bicicleta",
+    "alias_norm": "bicicleta",
+    "slug": "abdominal_bicicleta"
+  },
+  {
+    "alias": "abdominal bike",
+    "alias_norm": "abdominal bike",
+    "slug": "abdominal_bicicleta"
+  },
+  {
+    "alias": "abdominal declinado",
+    "alias_norm": "abdominal declinado",
+    "slug": "abdominal_declinado"
+  },
+  {
+    "alias": "abdominal banco declinado",
+    "alias_norm": "abdominal banco declinado",
+    "slug": "abdominal_declinado"
+  },
+  {
+    "alias": "remador",
+    "alias_norm": "remador",
+    "slug": "abdominal_remador"
+  },
+  {
+    "alias": "abdominal canoa",
+    "alias_norm": "abdominal canoa",
+    "slug": "abdominal_remador"
+  },
+  {
+    "alias": "canivete",
+    "alias_norm": "canivete",
+    "slug": "abdominal_canivete"
+  },
+  {
+    "alias": "v up",
+    "alias_norm": "v up",
+    "slug": "abdominal_canivete"
+  },
+  {
+    "alias": "rodinha",
+    "alias_norm": "rodinha",
+    "slug": "roda_abdominal"
+  },
+  {
+    "alias": "rodinha abdominal",
+    "alias_norm": "rodinha abdominal",
+    "slug": "roda_abdominal"
+  },
+  {
+    "alias": "ab wheel",
+    "alias_norm": "ab wheel",
+    "slug": "roda_abdominal"
+  },
+  {
+    "alias": "rolinho abdominal",
+    "alias_norm": "rolinho abdominal",
+    "slug": "roda_abdominal"
+  },
+  {
+    "alias": "prancha",
+    "alias_norm": "prancha",
+    "slug": "prancha"
+  },
+  {
+    "alias": "prancha isométrica",
+    "alias_norm": "prancha isometrica",
+    "slug": "prancha"
+  },
+  {
+    "alias": "prancha abdominal",
+    "alias_norm": "prancha abdominal",
+    "slug": "prancha"
+  },
+  {
+    "alias": "prancha horizontal",
+    "alias_norm": "prancha horizontal",
+    "slug": "prancha"
+  },
+  {
+    "alias": "plank",
+    "alias_norm": "plank",
+    "slug": "prancha"
+  },
+  {
+    "alias": "side plank",
+    "alias_norm": "side plank",
+    "slug": "prancha_lateral"
+  },
+  {
+    "alias": "prancha lateral isométrica",
+    "alias_norm": "prancha lateral isometrica",
+    "slug": "prancha_lateral"
+  },
+  {
+    "alias": "copenhagen plank com alavanca curta",
+    "alias_norm": "copenhagen plank com alavanca curta",
+    "slug": "prancha_copenhagen_curta"
+  },
+  {
+    "alias": "copenhagen curta",
+    "alias_norm": "copenhagen curta",
+    "slug": "prancha_copenhagen_curta"
+  },
+  {
+    "alias": "copenhagen com joelho apoiado",
+    "alias_norm": "copenhagen com joelho apoiado",
+    "slug": "prancha_copenhagen_curta"
+  },
+  {
+    "alias": "copenhagen plank",
+    "alias_norm": "copenhagen plank",
+    "slug": "prancha_copenhagen_longa"
+  },
+  {
+    "alias": "prancha copenhagen",
+    "alias_norm": "prancha copenhagen",
+    "slug": "prancha_copenhagen_longa"
+  },
+  {
+    "alias": "copenhagen longa",
+    "alias_norm": "copenhagen longa",
+    "slug": "prancha_copenhagen_longa"
+  },
+  {
+    "alias": "inseto morto",
+    "alias_norm": "inseto morto",
+    "slug": "dead_bug"
+  },
+  {
+    "alias": "bird dog",
+    "alias_norm": "bird dog",
+    "slug": "bird_dog"
+  },
+  {
+    "alias": "perdigueiro",
+    "alias_norm": "perdigueiro",
+    "slug": "bird_dog"
+  },
+  {
+    "alias": "quatro apoios alternado",
+    "alias_norm": "quatro apoios alternado",
+    "slug": "bird_dog"
+  },
+  {
+    "alias": "pallof press",
+    "alias_norm": "pallof press",
+    "slug": "pallof_press"
+  },
+  {
+    "alias": "pallof press no cabo",
+    "alias_norm": "pallof press no cabo",
+    "slug": "pallof_press"
+  },
+  {
+    "alias": "pallof",
+    "alias_norm": "pallof",
+    "slug": "pallof_press"
+  },
+  {
+    "alias": "antirrotação na polia",
+    "alias_norm": "antirrotacao na polia",
+    "slug": "pallof_press"
+  },
+  {
+    "alias": "cable chop",
+    "alias_norm": "cable chop",
+    "slug": "lenhador_alto_baixo"
+  },
+  {
+    "alias": "lenhador",
+    "alias_norm": "lenhador",
+    "slug": "lenhador_alto_baixo"
+  },
+  {
+    "alias": "lenhador na polia",
+    "alias_norm": "lenhador na polia",
+    "slug": "lenhador_alto_baixo"
+  },
+  {
+    "alias": "chop na polia",
+    "alias_norm": "chop na polia",
+    "slug": "lenhador_alto_baixo"
+  },
+  {
+    "alias": "woodchopper",
+    "alias_norm": "woodchopper",
+    "slug": "lenhador_alto_baixo"
+  },
+  {
+    "alias": "cable lift",
+    "alias_norm": "cable lift",
+    "slug": "lenhador_baixo_alto"
+  },
+  {
+    "alias": "lift na polia",
+    "alias_norm": "lift na polia",
+    "slug": "lenhador_baixo_alto"
+  },
+  {
+    "alias": "lenhador invertido",
+    "alias_norm": "lenhador invertido",
+    "slug": "lenhador_baixo_alto"
+  },
+  {
+    "alias": "russian twist",
+    "alias_norm": "russian twist",
+    "slug": "rotacao_russa"
+  },
+  {
+    "alias": "giro russo",
+    "alias_norm": "giro russo",
+    "slug": "rotacao_russa"
+  },
+  {
+    "alias": "mountain climber",
+    "alias_norm": "mountain climber",
+    "slug": "escalador"
+  },
+  {
+    "alias": "montanhista",
+    "alias_norm": "montanhista",
+    "slug": "escalador"
+  },
+  {
+    "alias": "alpinista",
+    "alias_norm": "alpinista",
+    "slug": "escalador"
+  },
+  {
+    "alias": "burpee sem flexão",
+    "alias_norm": "burpee sem flexao",
+    "slug": "burpee"
+  },
+  {
+    "alias": "farmer walk",
+    "alias_norm": "farmer walk",
+    "slug": "caminhada_fazendeiro"
+  },
+  {
+    "alias": "farmer walk com halteres",
+    "alias_norm": "farmer walk com halteres",
+    "slug": "caminhada_fazendeiro"
+  },
+  {
+    "alias": "farmers walk",
+    "alias_norm": "farmers walk",
+    "slug": "caminhada_fazendeiro"
+  },
+  {
+    "alias": "caminhada do fazendeiro",
+    "alias_norm": "caminhada do fazendeiro",
+    "slug": "caminhada_fazendeiro"
+  },
+  {
+    "alias": "suitcase carry",
+    "alias_norm": "suitcase carry",
+    "slug": "carregamento_mala"
+  },
+  {
+    "alias": "suitcase carry com halter",
+    "alias_norm": "suitcase carry com halter",
+    "slug": "carregamento_mala"
+  },
+  {
+    "alias": "carregamento de mala",
+    "alias_norm": "carregamento de mala",
+    "slug": "carregamento_mala"
+  },
+  {
+    "alias": "carregamento unilateral",
+    "alias_norm": "carregamento unilateral",
+    "slug": "carregamento_mala"
+  },
+  {
+    "alias": "suitcase hold",
+    "alias_norm": "suitcase hold",
+    "slug": "sustentacao_mala"
+  },
+  {
+    "alias": "suitcase hold com halter",
+    "alias_norm": "suitcase hold com halter",
+    "slug": "sustentacao_mala"
+  },
+  {
+    "alias": "segurar mala",
+    "alias_norm": "segurar mala",
+    "slug": "sustentacao_mala"
+  }
+]

@@ -7,6 +7,13 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Seed do catálogo global de exercícios em `supabase/seed/exercises/`: 194
+  exercícios com nome e descrição em pt-BR de academia, família, músculos,
+  equipamento e forma de carga sugerida, mais os apelidos globais com a forma
+  normalizada de busca. Texto todo próprio, sem cópia de base externa. Um
+  validador roda no `npm run test` e recusa slug repetido, vocabulário fora da
+  lista, apelido apontando para exercício inexistente e o mesmo apelido em
+  dois exercícios. Ainda não carregado no banco.
 - Gráficos no detalhe do exercício: carga máxima (repetições em peso
   corporal, assistência com "menor é melhor"), 1RM estimado e volume por
   sessão, seguindo o filtro Ciclo ou Tudo. Tocar num ponto mostra data e

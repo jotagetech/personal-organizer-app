@@ -694,6 +694,8 @@ src/
 supabase/migrations/  esquema SQL + RLS + funções (importação de plano, cálculo nutricional)
 supabase/functions/   Edge Function send-due-pushes (Deno, fora do tsc e do build do Vite)
 supabase/scheduler/   SQL do pg_cron que chama a Edge Function
+supabase/seed/exercises/  seed do catálogo global de exercícios e apelidos (pt-BR,
+                        conteúdo próprio), com regras e vocabulários no README da pasta
 public/sw.js          service worker do Web Push
 examples/             plano de treino de exemplo (JSON)
 schemas/               JSON Schema gerado a partir do contrato Zod
@@ -701,6 +703,19 @@ tests/                 testes Vitest (contrato, datas, seleção de treino, hash
                         progresso de sessão, grade de resultados, sugestão de refeição)
 CHANGELOG.md           histórico de mudanças, por data
 ```
+
+## Catálogo de exercícios (seed)
+
+`supabase/seed/exercises/` guarda a base do futuro catálogo compartilhado de
+exercícios: 194 exercícios com nome, família, músculo primário e secundários,
+equipamento, forma de carga sugerida e descrição curta, mais os apelidos
+globais (ex: "stiff" e "levantamento terra romeno", "puxador frente" e "pull
+down"). O texto é todo próprio, em pt-BR de academia. A regra de identidade
+(barra e halter são exercícios diferentes, tempo e pausa não), os vocabulários
+e a licença estão no `README.md` da pasta. `validateExerciseSeed`
+(`src/lib/exerciseCatalogSeed.ts`) confere os dois arquivos dentro do
+`npm run test`. O seed ainda não vai para o banco: falta a migração das
+tabelas `exercises` e `exercise_aliases`.
 
 ## Estado atual
 
