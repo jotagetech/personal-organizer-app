@@ -1,3 +1,9 @@
+import type {
+    ExerciseAliasRow,
+    ExerciseGenericNameRow,
+    ExerciseRow,
+    UnlinkedExerciseNameRow,
+} from '@/features/exerciseCatalog/types'
 import type { SetMetric } from '@/lib/workoutPlanSchema'
 import type { StoredWorkoutSnapshot } from '@/lib/workoutSnapshotSchema'
 
@@ -75,6 +81,9 @@ type WorkoutSetRow = {
     // Esforço percebido (1 a 10) de uma rodada de intervalado. Opcional no
     // tipo porque a coluna só existe depois da migração que a cria.
     rpe?: number | null
+    // Vínculo com o catálogo, preenchido pelo banco a partir do snapshot.
+    // Opcional no tipo porque a coluna só existe depois da migração.
+    exercise_id?: string | null
     updated_at: string
 }
 
@@ -369,6 +378,36 @@ export type Database = {
                 { id?: string; created_at?: string; updated_at?: string; user_agent?: string | null },
                 Record<never, never>
             >
+            exercises: TableDefinition<
+                ExerciseRow,
+                {
+                    id?: string
+                    slug?: string
+                    name_norm?: never
+                    family?: string | null
+                    primary_muscle?: string | null
+                    secondary_muscles?: string[]
+                    padrao_movimento?: string | null
+                    description_pt?: string | null
+                    source?: string
+                    source_ref?: string | null
+                    license?: string | null
+                    attribution?: string | null
+                    merged_into_id?: never
+                    created_at?: string
+                },
+                { name_norm?: never; merged_into_id?: never }
+            >
+            exercise_aliases: TableDefinition<
+                ExerciseAliasRow,
+                { id?: string; alias_norm?: never; created_at?: string },
+                { alias_norm?: never }
+            >
+            exercise_generic_names: TableDefinition<
+                ExerciseGenericNameRow,
+                Record<never, never>,
+                Record<never, never>
+            >
             scheduled_pushes: TableDefinition<
                 ScheduledPushRow,
                 { created_at?: string; updated_at?: string; body?: string; sent_at?: string | null },
@@ -400,6 +439,14 @@ export type Database = {
                     p_drops: unknown
                 }
                 Returns: WorkoutSetDropRow[]
+            }
+            unlinked_exercise_names: {
+                Args: Record<never, never>
+                Returns: UnlinkedExerciseNameRow[]
+            }
+            link_exercise_name: {
+                Args: { p_name: string; p_exercise_id: string }
+                Returns: undefined
             }
             register_push_subscription: {
                 Args: {

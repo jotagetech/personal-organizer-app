@@ -7,6 +7,21 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Catálogo de exercícios no banco, compartilhado por todas as contas
+  (migrações `20261001000000` e `20261001000100`): cada série passa a ficar
+  ligada ao exercício do catálogo, pelo slug do plano ou pelo nome, inclusive
+  as séries antigas. Nome genérico ("pull down") ou desconhecido fica sem
+  vínculo para a pessoa decidir.
+- No montador, o nome do exercício sugere do catálogo enquanto se digita (nome,
+  apelido, iniciais como "srh", nome genérico com as variações para escolher)
+  e preenche nome, equipamento, pegada e forma de carga. Dá para guardar o que
+  foi digitado como apelido da conta e criar um exercício só seu quando o
+  catálogo não tem.
+- Menu › Exercícios do histórico: liga os nomes dos treinos que ficaram sem
+  vínculo a um exercício do catálogo, só para a conta, valendo para as séries
+  antigas e futuras.
+- Campo `catalogo` (slug do catálogo) no exercício de séries do JSON do plano,
+  levado ao snapshot e à exportação (`catalog_slug`).
 - Pegada, largura da pegada e acessório no exercício de séries (`pegada`,
   `largura_pegada`, `acessorio` no JSON do plano), para separar variações
   como puxada aberta pronada, puxada supinada e puxada com triângulo. O

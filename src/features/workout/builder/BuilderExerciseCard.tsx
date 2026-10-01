@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { BuilderPrescriptionFields } from '@/features/workout/builder/BuilderPrescriptionFields'
 import { segmentClassName } from '@/features/workout/builder/BuilderRangeField'
 import { BuilderVariations } from '@/features/workout/builder/BuilderVariations'
+import { CatalogNameAssist } from '@/features/workout/builder/CatalogNameAssist'
 import { exerciseIdStatus } from '@/features/workout/builder/builderIds'
 import {
     ATTACHMENT_CHOICES,
@@ -150,6 +151,7 @@ function ExerciseKindSwitch({ exercise, onChange }: Pick<BuilderExerciseCardProp
 function ExerciseNameField({ fieldPath, exercise, resolvedId, onChange }: BuilderExerciseCardProps) {
     const nameId = builderFieldId([...fieldPath, 'nome'])
     const status = exerciseIdStatus(exercise)
+    const [isNameFocused, setIsNameFocused] = useState(false)
 
     return (
         <div className="field">
@@ -157,10 +159,14 @@ function ExerciseNameField({ fieldPath, exercise, resolvedId, onChange }: Builde
             <input
                 id={nameId}
                 type="text"
-                placeholder={exercise.tipo === 'intervalado' ? 'ex: Tiros na bike' : 'ex: Supino reto'}
+                autoComplete="off"
+                placeholder={exercise.tipo === 'intervalado' ? 'ex: Tiros na bike' : 'ex: Supino reto, stiff, srh'}
                 value={exercise.nome}
+                onFocus={() => setIsNameFocused(true)}
+                onBlur={() => setIsNameFocused(false)}
                 onChange={(event) => onChange({ ...exercise, nome: event.target.value })}
             />
+            <CatalogNameAssist exercise={exercise} isNameFocused={isNameFocused} onChange={onChange} />
             <div className="builder-id-note">
                 <History size={ACTION_ICON_SIZE} aria-hidden="true" />
                 <span className="builder-id-note__text">

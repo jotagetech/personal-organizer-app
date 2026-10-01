@@ -1,10 +1,11 @@
-import { BookOpen, ChevronRight, Download, Dumbbell, type LucideIcon } from 'lucide-react'
+import { BookOpen, ChevronRight, Download, Dumbbell, Link2, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { SignOutSection } from '@/features/account/SignOutSection'
 import { BodyWeightLog, SleepLog } from '@/features/bodyMetrics/BodyMetricLogs'
+import { UnlinkedExercisesPanel } from '@/features/exerciseCatalog/UnlinkedExercisesPanel'
 import { PeriodExportPanel } from '@/features/export/PeriodExportPanel'
 import { FoodItemsCatalog } from '@/features/food/FoodItemsCatalog'
 import { PushNotificationsSection } from '@/features/notifications/PushNotificationsSection'
@@ -12,7 +13,7 @@ import { formatDateLabel } from '@/features/shared/DateHeader'
 import { StoredPlansPanel } from '@/features/workout/StoredPlansPanel'
 import { todayInTimezone } from '@/lib/dateUtils'
 
-type MenuToolKey = 'workout_plans' | 'food_catalog' | 'period_export'
+type MenuToolKey = 'workout_plans' | 'exercise_history_names' | 'food_catalog' | 'period_export'
 type MenuPanel = 'home' | MenuToolKey
 
 type MenuTool = {
@@ -34,6 +35,12 @@ const MENU_TOOLS: MenuTool[] = [
         label: 'Planos de treino',
         description: 'Voltar para um plano já importado, sem o arquivo',
         icon: Dumbbell,
+    },
+    {
+        key: 'exercise_history_names',
+        label: 'Exercícios do histórico',
+        description: 'Ligar nomes dos seus treinos aos exercícios do catálogo',
+        icon: Link2,
     },
     {
         key: 'food_catalog',
@@ -63,6 +70,8 @@ function renderToolPanel(toolKey: MenuToolKey, onClose: () => void) {
     switch (toolKey) {
         case 'workout_plans':
             return <StoredPlansPanel onClose={onClose} />
+        case 'exercise_history_names':
+            return <UnlinkedExercisesPanel onClose={onClose} />
         case 'food_catalog':
             return <FoodItemsCatalog onClose={onClose} />
         case 'period_export':

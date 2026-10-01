@@ -35,6 +35,7 @@ npm run dev
 | `npm run typecheck` | Só o typecheck (`tsc --noEmit`) |
 | `npm run test` | Roda a suíte Vitest |
 | `npm run schema:generate` | Regera `schemas/workout-plan.schema.json` a partir do schema Zod |
+| `npm run exercises:seed-sql -- <arquivo>` | Gera a migração que carrega `supabase/seed/exercises/` no banco (upsert pelo slug) |
 
 ## Configuração do Supabase
 
@@ -521,6 +522,16 @@ a pegada de um exercício pede `id` novo, como trocar o equipamento:
 { "equipamento": "cabo", "pegada": "pronada", "largura_pegada": "aberta", "acessorio": "barra_reta" }
 ```
 
+**Exercício do catálogo** (`catalogo`): slug do exercício no catálogo
+compartilhado (ex: `supino_reto_barra`; um exercício criado pela conta começa
+com `meu_`). Liga as séries ao catálogo mesmo quando o nome da ficha é outro, e
+junta o histórico do mesmo exercício entre planos. Opcional: sem ele, o banco
+tenta pelo nome. O `id` continua sendo a chave da sessão:
+
+```json
+{ "id": "puxada-aberta", "nome": "Pulldown aberto", "catalogo": "puxada_frontal_aberta" }
+```
+
 **Observações** (`observacoes`): texto livre do exercício, mostrado no card:
 
 ```json
@@ -705,6 +716,7 @@ src/
     bodyMetrics/    peso corporal e sono (registro rápido diário)
     results/        grade semanal de treinos concluídos
     notifications/  service worker, assinatura de push e ativação no Menu
+    exerciseCatalog/ catálogo de exercícios: busca, sugestões e ligação de nomes do histórico
 supabase/migrations/  esquema SQL + RLS + funções (importação de plano, cálculo nutricional)
 supabase/functions/   Edge Function send-due-pushes (Deno, fora do tsc e do build do Vite)
 supabase/scheduler/   SQL do pg_cron que chama a Edge Function
@@ -718,20 +730,60 @@ tests/                 testes Vitest (contrato, datas, seleção de treino, hash
 CHANGELOG.md           histórico de mudanças, por data
 ```
 
-## Catálogo de exercícios (seed)
+## Catálogo de exercícios
 
-`supabase/seed/exercises/` guarda a base do futuro catálogo compartilhado de
-exercícios: 201 exercícios com nome, família, músculo primário e secundários,
-equipamento, pegada, largura, acessório, forma de carga sugerida e descrição
-curta, os apelidos globais (ex: "stiff" e "levantamento terra romeno") e os
-nomes genéricos que valem para mais de uma variação ("pull down", "remada
-baixa", "tríceps polia"), ligados à família para a pessoa escolher. O texto é
-todo próprio, em pt-BR de academia. A regra de identidade (barra e halter são
+Um catálogo só, compartilhado por todas as contas, em vez de cada pessoa
+cadastrar os próprios exercícios repetidos. A fonte é
+`supabase/seed/exercises/`: 201 exercícios com nome, família, músculo primário
+e secundários, equipamento, pegada, largura, acessório, padrão de movimento,
+forma de carga sugerida e descrição curta, os apelidos globais (ex: "stiff" e
+"levantamento terra romeno") e os nomes genéricos que valem para mais de uma
+variação ("pull down", "remada baixa", "tríceps polia"). O texto é todo
+próprio, em pt-BR de academia. A regra de identidade (barra e halter são
 exercícios diferentes, pegada que muda a carga também, tempo e pausa não), os
 vocabulários e a licença estão no `README.md` da pasta. `validateExerciseSeed`
 (`src/lib/exerciseCatalogSeed.ts`) confere os três arquivos dentro do
-`npm run test`. O seed ainda não vai para o banco: falta a migração das
-tabelas `exercises` e `exercise_aliases`.
+`npm run test`.
+
+**No banco** (`20261001000000_exercise_catalog.sql`, seed em
+`20261001000100_exercise_catalog_seed.sql`):
+
+- `exercises`: global (`owner_user_id` nulo) ou da conta. O exercício da conta
+  ganha slug `meu_*` e nasce só com o nome; o global tem ficha completa.
+- `exercise_aliases`: apelido global ou da conta. O da conta vale só para ela
+  (a sigla "sprh" de uma pessoa não aparece para outra).
+- `exercise_generic_names`: nome genérico ligado a famílias.
+- `workout_sets.exercise_id`: preenchido por gatilho a partir do snapshot da
+  sessão, nunca pelo app. A ordem é o slug `catalogo` do plano, o apelido da
+  conta, o exercício da conta, o nome global e o apelido global; nome genérico
+  ou desconhecido fica nulo. Prescrição no nome ("(RIR 2)", "drop", "leve")
+  não atrapalha. Criar, trocar ou apagar um apelido da conta religa as séries
+  antigas daquele nome.
+
+**No app:**
+
+- Montador: o nome do exercício sugere do catálogo enquanto a pessoa digita
+  (nome, apelido, apelido da conta, iniciais como "srh", nome genérico com as
+  variações para escolher). Escolher preenche nome, slug, equipamento, pegada
+  e forma de carga. Se o que foi digitado não era um nome conhecido, aparece
+  "Guardar como seu apelido". Sem resultado, dá para criar o exercício só para
+  a conta. "Desvincular" tira o slug e deixa o nome como digitado.
+- Menu › Exercícios do histórico: nomes dos treinos que ficaram sem vínculo
+  (genéricos, ambíguos, novos), com a busca para escolher o exercício ou criar
+  um da conta. Ligar vale para as séries antigas e futuras com aquele nome.
+
+**Curadoria** (só pelo SQL, como admin do banco): `exercise_curation_aliases`
+lista apelidos de conta que ainda não são globais, com quantas contas usam cada
+um; `exercise_curation_private` lista os exercícios criados pelas contas.
+`select promote_exercise_alias('<apelido normalizado>', '<id do global>')`
+promove um apelido a global; `select merge_private_exercise('<id do privado>',
+'<id do global>')` funde um exercício da conta num global (séries e apelidos
+vão junto, e o nome antigo vira apelido da conta). Para promover um privado,
+cria-se o global pelo seed e funde-se o privado nele. Nada é promovido sozinho.
+
+Mudar o seed: editar os JSON da pasta, rodar `npm run test` e gerar uma
+migração nova com `npm run exercises:seed-sql -- supabase/migrations/<timestamp>_exercise_catalog_seed.sql`.
+A migração já aplicada não é reescrita.
 
 ## Estado atual
 

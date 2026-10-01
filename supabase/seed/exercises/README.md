@@ -1,8 +1,9 @@
 # Seed do catálogo global de exercícios
 
-Fonte do catálogo compartilhado (`exercises` com `owner_user_id is null`) e dos
-apelidos globais (`exercise_aliases` com `owner_user_id is null`). Ainda não
-existe migração que carregue estes arquivos no banco.
+Fonte do catálogo compartilhado (`exercises` com `owner_user_id is null`), dos
+apelidos globais (`exercise_aliases` com `owner_user_id is null`) e dos nomes
+genéricos (`exercise_generic_names`). A migração que carrega estes arquivos é
+gerada por `npm run exercises:seed-sql` (ver "Como editar e validar").
 
 | Arquivo | Conteúdo |
 |---|---|
@@ -110,8 +111,9 @@ máquina, com o tríceps como primário, é `extensao_cotovelo`.
 ## Formato
 
 - `slug`: minúsculas, sem acento, `_` como separador. É estável para sempre,
-  porque vai para o JSON do plano e para o conversor. Renomear o exercício muda
-  `name_pt`, nunca o `slug`.
+  porque vai para o JSON do plano (campo `catalogo`) e para o conversor.
+  Renomear o exercício muda `name_pt`, nunca o `slug`. O prefixo `meu_` é
+  reservado aos exercícios criados pelas contas.
 - `alias_norm`: `normalizeAlias(alias)`, que deixa tudo minúsculo, sem acento e
   troca qualquer pontuação por espaço ("Leg press 45°" vira `leg press 45`).
 - Um `alias_norm` aponta para um exercício só e não pode repetir o nome oficial
@@ -130,11 +132,17 @@ máquina, com o tríceps como primário, é `extensao_cotovelo`.
 Os três JSON são a fonte; não há geração automática a partir de base externa.
 Para incluir um exercício, acrescente o registro em `exercises.json` e os
 apelidos em `aliases.json`, com `alias_norm` já normalizado. Nome genérico
-entra em `generic_names.json`, com `name_norm` normalizado. Depois rode:
+entra em `generic_names.json`, com `name_norm` normalizado. Depois rode
+`npm run test` e gere uma migração nova com o conteúdo atual da pasta:
 
 ```bash
-npm run test
+npm run exercises:seed-sql -- supabase/migrations/<timestamp>_exercise_catalog_seed.sql
 ```
+
+O SQL gerado faz upsert dos exercícios globais pelo slug, sincroniza apelidos e
+nomes genéricos globais (o que saiu do seed é apagado; os da conta não são
+tocados) e religa todas as séries. A normalização do banco
+(`normalize_exercise_name`) é a mesma de `normalizeAlias`.
 
 O teste `tests/exerciseCatalogSeed.test.ts` passa os três arquivos por
 `validateExerciseSeed` e falha listando cada problema: slug repetido ou fora do

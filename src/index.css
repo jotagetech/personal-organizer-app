@@ -4675,3 +4675,109 @@ h1, h2, h3, h4 {
 .plan-view .day-workout__set-label {
     width: 64px;
 }
+
+/* Catálogo de exercícios: sugestões no nome do montador e ligação de nomes
+   do histórico no Menu. */
+.catalog-assist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.catalog-suggestions {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.catalog-suggestions__heading {
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: var(--color-surface-muted);
+}
+
+.catalog-suggestions__item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+    width: 100%;
+    min-height: var(--touch-target-large);
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    text-align: left;
+}
+
+.catalog-suggestions__item + .catalog-suggestions__item,
+.catalog-suggestions__heading + .catalog-suggestions__item {
+    border-top: 1px solid var(--color-divider);
+}
+
+.catalog-suggestions__item:active {
+    background: var(--color-surface-pressed);
+}
+
+.catalog-suggestions__name {
+    font-size: 15px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.catalog-suggestions__meta {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-muted);
+}
+
+.catalog-assist__action {
+    align-self: flex-start;
+    gap: 6px;
+    padding: 0 8px;
+    color: var(--color-accent-text);
+}
+
+.catalog-assist__linked {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 8px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-muted);
+    font-size: 13px;
+}
+
+.catalog-assist__linked-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.catalog-link-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.catalog-link-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.catalog-link-row__title {
+    font-size: 15px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
