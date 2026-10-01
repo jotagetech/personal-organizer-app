@@ -7,6 +7,7 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Rosca direta na polia com barra W no catálogo (migração `20261001000200`).
 - Catálogo de exercícios no banco, compartilhado por todas as contas
   (migrações `20261001000000` e `20261001000100`): cada série passa a ficar
   ligada ao exercício do catálogo, pelo slug do plano ou pelo nome, inclusive

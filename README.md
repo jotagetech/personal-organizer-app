@@ -734,7 +734,7 @@ CHANGELOG.md           histórico de mudanças, por data
 
 Um catálogo só, compartilhado por todas as contas, em vez de cada pessoa
 cadastrar os próprios exercícios repetidos. A fonte é
-`supabase/seed/exercises/`: 201 exercícios com nome, família, músculo primário
+`supabase/seed/exercises/`: 202 exercícios com nome, família, músculo primário
 e secundários, equipamento, pegada, largura, acessório, padrão de movimento,
 forma de carga sugerida e descrição curta, os apelidos globais (ex: "stiff" e
 "levantamento terra romeno") e os nomes genéricos que valem para mais de uma

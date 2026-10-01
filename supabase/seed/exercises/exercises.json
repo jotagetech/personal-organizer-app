@@ -1993,6 +1993,26 @@
     "attribution": null
   },
   {
+    "slug": "rosca_direta_polia_barra_w",
+    "name_pt": "Rosca direta na polia com barra W",
+    "family": "rosca_direta",
+    "primary_muscle": "biceps",
+    "secondary_muscles": [
+      "antebraco"
+    ],
+    "equipment": "cabo",
+    "pegada": "supinada",
+    "largura_pegada": null,
+    "acessorio": "barra_w",
+    "padrao_movimento": "flexao_cotovelo",
+    "default_load_form": "total",
+    "description_pt": "De frente para a polia baixa com a barra W presa, segure nas curvas com as palmas para cima e os cotovelos junto ao corpo. Suba dobrando os cotovelos e desça até estender. A curva da barra alivia o punho em relação à barra reta.",
+    "source": "proprio",
+    "source_ref": null,
+    "license": "proprio",
+    "attribution": null
+  },
+  {
     "slug": "rosca_inversa_barra",
     "name_pt": "Rosca inversa com barra",
     "family": "rosca_inversa",

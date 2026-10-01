@@ -1465,6 +1465,26 @@
     "slug": "rosca_direta_polia"
   },
   {
+    "alias": "rosca direta polia barra w",
+    "alias_norm": "rosca direta polia barra w",
+    "slug": "rosca_direta_polia_barra_w"
+  },
+  {
+    "alias": "rosca na polia com barra w",
+    "alias_norm": "rosca na polia com barra w",
+    "slug": "rosca_direta_polia_barra_w"
+  },
+  {
+    "alias": "rosca w na polia",
+    "alias_norm": "rosca w na polia",
+    "slug": "rosca_direta_polia_barra_w"
+  },
+  {
+    "alias": "rosca direta cross barra w",
+    "alias_norm": "rosca direta cross barra w",
+    "slug": "rosca_direta_polia_barra_w"
+  },
+  {
     "alias": "rosca inversa",
     "alias_norm": "rosca inversa",
     "slug": "rosca_inversa_barra"
