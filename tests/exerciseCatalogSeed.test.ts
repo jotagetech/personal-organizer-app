@@ -23,6 +23,7 @@ const BENCH: SeedExercise = {
     pegada: null,
     largura_pegada: null,
     acessorio: null,
+    padrao_movimento: 'empurrar_horizontal',
     default_load_form: 'total',
     description_pt: 'Deitado no banco, desça a barra até o peito e empurre de volta.',
     source: 'proprio',
@@ -47,6 +48,7 @@ const WIDE_PULLDOWN: SeedExercise = {
     primary_muscle: 'costas',
     secondary_muscles: ['biceps'],
     equipment: 'cabo',
+    padrao_movimento: 'puxar_vertical',
     pegada: 'pronada',
     largura_pegada: 'aberta',
     acessorio: 'barra_reta',
@@ -101,12 +103,14 @@ describe('validateExerciseSeed', () => {
             equipment: 'polia',
             default_load_form: 'por_braco',
             secondary_muscles: ['peitoral_maior'],
+            padrao_movimento: 'empurrar',
         }])
         const errors = validateExerciseSeed(seed).join('\n')
 
         expect(errors).toContain('equipment "polia"')
         expect(errors).toContain('default_load_form "por_braco"')
         expect(errors).toContain('peitoral_maior')
+        expect(errors).toContain('padrao_movimento "empurrar"')
     })
 
     it('recusa apelido para slug inexistente ou com alias_norm errado', () => {

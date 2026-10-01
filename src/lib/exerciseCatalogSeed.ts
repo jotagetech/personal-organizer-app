@@ -29,6 +29,38 @@ export const MUSCLE_GROUPS = [
     'tibial',
 ] as const
 
+// Padrão de movimento por ação articular principal: permite ver equilíbrio
+// do plano (empurrar contra puxar, joelho contra quadril) além do volume
+// por músculo. Exercício de isolamento entra pela articulação que move.
+export const MOVEMENT_PATTERNS = [
+    'empurrar_horizontal',
+    'empurrar_vertical',
+    'puxar_horizontal',
+    'puxar_vertical',
+    'elevacao_ombro',
+    'rotacao_ombro',
+    'elevacao_escapula',
+    'agachar',
+    'afundo',
+    'dobradica_quadril',
+    'extensao_quadril',
+    'extensao_joelho',
+    'flexao_joelho',
+    'abducao_quadril',
+    'aducao_quadril',
+    'flexao_plantar',
+    'dorsiflexao',
+    'flexao_cotovelo',
+    'extensao_cotovelo',
+    'pegada',
+    'flexao_tronco',
+    'antiextensao',
+    'antirrotacao',
+    'rotacao',
+    'carregamento',
+    'corpo_inteiro',
+] as const
+
 export const OWN_SOURCE = 'proprio'
 
 const SLUG_PATTERN = /^[a-z0-9]+(_[a-z0-9]+)*$/
@@ -43,6 +75,7 @@ export type SeedExercise = {
     pegada: string | null
     largura_pegada: string | null
     acessorio: string | null
+    padrao_movimento: string
     default_load_form: string
     description_pt: string
     source: string
@@ -108,6 +141,9 @@ function validateExercise(exercise: SeedExercise): string[] {
     }
     if (!isOneOf(exercise.equipment, EQUIPMENT_TYPES)) {
         errors.push(`${where}: equipment "${exercise.equipment}" fora do vocabulário`)
+    }
+    if (!isOneOf(exercise.padrao_movimento, MOVEMENT_PATTERNS)) {
+        errors.push(`${where}: padrao_movimento "${exercise.padrao_movimento}" fora do vocabulário`)
     }
     if (!isOneOf(exercise.default_load_form, LOAD_CONVENTIONS)) {
         errors.push(`${where}: default_load_form "${exercise.default_load_form}" fora do contrato`)

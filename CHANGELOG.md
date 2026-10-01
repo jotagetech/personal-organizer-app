@@ -16,7 +16,8 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   iguais.
 - Seed do catálogo global de exercícios em `supabase/seed/exercises/`: 201
   exercícios com nome e descrição em pt-BR de academia, família, músculos,
-  equipamento, pegada, largura, acessório e forma de carga sugerida, os
+  equipamento, pegada, largura, acessório, padrão de movimento (empurrar,
+  puxar, agachar, dobradiça de quadril e outros) e forma de carga sugerida, os
   apelidos globais com a forma normalizada de busca e os nomes genéricos
   ("pull down", "remada baixa") ligados à família, para a pessoa escolher a
   variação. Texto todo próprio, sem cópia de base externa. Um validador roda

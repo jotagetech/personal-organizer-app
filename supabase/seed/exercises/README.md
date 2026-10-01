@@ -6,7 +6,7 @@ existe migração que carregue estes arquivos no banco.
 
 | Arquivo | Conteúdo |
 |---|---|
-| `exercises.json` | Um registro por exercício: `slug`, `name_pt`, `family`, `primary_muscle`, `secondary_muscles`, `equipment`, `pegada`, `largura_pegada`, `acessorio`, `default_load_form`, `description_pt`, `source`, `source_ref`, `license`, `attribution` |
+| `exercises.json` | Um registro por exercício: `slug`, `name_pt`, `family`, `primary_muscle`, `secondary_muscles`, `equipment`, `pegada`, `largura_pegada`, `acessorio`, `padrao_movimento`, `default_load_form`, `description_pt`, `source`, `source_ref`, `license`, `attribution` |
 | `aliases.json` | Apelidos globais: `alias` (como as pessoas escrevem), `alias_norm` (forma de busca) e `slug` do exercício |
 | `generic_names.json` | Nomes que valem para mais de uma variação: `name`, `name_norm` e `families`. A busca por um deles mostra os exercícios dessas famílias para a pessoa escolher |
 
@@ -87,6 +87,25 @@ o plano continua dizendo a forma real de cada exercício.
 
 Cada exercício tem um primário só, onde a série conta no volume. Os secundários
 são informativos.
+
+`padrao_movimento` usa `MOVEMENT_PATTERNS` (mesmo arquivo) e classifica o
+exercício pela ação articular principal, para ver o equilíbrio do plano além do
+volume por músculo (empurrar contra puxar, joelho contra quadril):
+
+`empurrar_horizontal`, `empurrar_vertical`, `puxar_horizontal`,
+`puxar_vertical`, `elevacao_ombro`, `rotacao_ombro`, `elevacao_escapula`,
+`agachar`, `afundo`, `dobradica_quadril`, `extensao_quadril`,
+`extensao_joelho`, `flexao_joelho`, `abducao_quadril`, `aducao_quadril`,
+`flexao_plantar`, `dorsiflexao`, `flexao_cotovelo`, `extensao_cotovelo`,
+`pegada`, `flexao_tronco`, `antiextensao`, `antirrotacao`, `rotacao`,
+`carregamento`, `corpo_inteiro`.
+
+Isolamento entra pela articulação que move (rosca é `flexao_cotovelo`,
+cadeira extensora é `extensao_joelho`). Crucifixo conta como
+`empurrar_horizontal` e crucifixo invertido e face pull como
+`puxar_horizontal`, porque é assim que entram no equilíbrio entre empurrar e
+puxar. Mergulho nas paralelas é `empurrar_vertical`; mergulho no banco e na
+máquina, com o tríceps como primário, é `extensao_cotovelo`.
 
 ## Formato
 
