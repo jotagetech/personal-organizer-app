@@ -60,11 +60,18 @@ export function resumeAt(pauseState: SessionPauseState, resumedAtIso: string): S
     return { pausedAt: null, pausedSeconds: pauseState.pausedSeconds + closedPauseSeconds }
 }
 
-function secondsBetween(startIso: string, endMs: number): number {
+function millisecondsBetween(startIso: string, endMs: number): number {
     const elapsedMs = endMs - timeOf(startIso)
     const isUsable = Number.isFinite(elapsedMs) && elapsedMs > 0
+    const usableMs = isUsable ? elapsedMs : 0
 
-    return isUsable ? Math.floor(elapsedMs / MS_PER_SECOND) : 0
+    return usableMs
+}
+
+function secondsBetween(startIso: string, endMs: number): number {
+    const elapsedSeconds = Math.floor(millisecondsBetween(startIso, endMs) / MS_PER_SECOND)
+
+    return elapsedSeconds
 }
 
 // Tempo pausado até o instante pedido, contando a pausa em andamento, que
@@ -77,10 +84,17 @@ export function pausedSecondsUntil(pauseState: SessionPauseState, untilMs: numbe
 
 // Tempo de treino efetivo entre o início e o instante pedido. Com a pausa em
 // andamento o valor para de crescer, então o relógio fica congelado sem
-// depender de nenhum contador em memória.
+// depender de nenhum contador em memória. A conta é feita em milissegundos e
+// arredondada uma vez só: arredondar o total e a pausa em andamento cada um
+// por si faria o relógio pausado oscilar 1 s, porque as frações de segundo
+// do início do treino e do início da pausa viram o segundo em momentos
+// diferentes.
 export function activeSecondsBetween(startedAtIso: string, untilMs: number, pauseState: SessionPauseState): number {
-    const totalSeconds = secondsBetween(startedAtIso, untilMs)
-    const activeSeconds = Math.max(0, totalSeconds - pausedSecondsUntil(pauseState, untilMs))
+    const totalMs = millisecondsBetween(startedAtIso, untilMs)
+    const ongoingPauseMs = pauseState.pausedAt === null ? 0 : millisecondsBetween(pauseState.pausedAt, untilMs)
+    const closedPauseMs = nonNegativeSeconds(pauseState.pausedSeconds) * MS_PER_SECOND
+    const activeMs = Math.max(0, totalMs - ongoingPauseMs - closedPauseMs)
+    const activeSeconds = Math.floor(activeMs / MS_PER_SECOND)
 
     return activeSeconds
 }

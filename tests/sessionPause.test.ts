@@ -83,6 +83,16 @@ describe('tempo de treino efetivo', () => {
         expect(muchLater).toBe(1140)
     })
 
+    it('não oscila pausado quando início e pausa caem em frações de segundo diferentes', () => {
+        const pauseState = { pausedAt: '2026-09-28T12:20:00.800Z', pausedSeconds: 0 }
+        const pauseStartMs = timeOf('2026-09-28T12:20:00.800Z')
+        const readings = [0, 150, 300, 450, 600, 750, 900, 1050, 1200, 4300].map((offsetMs) =>
+            activeSecondsBetween('2026-09-28T12:00:00.300Z', pauseStartMs + offsetMs, pauseState),
+        )
+
+        expect(new Set(readings)).toEqual(new Set([1200]))
+    })
+
     it('conta a pausa em andamento até o instante pedido', () => {
         const pauseState = { pausedAt: '2026-09-28T12:20:00.000Z', pausedSeconds: 60 }
 
