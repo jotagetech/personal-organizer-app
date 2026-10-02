@@ -13,6 +13,7 @@ import {
     shouldStartRest,
     startRestTimer,
     stopwatchPhase,
+    timedSetClock,
 } from '@/features/workout/workoutTimers'
 
 const START = 1_800_000_000_000
@@ -145,5 +146,33 @@ describe('elapsedSecondsBetween', () => {
 
     it('trata horário ilegível como zero', () => {
         expect(elapsedSecondsBetween('ontem', START)).toBe(0)
+    })
+})
+
+describe('timedSetClock', () => {
+    it('começa pelo preparo de 5 s, contando de 5 até 1', () => {
+        expect(timedSetClock(START, START, 30)).toMatchObject({ stage: 'preparando', prepRemainingSeconds: 5 })
+        expect(timedSetClock(START, START + 4_100, 30)).toMatchObject({ stage: 'preparando', prepRemainingSeconds: 1 })
+    })
+
+    it('depois do preparo conta para baixo a partir da meta', () => {
+        expect(timedSetClock(START, START + 5_000, 30)).toMatchObject({
+            stage: 'contando',
+            remainingSeconds: 30,
+            elapsedSeconds: 0,
+        })
+        expect(timedSetClock(START, START + 17_400, 30)).toMatchObject({
+            stage: 'contando',
+            remainingSeconds: 18,
+            elapsedSeconds: 12,
+        })
+    })
+
+    it('termina ao chegar no zero', () => {
+        expect(timedSetClock(START, START + 35_000, 30)).toMatchObject({
+            stage: 'terminado',
+            remainingSeconds: 0,
+            elapsedSeconds: 30,
+        })
     })
 })

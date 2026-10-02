@@ -1,13 +1,14 @@
-import { Play, Square } from 'lucide-react'
+import { Play, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { playBeep, unlockAudio } from '@/features/workout/timerDevice'
 import { useNow, useWakeLock } from '@/features/workout/timerHooks'
 import { loadStopwatch, saveStopwatch } from '@/features/workout/timerStorage'
 import {
-    elapsedSeconds,
     formatClock,
+    SET_PREP_SECONDS,
     stopwatchPhase,
+    timedSetClock,
     type StopwatchPhase,
 } from '@/features/workout/workoutTimers'
 
@@ -24,50 +25,85 @@ type SetStopwatchProps = {
 
 const PHASE_MESSAGE: Record<StopwatchPhase, string> = {
     antes_do_minimo: 'Segure até o mínimo',
-    na_faixa: 'Na faixa da meta',
-    passou_do_maximo: 'Meta máxima atingida, pode parar',
+    na_faixa: 'Na faixa da meta, pode parar',
+    passou_do_maximo: 'Meta atingida',
 }
 
-// Cronômetro da série de tempo: conta para cima, avisa ao chegar no mínimo e
-// no máximo da meta e, ao parar, devolve os segundos para o campo de tempo.
+// Cronômetro da série de tempo: depois de Iniciar, um preparo de alguns
+// segundos e então a contagem regressiva a partir da meta máxima. Avisa ao
+// passar do mínimo, termina sozinho no zero e devolve os segundos feitos para
+// o campo de tempo; Parar antes do zero devolve o que foi feito até ali.
 export function SetStopwatch({ sessionDate, setKey, targetMin, targetMax, targetText, onStop }: SetStopwatchProps) {
-    const [startedAtMs, setStartedAtMs] = useState<number | null>(
+    const [tappedAtMs, setTappedAtMs] = useState<number | null>(
         () => loadStopwatch(sessionDate, setKey)?.startedAtMs ?? null,
     )
-    const isRunning = startedAtMs !== null
+    const isRunning = tappedAtMs !== null
     const nowMs = useNow(isRunning)
     useWakeLock(isRunning)
 
-    const elapsed = startedAtMs === null ? 0 : elapsedSeconds(startedAtMs, nowMs)
-    const phase = stopwatchPhase(elapsed, targetMin, targetMax)
-    // Ao retomar um cronômetro já avançado, as fases que ficaram para trás não
-    // tocam de novo: o bipe marca só a passagem vista com a tela aberta.
+    const clock = tappedAtMs === null ? null : timedSetClock(tappedAtMs, nowMs, targetMax)
+    const stage = clock?.stage ?? null
+    const prepRemainingSeconds = clock?.prepRemainingSeconds ?? 0
+    const phase = stopwatchPhase(clock?.elapsedSeconds ?? 0, targetMin, targetMax)
+    // Ao reabrir um cronômetro já avançado, o que ficou para trás não toca de
+    // novo: o bipe marca só a passagem vista com a tela aberta.
     const lastPhaseRef = useRef<StopwatchPhase>(phase)
+    const lastPrepSecondRef = useRef<number>(prepRemainingSeconds)
 
     useEffect(() => {
-        if (!isRunning || phase === lastPhaseRef.current) {
+        if (stage !== 'preparando' || prepRemainingSeconds === lastPrepSecondRef.current) {
+            return
+        }
+        lastPrepSecondRef.current = prepRemainingSeconds
+        playBeep('contagem')
+    }, [stage, prepRemainingSeconds])
+
+    useEffect(() => {
+        if (stage === null || stage === 'preparando' || lastPrepSecondRef.current === 0) {
+            return
+        }
+        lastPrepSecondRef.current = 0
+        playBeep('trabalho')
+    }, [stage])
+
+    useEffect(() => {
+        if (stage !== 'contando' || phase === lastPhaseRef.current) {
             return
         }
         lastPhaseRef.current = phase
-        playBeep(phase === 'passou_do_maximo' ? 'limite' : 'faixa')
-    }, [isRunning, phase])
+        playBeep('faixa')
+    }, [stage, phase])
+
+    useEffect(() => {
+        if (stage !== 'terminado') {
+            return
+        }
+        playBeep('limite')
+        finish(targetMax)
+    }, [stage])
+
+    function finish(seconds: number) {
+        saveStopwatch(null)
+        setTappedAtMs(null)
+        onStop(seconds)
+    }
 
     function handleStart() {
         unlockAudio()
-        const startedAt = Date.now()
+        const tappedAt = Date.now()
         lastPhaseRef.current = stopwatchPhase(0, targetMin, targetMax)
-        saveStopwatch({ sessionDate, setKey, startedAtMs: startedAt })
-        setStartedAtMs(startedAt)
+        lastPrepSecondRef.current = SET_PREP_SECONDS
+        playBeep('contagem')
+        saveStopwatch({ sessionDate, setKey, startedAtMs: tappedAt })
+        setTappedAtMs(tappedAt)
     }
 
-    function handleStop() {
-        const finalSeconds = startedAtMs === null ? 0 : elapsedSeconds(startedAtMs, Date.now())
+    function handleCancelPrep() {
         saveStopwatch(null)
-        setStartedAtMs(null)
-        onStop(finalSeconds)
+        setTappedAtMs(null)
     }
 
-    if (!isRunning) {
+    if (!clock) {
         return (
             <button type="button" className="primary-button stopwatch__start" onClick={handleStart}>
                 <Play size={ACTION_ICON_SIZE} aria-hidden="true" />
@@ -76,14 +112,34 @@ export function SetStopwatch({ sessionDate, setKey, targetMin, targetMax, target
         )
     }
 
+    if (clock.stage === 'preparando') {
+        return (
+            <div className="stopwatch stopwatch--preparando" role="timer" aria-label="Preparo da série">
+                <span className="stopwatch__message">Prepare-se</span>
+                <span className="stopwatch__clock" aria-live="assertive">
+                    {clock.prepRemainingSeconds}
+                </span>
+                <span className="stopwatch__target">meta {targetText}</span>
+                <button type="button" className="secondary-button stopwatch__stop" onClick={handleCancelPrep}>
+                    <X size={ACTION_ICON_SIZE} aria-hidden="true" />
+                    Cancelar
+                </button>
+            </div>
+        )
+    }
+
     return (
         <div className={`stopwatch stopwatch--${phase}`} role="timer" aria-label="Cronômetro da série">
-            <span className="stopwatch__clock">{formatClock(elapsed)}</span>
+            <span className="stopwatch__clock">{formatClock(clock.remainingSeconds)}</span>
             <span className="stopwatch__target">meta {targetText}</span>
             <span className="stopwatch__message" aria-live="polite">
                 {PHASE_MESSAGE[phase]}
             </span>
-            <button type="button" className="secondary-button stopwatch__stop" onClick={handleStop}>
+            <button
+                type="button"
+                className="secondary-button stopwatch__stop"
+                onClick={() => finish(clock.elapsedSeconds)}
+            >
                 <Square size={ACTION_ICON_SIZE} aria-hidden="true" />
                 Parar
             </button>

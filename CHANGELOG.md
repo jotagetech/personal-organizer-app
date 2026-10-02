@@ -132,6 +132,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- Série de tempo (prancha, isometria): Iniciar abre um preparo de 5 s com
+  contagem e bipe a cada segundo, e então o cronômetro conta para baixo a
+  partir da meta máxima, avisa ao passar do mínimo e termina sozinho no zero,
+  preenchendo o tempo feito. Parar antes do zero grava o que foi feito até ali.
 - Iniciar um ciclo numa data que já tem ciclo reaproveita o existente em
   vez de criar outro no mesmo dia (migração `20260930010000`).
 - A grade de Resultados segue o ciclo da data selecionada, com número do
@@ -159,6 +163,8 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Corrigido
 
+- Relógio do treino pausado oscilava 1 s para cima e para baixo: o tempo
+  total e o da pausa eram arredondados cada um por si.
 - Gráficos dos exercícios ocupam a largura da tela em vez de ficarem com
   largura fixa centralizada, e só rolam na horizontal quando as sessões não
   cabem. Os rótulos de recorde e último valor não se sobrepõem mais quando

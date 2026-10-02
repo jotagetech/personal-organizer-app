@@ -42,6 +42,35 @@ export function stopwatchPhase(elapsed: number, minSeconds: number, maxSeconds: 
     return 'antes_do_minimo'
 }
 
+// Série de tempo (prancha, isometria): o toque em Iniciar abre um preparo
+// curto, para dar tempo de largar o celular e se posicionar, e só então a
+// contagem regressiva da meta começa. O início guardado é o do toque, então o
+// preparo também sobrevive a fechar e reabrir o app.
+export const SET_PREP_SECONDS = 5
+
+export type TimedSetStage = 'preparando' | 'contando' | 'terminado'
+
+export type TimedSetClock = {
+    stage: TimedSetStage
+    prepRemainingSeconds: number
+    elapsedSeconds: number
+    remainingSeconds: number
+}
+
+export function timedSetClock(tappedAtMs: number, nowMs: number, targetSeconds: number): TimedSetClock {
+    const countStartMs = tappedAtMs + SET_PREP_SECONDS * 1000
+    const targetMs = targetSeconds * 1000
+    const prepRemainingSeconds = Math.max(0, Math.ceil((countStartMs - nowMs) / 1000))
+    const elapsedMs = Math.max(0, nowMs - countStartMs)
+    const remainingSeconds = Math.max(0, Math.ceil((targetMs - elapsedMs) / 1000))
+    const isPreparing = prepRemainingSeconds > 0
+    const isFinished = !isPreparing && elapsedMs >= targetMs
+    const stage: TimedSetStage = isPreparing ? 'preparando' : isFinished ? 'terminado' : 'contando'
+    const clock = { stage, prepRemainingSeconds, elapsedSeconds: Math.floor(elapsedMs / 1000), remainingSeconds }
+
+    return clock
+}
+
 export function restTotalSeconds(timer: RestTimer): number {
     return timer.maxSeconds + timer.extraSeconds
 }

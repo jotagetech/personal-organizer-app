@@ -2776,6 +2776,22 @@ h1, h2, h3, h4 {
     color: var(--color-pending-strong-text);
 }
 
+/* Preparo antes da série de tempo: número grande sozinho, para ler de longe
+   com o celular já apoiado no chão. */
+.stopwatch--preparando {
+    border-color: var(--color-pending);
+    background: var(--color-pending-soft);
+}
+
+.stopwatch--preparando .stopwatch__clock {
+    font-size: 104px;
+    color: var(--color-pending-strong-text);
+}
+
+.stopwatch--preparando .stopwatch__message {
+    color: var(--color-pending-strong-text);
+}
+
 /* Relógio do treino inteiro, no topo: o botão de início ocupa a largura
    toda (alvo de toque grande) e, depois dele, uma faixa discreta com o tempo
    decorrido, que não compete com o card da série. */
