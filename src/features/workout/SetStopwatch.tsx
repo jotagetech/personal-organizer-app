@@ -23,10 +23,15 @@ type SetStopwatchProps = {
     onStop: (seconds: number) => void
 }
 
-const PHASE_MESSAGE: Record<StopwatchPhase, string> = {
-    antes_do_minimo: 'Segure até o mínimo',
-    na_faixa: 'Na faixa da meta, pode parar',
-    passou_do_maximo: 'Meta atingida',
+function phaseMessage(phase: StopwatchPhase, targetMin: number): string {
+    const messages: Record<StopwatchPhase, string> = {
+        antes_do_minimo: `Segure até o mínimo de ${targetMin} s`,
+        na_faixa: `Mínimo de ${targetMin} s batido! Siga até zerar ou pare`,
+        passou_do_maximo: 'Meta atingida',
+    }
+    const message = messages[phase]
+
+    return message
 }
 
 // Cronômetro da série de tempo: depois de Iniciar, um preparo de alguns
@@ -133,7 +138,7 @@ export function SetStopwatch({ sessionDate, setKey, targetMin, targetMax, target
             <span className="stopwatch__clock">{formatClock(clock.remainingSeconds)}</span>
             <span className="stopwatch__target">meta {targetText}</span>
             <span className="stopwatch__message" aria-live="polite">
-                {PHASE_MESSAGE[phase]}
+                {phaseMessage(phase, targetMin)}
             </span>
             <button
                 type="button"
