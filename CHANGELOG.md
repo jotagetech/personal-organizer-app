@@ -7,6 +7,12 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Gerenciar itens da rotina: cada hábito ganha categoria, importante e a
+  opção de repetir a cada N dias a partir de uma data, além dos dias da semana;
+  a lista mostra a categoria, a estrela e a agenda ("Seg, Qua, Sex" ou "A cada
+  3 dias"). Mudar a agenda vale de hoje em diante, sem mexer nos dias que já
+  passaram. Tarefas avulsas ganham "Editar" (nome, data, categoria e
+  importante).
 - Perfil no Menu: nome e "como quer ser chamado" (migração
   `20261003010000`). A Rotina cumprimenta com Bom dia, Boa tarde ou Boa noite
   conforme a hora do aparelho, seguido do apelido (ou do primeiro nome, ou do

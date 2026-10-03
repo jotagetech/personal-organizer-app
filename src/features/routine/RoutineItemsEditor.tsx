@@ -1,26 +1,50 @@
-import { Archive, ArrowLeft, Pencil, Plus } from 'lucide-react'
+import { Archive, ArrowLeft, CalendarDays, Pencil, Plus, Star } from 'lucide-react'
 import { useState } from 'react'
 
 import { archiveRoutineItem, createRoutineItem, updateRoutineItem } from '@/features/routine/api'
+import { findCategory } from '@/features/routine/categories'
+import { CategoryDot } from '@/features/routine/CategoryDot'
+import { CategoryPicker } from '@/features/routine/CategoryPicker'
+import { MAX_INTERVAL_DAYS, MIN_INTERVAL_DAYS } from '@/features/routine/newTaskInput'
 import { routineItemInputSchema, type RoutineItemInput } from '@/features/routine/routineSchema'
+import { formatRoutineSchedule } from '@/features/routine/routineSchedule'
+import { shortDateLabel } from '@/features/routine/shortDateLabel'
 import { ROUTINE_LINK_KIND_LABELS, ROUTINE_LINK_KINDS } from '@/features/routine/types'
-import type { RoutineItemRow, RoutineLinkKind } from '@/features/routine/types'
-import { todayInTimezone } from '@/lib/dateUtils'
+import type { RoutineCategoryRow, RoutineItemRow, RoutineLinkKind } from '@/features/routine/types'
+import { MonthCalendar } from '@/features/shared/MonthCalendar'
+import { isValidIsoDate, todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 import { WEEKDAY_LABELS } from '@/lib/weekdayLabels'
 import { WEEKDAYS, type Weekday } from '@/lib/workoutPlanSchema'
 
 const NO_LINK_OPTION_VALUE = 'nenhum'
 const BUTTON_ICON_SIZE = 18
 const ROW_ACTION_ICON_SIZE = 20
+const META_ICON_SIZE = 12
+
+type RepeatKind = RoutineItemInput['repeatKind']
+
+const REPEAT_OPTIONS: { value: RepeatKind; label: string }[] = [
+    { value: 'weekdays', label: 'Dias da semana' },
+    { value: 'interval', label: 'A cada N dias' },
+]
 
 type RoutineItemsEditorProps = {
     items: RoutineItemRow[]
+    categories: RoutineCategoryRow[]
     initialEditingItemId?: string | null
+    onOpenCategories: () => void
     onClose: () => void
     onChanged: () => Promise<void>
 }
 
-export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onChanged }: RoutineItemsEditorProps) {
+export function RoutineItemsEditor({
+    items,
+    categories,
+    initialEditingItemId,
+    onOpenCategories,
+    onClose,
+    onChanged,
+}: RoutineItemsEditorProps) {
     const [editingItemId, setEditingItemId] = useState<string | null>(initialEditingItemId ?? null)
     const [isCreating, setIsCreating] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -66,11 +90,9 @@ export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onCha
                         editingItemId === item.id ? (
                             <div key={item.id} className="routine-item-list__row routine-item-list__row--editing">
                                 <RoutineItemForm
-                                    initialValues={{
-                                        title: item.title,
-                                        weekdays: (item.weekdays ?? []) as Weekday[],
-                                        linkKind: (item.link_kind as RoutineLinkKind | null) ?? undefined,
-                                    }}
+                                    initialValues={initialValuesOf(item)}
+                                    categories={categories}
+                                    onOpenCategories={onOpenCategories}
                                     submitLabel="Salvar"
                                     onSubmit={(input) => handleUpdate(item.id, input)}
                                     onCancel={() => setEditingItemId(null)}
@@ -81,11 +103,12 @@ export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onCha
                                 <div className="routine-item-list__text">
                                     <strong className="routine-item-list__title">{item.title}</strong>
                                     <p className="routine-item-list__meta">
-                                        {formatSchedule(item)}
+                                        {formatRoutineSchedule(item)}
                                         {item.link_kind
                                             ? ` · ${ROUTINE_LINK_KIND_LABELS[item.link_kind as RoutineLinkKind]}`
                                             : ''}
                                     </p>
+                                    <RoutineItemFlags item={item} category={findCategory(categories, item.category_id)} />
                                 </div>
                                 <div className="routine-item-list__actions">
                                     <button
@@ -114,6 +137,8 @@ export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onCha
                 <div className="card">
                     <h3 className="section-title routine-item-form__heading">Novo item</h3>
                     <RoutineItemForm
+                        categories={categories}
+                        onOpenCategories={onOpenCategories}
                         submitLabel="Criar"
                         onSubmit={handleCreate}
                         onCancel={() => setIsCreating(false)}
@@ -129,48 +154,138 @@ export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onCha
     )
 }
 
-function formatSchedule(item: RoutineItemRow): string {
-    if (item.repeat_kind === 'interval') {
-        return `A cada ${item.interval_days} dias`
+function initialValuesOf(item: RoutineItemRow): RoutineItemInput {
+    const common = {
+        title: item.title,
+        linkKind: (item.link_kind as RoutineLinkKind | null) ?? undefined,
+        categoryId: item.category_id,
+        isImportant: item.is_important,
+    }
+    if (item.repeat_kind === 'interval' && item.interval_days !== null && item.interval_anchor !== null) {
+        return { ...common, repeatKind: 'interval', intervalDays: item.interval_days, intervalAnchor: item.interval_anchor }
     }
 
-    return formatWeekdays((item.weekdays ?? []) as Weekday[])
+    return { ...common, repeatKind: 'weekdays', weekdays: (item.weekdays ?? []) as Weekday[] }
 }
 
-function formatWeekdays(weekdays: Weekday[]): string {
-    const orderedLabels = WEEKDAYS.filter((weekday) => weekdays.includes(weekday)).map(
-        (weekday) => WEEKDAY_LABELS[weekday],
+type RoutineItemFlagsProps = {
+    item: RoutineItemRow
+    category: RoutineCategoryRow | null
+}
+
+function RoutineItemFlags({ item, category }: RoutineItemFlagsProps) {
+    if (!category && !item.is_important) {
+        return null
+    }
+
+    return (
+        <p className="routine-item-list__flags">
+            {category && (
+                <span className="routine-item-list__flag">
+                    <CategoryDot color={category.color} />
+                    {category.name}
+                </span>
+            )}
+            {item.is_important && (
+                <span className="routine-item-list__flag">
+                    <Star size={META_ICON_SIZE} className="routine-item-list__star" aria-hidden="true" />
+                    Importante
+                </span>
+            )}
+        </p>
     )
-    return orderedLabels.join(', ')
 }
 
 type RoutineItemFormProps = {
     initialValues?: RoutineItemInput
+    categories: RoutineCategoryRow[]
+    onOpenCategories: () => void
     submitLabel: string
     onSubmit: (input: RoutineItemInput) => Promise<void>
     onCancel: () => void
 }
 
-function RoutineItemForm({ initialValues, submitLabel, onSubmit, onCancel }: RoutineItemFormProps) {
-    const [title, setTitle] = useState(initialValues?.title ?? '')
-    const [weekdays, setWeekdays] = useState<Weekday[]>(initialValues?.weekdays ?? [])
-    const [linkKindOption, setLinkKindOption] = useState<string>(initialValues?.linkKind ?? NO_LINK_OPTION_VALUE)
+type FormDraft = {
+    title: string
+    repeatKind: RepeatKind
+    weekdays: Weekday[]
+    intervalText: string
+    intervalAnchor: IsoDate
+    linkKindOption: string
+    categoryId: string | null
+    isImportant: boolean
+}
+
+function draftOf(initialValues: RoutineItemInput | undefined): FormDraft {
+    const draft: FormDraft = {
+        title: initialValues?.title ?? '',
+        repeatKind: initialValues?.repeatKind ?? 'weekdays',
+        weekdays: initialValues?.repeatKind === 'weekdays' ? initialValues.weekdays : [],
+        intervalText: initialValues?.repeatKind === 'interval' ? String(initialValues.intervalDays) : '',
+        intervalAnchor: initialValues?.repeatKind === 'interval' ? initialValues.intervalAnchor : todayInTimezone(),
+        linkKindOption: initialValues?.linkKind ?? NO_LINK_OPTION_VALUE,
+        categoryId: initialValues?.categoryId ?? null,
+        isImportant: initialValues?.isImportant ?? false,
+    }
+    return draft
+}
+
+// O tipo de repetição escolhido decide quais campos de agenda seguem: os do
+// outro tipo ficam de fora, e o schema recusa o que estiver incompleto.
+function buildCandidate(draft: FormDraft): unknown {
+    const linkKind = draft.linkKindOption === NO_LINK_OPTION_VALUE ? undefined : draft.linkKindOption
+    const common = {
+        title: draft.title.trim(),
+        linkKind,
+        categoryId: draft.categoryId,
+        isImportant: draft.isImportant,
+    }
+    if (draft.repeatKind === 'interval') {
+        return {
+            ...common,
+            repeatKind: 'interval',
+            intervalDays: Number(draft.intervalText.trim()),
+            intervalAnchor: draft.intervalAnchor,
+        }
+    }
+
+    return { ...common, repeatKind: 'weekdays', weekdays: draft.weekdays }
+}
+
+function RoutineItemForm({
+    initialValues,
+    categories,
+    onOpenCategories,
+    submitLabel,
+    onSubmit,
+    onCancel,
+}: RoutineItemFormProps) {
+    const [draft, setDraft] = useState<FormDraft>(() => draftOf(initialValues))
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const today = todayInTimezone()
+
+    function updateDraft(changes: Partial<FormDraft>) {
+        setDraft((previousDraft) => ({ ...previousDraft, ...changes }))
+    }
 
     function toggleWeekday(weekday: Weekday) {
-        setWeekdays((previousWeekdays) =>
-            previousWeekdays.includes(weekday)
-                ? previousWeekdays.filter((selectedWeekday) => selectedWeekday !== weekday)
-                : [...previousWeekdays, weekday],
-        )
+        const nextWeekdays = draft.weekdays.includes(weekday)
+            ? draft.weekdays.filter((selectedWeekday) => selectedWeekday !== weekday)
+            : [...draft.weekdays, weekday]
+        updateDraft({ weekdays: nextWeekdays })
+    }
+
+    function chooseAnchor(anchor: IsoDate) {
+        updateDraft({ intervalAnchor: anchor })
+        setIsCalendarOpen(false)
     }
 
     async function handleSubmit(event: React.FormEvent) {
         event.preventDefault()
 
-        const linkKind = linkKindOption === NO_LINK_OPTION_VALUE ? undefined : (linkKindOption as RoutineLinkKind)
-        const parseResult = routineItemInputSchema.safeParse({ title: title.trim(), weekdays, linkKind })
+        const parseResult = routineItemInputSchema.safeParse(buildCandidate(draft))
         if (!parseResult.success) {
             setErrorMessage(parseResult.error.issues[0]?.message ?? 'Dados inválidos')
             return
@@ -196,33 +311,88 @@ function RoutineItemForm({ initialValues, submitLabel, onSubmit, onCancel }: Rou
                 <input
                     id="routine-item-title"
                     type="text"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
+                    value={draft.title}
+                    onChange={(event) => updateDraft({ title: event.target.value })}
                     placeholder="ex: Tomar creatina"
                 />
             </div>
-            <div className="field">
-                <label>Dias da semana</label>
-                <div className="weekday-chip-row">
-                    {WEEKDAYS.map((weekday) => (
+            <div className="routine-item-form__group">
+                <span className="routine-item-form__label">Repetir</span>
+                <div className="choice-chip-row">
+                    {REPEAT_OPTIONS.map((option) => (
                         <button
-                            key={weekday}
+                            key={option.value}
                             type="button"
-                            className={weekdayChipClassName(weekdays.includes(weekday))}
-                            aria-pressed={weekdays.includes(weekday)}
-                            onClick={() => toggleWeekday(weekday)}
+                            className={choiceChipClassName(draft.repeatKind === option.value)}
+                            aria-pressed={draft.repeatKind === option.value}
+                            onClick={() => updateDraft({ repeatKind: option.value })}
                         >
-                            {WEEKDAY_LABELS[weekday]}
+                            {option.label}
                         </button>
                     ))}
                 </div>
+                {draft.repeatKind === 'weekdays' && (
+                    <div className="weekday-chip-row">
+                        {WEEKDAYS.map((weekday) => (
+                            <button
+                                key={weekday}
+                                type="button"
+                                className={weekdayChipClassName(draft.weekdays.includes(weekday))}
+                                aria-pressed={draft.weekdays.includes(weekday)}
+                                onClick={() => toggleWeekday(weekday)}
+                            >
+                                {WEEKDAY_LABELS[weekday]}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                {draft.repeatKind === 'interval' && (
+                    <>
+                        <div className="routine-item-form__interval">
+                            <span>A cada</span>
+                            <input
+                                type="number"
+                                inputMode="numeric"
+                                min={MIN_INTERVAL_DAYS}
+                                max={MAX_INTERVAL_DAYS}
+                                value={draft.intervalText}
+                                aria-label="Intervalo em dias"
+                                onChange={(event) => updateDraft({ intervalText: event.target.value })}
+                            />
+                            <span>dias, a partir de</span>
+                            <button
+                                type="button"
+                                className={choiceChipClassName(isCalendarOpen)}
+                                aria-expanded={isCalendarOpen}
+                                onClick={() => setIsCalendarOpen((previous) => !previous)}
+                            >
+                                <CalendarDays size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                                {isValidIsoDate(draft.intervalAnchor)
+                                    ? shortDateLabel(draft.intervalAnchor)
+                                    : 'Escolher data'}
+                            </button>
+                        </div>
+                        {isCalendarOpen && (
+                            <MonthCalendar value={draft.intervalAnchor} onChange={chooseAnchor} today={today} />
+                        )}
+                    </>
+                )}
+            </div>
+            <div className="routine-item-form__group">
+                <span className="routine-item-form__label">Categoria</span>
+                <CategoryPicker
+                    categories={categories}
+                    value={draft.categoryId}
+                    onChange={(categoryId) => updateDraft({ categoryId })}
+                    onCreateCategory={onOpenCategories}
+                />
             </div>
             <div className="field">
                 <label htmlFor="routine-item-link">Vínculo com outra aba</label>
                 <select
                     id="routine-item-link"
-                    value={linkKindOption}
-                    onChange={(event) => setLinkKindOption(event.target.value)}
+                    value={draft.linkKindOption}
+                    onChange={(event) => updateDraft({ linkKindOption: event.target.value })}
                 >
                     <option value={NO_LINK_OPTION_VALUE}>Nenhum</option>
                     {ROUTINE_LINK_KINDS.map((linkKind) => (
@@ -231,6 +401,17 @@ function RoutineItemForm({ initialValues, submitLabel, onSubmit, onCancel }: Rou
                         </option>
                     ))}
                 </select>
+            </div>
+            <div className="routine-item-form__group">
+                <button
+                    type="button"
+                    className={importantButtonClassName(draft.isImportant)}
+                    aria-pressed={draft.isImportant}
+                    onClick={() => updateDraft({ isImportant: !draft.isImportant })}
+                >
+                    <Star size={BUTTON_ICON_SIZE} aria-hidden="true" />
+                    Importante
+                </button>
             </div>
             <div className="inline-actions routine-item-form__actions">
                 <button type="submit" className="primary-button" disabled={isSubmitting}>
@@ -242,6 +423,14 @@ function RoutineItemForm({ initialValues, submitLabel, onSubmit, onCancel }: Rou
             </div>
         </form>
     )
+}
+
+function choiceChipClassName(isSelected: boolean): string {
+    return isSelected ? 'choice-chip choice-chip--selected' : 'choice-chip'
+}
+
+function importantButtonClassName(isImportant: boolean): string {
+    return isImportant ? 'routine-item-form__star routine-item-form__star--on' : 'routine-item-form__star'
 }
 
 function weekdayChipClassName(isSelected: boolean): string {

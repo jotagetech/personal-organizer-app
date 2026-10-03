@@ -200,31 +200,50 @@ export async function loadRoutineDataForDate(date: IsoDate): Promise<RoutineData
     return routineData
 }
 
-// O formulário atual só conhece dias da semana; as colunas de intervalo vão
-// nulas explicitamente para a linha nunca misturar os dois tipos de agenda.
-function weekdaysScheduleColumns(input: RoutineItemInput) {
-    const scheduleColumns = {
+// As colunas dos dois tipos de agenda vão sempre juntas, com as do tipo
+// que não vale nulas, para a linha nunca misturar os dois.
+function scheduleColumns(input: RoutineItemInput) {
+    if (input.repeatKind === 'interval') {
+        return {
+            repeat_kind: 'interval' as const,
+            weekdays: null,
+            interval_days: input.intervalDays,
+            interval_anchor: input.intervalAnchor,
+        }
+    }
+
+    return {
         repeat_kind: 'weekdays' as const,
         weekdays: input.weekdays,
         interval_days: null,
         interval_anchor: null,
     }
-    return scheduleColumns
+}
+
+function itemDetailColumns(input: RoutineItemInput) {
+    const detailColumns = {
+        title: input.title,
+        link_kind: input.linkKind ?? null,
+        category_id: input.categoryId,
+        is_important: input.isImportant,
+    }
+    return detailColumns
 }
 
 // active_from sai do dia da conta no cliente: o banco roda em UTC e não tem
-// como saber, sem consulta, qual é "hoje" para quem está usando.
+// como saber, sem consulta, qual é "hoje" para quem está usando. Item por
+// intervalo começa no dia de início escolhido.
 export async function createRoutineItem(input: RoutineItemInput, sortOrder: number): Promise<RoutineItemRow> {
     const currentUserId = await requireCurrentUserId()
+    const activeFrom = input.repeatKind === 'interval' ? input.intervalAnchor : todayInTimezone()
 
     const { data, error } = await supabase
         .from('routine_items')
         .insert({
             user_id: currentUserId,
-            title: input.title,
-            link_kind: input.linkKind ?? null,
-            ...weekdaysScheduleColumns(input),
-            active_from: todayInTimezone(),
+            ...itemDetailColumns(input),
+            ...scheduleColumns(input),
+            active_from: activeFrom,
             sort_order: sortOrder,
         })
         .select('*')
@@ -237,13 +256,13 @@ export async function createRoutineItem(input: RoutineItemInput, sortOrder: numb
     return data
 }
 
+// A versão da agenda é gravada pelo banco quando dias ou intervalo mudam.
 export async function updateRoutineItem(itemId: string, input: RoutineItemInput): Promise<RoutineItemRow> {
     const { data, error } = await supabase
         .from('routine_items')
         .update({
-            title: input.title,
-            link_kind: input.linkKind ?? null,
-            ...weekdaysScheduleColumns(input),
+            ...itemDetailColumns(input),
+            ...scheduleColumns(input),
         })
         .eq('id', itemId)
         .select('*')
@@ -303,6 +322,34 @@ export async function deleteRoutineDayEntry(dayEntryId: string): Promise<void> {
     if (error) {
         throw new Error(error.message)
     }
+}
+
+export type RoutineTaskEdit = {
+    title: string
+    scheduledOn: IsoDate | null
+    isImportant: boolean
+    categoryId: string | null
+}
+
+// A posição na lista (sort_order) não muda: editar não reordena.
+export async function updateRoutineTask(taskId: string, edit: RoutineTaskEdit): Promise<RoutineTaskRow> {
+    const { data, error } = await supabase
+        .from('routine_tasks')
+        .update({
+            title: edit.title,
+            scheduled_on: edit.scheduledOn,
+            is_important: edit.isImportant,
+            category_id: edit.categoryId,
+        })
+        .eq('id', taskId)
+        .select('*')
+        .single()
+
+    if (error || !data) {
+        throw new Error(error?.message ?? 'Falha ao atualizar tarefa')
+    }
+
+    return data
 }
 
 // Cria a tarefa avulsa ou o item que repete descrito pela folha de nova

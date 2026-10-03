@@ -43,6 +43,10 @@ export type NewTaskInsert =
           categoryId: string | null
       }
 
+// Na criação a folha também cria item que repete; na edição só a tarefa
+// avulsa muda, então a repetição do rascunho é ignorada.
+export type NewTaskMode = 'create' | 'edit'
+
 export type NewTaskErrors = {
     title?: string
     date?: string
@@ -57,7 +61,8 @@ const INTEGER_PATTERN = /^\d+$/
 // Lógica pura: valida o estado da folha e devolve o insert de tarefa avulsa
 // ou de item que repete. Repetir precisa de um dia de início, então a
 // ausência de data só vale para tarefa que não repete.
-export function validateNewTask(draft: NewTaskDraft): NewTaskValidation {
+export function validateNewTask(rawDraft: NewTaskDraft, mode: NewTaskMode = 'create'): NewTaskValidation {
+    const draft: NewTaskDraft = mode === 'edit' ? { ...rawDraft, repeat: 'none' } : rawDraft
     const title = draft.title.trim()
     const errors: NewTaskErrors = {}
 

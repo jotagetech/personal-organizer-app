@@ -1,28 +1,32 @@
 import { CalendarDays, Star } from 'lucide-react'
 import { useId, useState } from 'react'
 
-import { createNewRoutineEntry } from '@/features/routine/api'
+import { createNewRoutineEntry, updateRoutineTask } from '@/features/routine/api'
 import {
     MAX_INTERVAL_DAYS,
     MIN_INTERVAL_DAYS,
     validateNewTask,
     type NewTaskErrors,
+    type NewTaskInsert,
     type NewTaskRepeat,
 } from '@/features/routine/newTaskInput'
 import { CategoryPicker } from '@/features/routine/CategoryPicker'
-import type { RoutineCategoryRow } from '@/features/routine/types'
+import { shortDateLabel } from '@/features/routine/shortDateLabel'
+import type { RoutineCategoryRow, RoutineTaskRow } from '@/features/routine/types'
 import { BottomSheet } from '@/features/shared/BottomSheet'
 import { MonthCalendar } from '@/features/shared/MonthCalendar'
 import { shiftIsoDate, todayInTimezone, weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
-import { WEEKDAY_LABELS } from '@/lib/weekdayLabels'
 import type { Weekday } from '@/lib/workoutPlanSchema'
 
+// Com task preenchida a folha edita essa tarefa avulsa: sem a parte de
+// repetir e salvando por update em vez de criar.
 interface NewTaskSheetProps {
     initialDate: IsoDate
+    task?: RoutineTaskRow
     categories: RoutineCategoryRow[]
     onOpenCategories: () => void
     onClose: () => void
-    onCreated: () => Promise<void>
+    onSaved: () => Promise<void>
 }
 
 const ICON_SIZE = 18
@@ -45,13 +49,6 @@ const WEEKDAY_PICKER: { weekday: Weekday; initial: string; name: string }[] = [
     { weekday: 'sabado', initial: 'S', name: 'Sábado' },
 ]
 
-function shortDateLabel(isoDate: IsoDate): string {
-    const [, month, day] = isoDate.split('-').map(Number)
-    const weekdayLabel = WEEKDAY_LABELS[weekdayOfIsoDate(isoDate)].toLowerCase()
-
-    return `${weekdayLabel} ${day}/${month}`
-}
-
 function chipClassName(isSelected: boolean): string {
     return isSelected ? 'choice-chip choice-chip--selected' : 'choice-chip'
 }
@@ -60,19 +57,27 @@ function weekdayButtonClassName(isSelected: boolean): string {
     return isSelected ? 'weekday-chip weekday-chip--selected' : 'weekday-chip'
 }
 
-export function NewTaskSheet({ initialDate, categories, onOpenCategories, onClose, onCreated }: NewTaskSheetProps) {
+export function NewTaskSheet({
+    initialDate,
+    task,
+    categories,
+    onOpenCategories,
+    onClose,
+    onSaved,
+}: NewTaskSheetProps) {
+    const isEditing = task !== undefined
     const today = todayInTimezone()
     const tomorrow = shiftIsoDate(today, 1)
     const fieldId = useId()
-    const [title, setTitle] = useState('')
-    const [date, setDate] = useState<IsoDate | null>(initialDate)
+    const [title, setTitle] = useState(task?.title ?? '')
+    const [date, setDate] = useState<IsoDate | null>(task ? task.scheduled_on : initialDate)
     const [isCalendarOpen, setIsCalendarOpen] = useState(false)
     const [repeat, setRepeat] = useState<NewTaskRepeat>('none')
     const [weekdays, setWeekdays] = useState<Weekday[]>([])
     const [hasPickedWeekdays, setHasPickedWeekdays] = useState(false)
     const [intervalText, setIntervalText] = useState('')
-    const [isImportant, setIsImportant] = useState(false)
-    const [categoryId, setCategoryId] = useState<string | null>(null)
+    const [isImportant, setIsImportant] = useState(task?.is_important ?? false)
+    const [categoryId, setCategoryId] = useState<string | null>(task?.category_id ?? null)
     const [errors, setErrors] = useState<NewTaskErrors>({})
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -116,7 +121,10 @@ export function NewTaskSheet({ initialDate, categories, onOpenCategories, onClos
 
     async function handleSubmit(event: React.FormEvent) {
         event.preventDefault()
-        const validation = validateNewTask({ title, date, repeat, weekdays, intervalText, isImportant, categoryId })
+        const validation = validateNewTask(
+            { title, date, repeat, weekdays, intervalText, isImportant, categoryId },
+            isEditing ? 'edit' : 'create',
+        )
         if (!validation.ok) {
             setErrors(validation.errors)
             return
@@ -126,7 +134,7 @@ export function NewTaskSheet({ initialDate, categories, onOpenCategories, onClos
         setSubmitError(null)
         setIsSubmitting(true)
         try {
-            await createNewRoutineEntry(validation.value)
+            await saveEntry(validation.value)
         } catch {
             setSubmitError(SAVE_FAILED_MESSAGE)
             setIsSubmitting(false)
@@ -134,14 +142,22 @@ export function NewTaskSheet({ initialDate, categories, onOpenCategories, onClos
         }
         setIsSubmitting(false)
         onClose()
-        await onCreated()
+        await onSaved()
+    }
+
+    async function saveEntry(insert: NewTaskInsert) {
+        if (task && insert.kind === 'task') {
+            await updateRoutineTask(task.id, insert)
+            return
+        }
+        await createNewRoutineEntry(insert)
     }
 
     return (
-        <BottomSheet title="Nova tarefa" onClose={onClose}>
+        <BottomSheet title={isEditing ? 'Editar tarefa' : 'Nova tarefa'} onClose={onClose}>
             <form className="new-task-form" onSubmit={handleSubmit} noValidate>
                 <div className="field">
-                    <label htmlFor={`${fieldId}-title`}>Nova tarefa</label>
+                    <label htmlFor={`${fieldId}-title`}>{isEditing ? 'Tarefa' : 'Nova tarefa'}</label>
                     <input
                         id={`${fieldId}-title`}
                         type="text"
@@ -154,7 +170,7 @@ export function NewTaskSheet({ initialDate, categories, onOpenCategories, onClos
                         }}
                     />
                     {errors.title && <p className="new-task-form__error">{errors.title}</p>}
-                    <p className="new-task-form__hint">Só o nome já basta. O resto é opcional.</p>
+                    {!isEditing && <p className="new-task-form__hint">Só o nome já basta. O resto é opcional.</p>}
                 </div>
 
                 <div className="new-task-form__group">
@@ -199,60 +215,62 @@ export function NewTaskSheet({ initialDate, categories, onOpenCategories, onClos
                     {errors.date && <p className="new-task-form__error">{errors.date}</p>}
                 </div>
 
-                <div className="new-task-form__group">
-                    <span className="new-task-form__label">Repetir</span>
-                    <div className="choice-chip-row">
-                        {REPEAT_OPTIONS.map((option) => (
-                            <button
-                                key={option.value}
-                                type="button"
-                                className={chipClassName(repeat === option.value)}
-                                aria-pressed={repeat === option.value}
-                                disabled={isUndated && option.value !== 'none'}
-                                onClick={() => chooseRepeat(option.value)}
-                            >
-                                {option.label}
-                            </button>
-                        ))}
-                    </div>
-                    {repeat === 'weekdays' && (
-                        <div className="weekday-chip-row">
-                            {WEEKDAY_PICKER.map((entry) => (
+                {!isEditing && (
+                    <div className="new-task-form__group">
+                        <span className="new-task-form__label">Repetir</span>
+                        <div className="choice-chip-row">
+                            {REPEAT_OPTIONS.map((option) => (
                                 <button
-                                    key={entry.weekday}
+                                    key={option.value}
                                     type="button"
-                                    className={weekdayButtonClassName(weekdays.includes(entry.weekday))}
-                                    aria-label={entry.name}
-                                    aria-pressed={weekdays.includes(entry.weekday)}
-                                    onClick={() => toggleWeekday(entry.weekday)}
+                                    className={chipClassName(repeat === option.value)}
+                                    aria-pressed={repeat === option.value}
+                                    disabled={isUndated && option.value !== 'none'}
+                                    onClick={() => chooseRepeat(option.value)}
                                 >
-                                    {entry.initial}
+                                    {option.label}
                                 </button>
                             ))}
                         </div>
-                    )}
-                    {errors.weekdays && <p className="new-task-form__error">{errors.weekdays}</p>}
-                    {repeat === 'interval' && date !== null && (
-                        <div className="new-task-form__interval">
-                            <span>A cada</span>
-                            <input
-                                type="number"
-                                inputMode="numeric"
-                                min={MIN_INTERVAL_DAYS}
-                                max={MAX_INTERVAL_DAYS}
-                                value={intervalText}
-                                aria-label="Intervalo em dias"
-                                aria-invalid={errors.interval !== undefined}
-                                onChange={(event) => {
-                                    setIntervalText(event.target.value)
-                                    setErrors((previous) => ({ ...previous, interval: undefined }))
-                                }}
-                            />
-                            <span>dias, a partir de {shortDateLabel(date)}</span>
-                        </div>
-                    )}
-                    {errors.interval && <p className="new-task-form__error">{errors.interval}</p>}
-                </div>
+                        {repeat === 'weekdays' && (
+                            <div className="weekday-chip-row">
+                                {WEEKDAY_PICKER.map((entry) => (
+                                    <button
+                                        key={entry.weekday}
+                                        type="button"
+                                        className={weekdayButtonClassName(weekdays.includes(entry.weekday))}
+                                        aria-label={entry.name}
+                                        aria-pressed={weekdays.includes(entry.weekday)}
+                                        onClick={() => toggleWeekday(entry.weekday)}
+                                    >
+                                        {entry.initial}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {errors.weekdays && <p className="new-task-form__error">{errors.weekdays}</p>}
+                        {repeat === 'interval' && date !== null && (
+                            <div className="new-task-form__interval">
+                                <span>A cada</span>
+                                <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={MIN_INTERVAL_DAYS}
+                                    max={MAX_INTERVAL_DAYS}
+                                    value={intervalText}
+                                    aria-label="Intervalo em dias"
+                                    aria-invalid={errors.interval !== undefined}
+                                    onChange={(event) => {
+                                        setIntervalText(event.target.value)
+                                        setErrors((previous) => ({ ...previous, interval: undefined }))
+                                    }}
+                                />
+                                <span>dias, a partir de {shortDateLabel(date)}</span>
+                            </div>
+                        )}
+                        {errors.interval && <p className="new-task-form__error">{errors.interval}</p>}
+                    </div>
+                )}
 
                 <div className="new-task-form__group">
                     <span className="new-task-form__label">Categoria</span>

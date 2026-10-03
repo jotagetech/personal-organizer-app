@@ -41,12 +41,12 @@ describe('deriveRoutineRowActions', () => {
         expect(actions).toEqual({ primary: 'confirm_done', canEdit: false, removal: null })
     })
 
-    it('tarefa pendente: pede confirmação e pode ser removida por inteiro', () => {
+    it('tarefa pendente: pede confirmação, pode ser editada e removida por inteiro', () => {
         const row = buildTaskRow({ state: 'pending' })
 
         const actions = deriveRoutineRowActions(row, new Set())
 
-        expect(actions).toEqual({ primary: 'confirm_done', canEdit: false, removal: 'delete_task' })
+        expect(actions).toEqual({ primary: 'confirm_done', canEdit: true, removal: 'delete_task' })
     })
 
     it('tarefa trazida de outro dia: também pode ser removida', () => {
@@ -86,12 +86,12 @@ describe('deriveRoutineRowActions', () => {
         expect(actions).toEqual({ primary: 'none', canEdit: true, removal: 'delete_day_entry' })
     })
 
-    it('tarefa concluída: não edita, remove desmarcando', () => {
+    it('tarefa concluída: edita e remove desmarcando', () => {
         const row = buildTaskRow({ state: 'done' })
 
         const actions = deriveRoutineRowActions(row, new Set())
 
-        expect(actions).toEqual({ primary: 'none', canEdit: false, removal: 'unmark_task' })
+        expect(actions).toEqual({ primary: 'none', canEdit: true, removal: 'unmark_task' })
     })
 
     it('item arquivado depois da data exibida: não pode ser editado', () => {

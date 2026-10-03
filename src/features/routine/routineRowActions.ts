@@ -10,10 +10,10 @@ export type RoutineRowActions = {
 }
 
 // Lógica pura: decide as ações disponíveis por linha, cruzando origem/estado
-// com a existência do item ainda ativo. "Editar" exige o item ativo porque a
-// tela de gerenciamento só lista itens não arquivados; um item arquivado
-// depois da data exibida ainda pode aparecer na linha, mas sem atalho de
-// edição.
+// com a existência do item ainda ativo. "Editar" de item exige o item ativo
+// porque a tela de gerenciamento só lista itens não arquivados; um item
+// arquivado depois da data exibida ainda pode aparecer na linha, mas sem
+// atalho de edição.
 export function deriveRoutineRowActions(row: RoutineRow, activeItemIds: Set<string>): RoutineRowActions {
     if (row.source === 'linked' && row.state === 'pending') {
         return { primary: 'linked_register', canEdit: false, removal: null }
@@ -33,15 +33,15 @@ export function deriveRoutineRowActions(row: RoutineRow, activeItemIds: Set<stri
     return { primary: 'none', canEdit: isItemActive, removal }
 }
 
-// Tarefa pendente pode ser descartada por inteiro; concluída, a remoção só
-// desfaz a conclusão.
+// Tarefa avulsa sempre pode ser editada. Pendente, ela pode ser descartada por
+// inteiro; concluída, a remoção só desfaz a conclusão.
 function deriveTaskRowActions(row: RoutineRow, isDone: boolean): RoutineRowActions {
     if (row.taskId === null) {
         return { primary: 'none', canEdit: false, removal: null }
     }
     if (isDone) {
-        return { primary: 'none', canEdit: false, removal: 'unmark_task' }
+        return { primary: 'none', canEdit: true, removal: 'unmark_task' }
     }
 
-    return { primary: 'confirm_done', canEdit: false, removal: 'delete_task' }
+    return { primary: 'confirm_done', canEdit: true, removal: 'delete_task' }
 }

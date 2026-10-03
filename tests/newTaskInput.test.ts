@@ -123,4 +123,42 @@ describe('validateNewTask', () => {
 
         expect(!validation.ok && Object.keys(validation.errors).sort()).toEqual(['title', 'weekdays'])
     })
+
+    describe('modo edição', () => {
+        it('devolve sempre uma tarefa avulsa, mesmo com repetição no rascunho', () => {
+            const validation = validateNewTask(
+                draft({ repeat: 'weekdays', weekdays: ['segunda'], isImportant: true, categoryId: 'cat-1' }),
+                'edit',
+            )
+
+            expect(validation).toEqual({
+                ok: true,
+                value: {
+                    kind: 'task',
+                    title: 'Pagar boleto',
+                    scheduledOn: '2026-10-08',
+                    isImportant: true,
+                    categoryId: 'cat-1',
+                },
+            })
+        })
+
+        it('permite deixar a tarefa sem data', () => {
+            const validation = validateNewTask(draft({ date: null, repeat: 'interval', intervalText: '' }), 'edit')
+
+            expect(validation).toEqual({
+                ok: true,
+                value: { kind: 'task', title: 'Pagar boleto', scheduledOn: null, isImportant: false, categoryId: null },
+            })
+        })
+
+        it('não cobra dias nem intervalo, mas recusa título vazio e data inexistente', () => {
+            const validation = validateNewTask(
+                draft({ title: ' ', date: '2026-02-30', repeat: 'interval', intervalText: 'abc' }),
+                'edit',
+            )
+
+            expect(!validation.ok && Object.keys(validation.errors).sort()).toEqual(['date', 'title'])
+        })
+    })
 })

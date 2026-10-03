@@ -42,7 +42,7 @@ import {
 } from '@/features/routine/resolveRoutine'
 import { deriveRoutineRowActions, type RoutineRowActions, type RoutineRowRemoval } from '@/features/routine/routineRowActions'
 import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
-import type { RoutineCategoryRow, RoutineData, RoutineRow, RoutineRowState } from '@/features/routine/types'
+import type { RoutineCategoryRow, RoutineData, RoutineRow, RoutineRowState, RoutineTaskRow } from '@/features/routine/types'
 import { fetchDaySignals, type DaySignals } from '@/features/shared/daySignals'
 
 const MENU_ICON_SIZE = 22
@@ -67,6 +67,7 @@ export function RoutineTab() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [editorTarget, setEditorTarget] = useState<{ initialEditingItemId: string | null } | null>(null)
     const [isNewTaskOpen, setIsNewTaskOpen] = useState(false)
+    const [editingTask, setEditingTask] = useState<RoutineTaskRow | null>(null)
     const [categories, setCategories] = useState<RoutineCategoryRow[]>([])
     const [isCategoriesOpen, setIsCategoriesOpen] = useState(false)
     const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>(ALL_CATEGORIES_FILTER)
@@ -196,7 +197,15 @@ export function RoutineTab() {
         })
     }
 
-    async function handleTaskCreated() {
+    function handleEdit(row: RoutineRow) {
+        if (row.taskId) {
+            setEditingTask(routineData.tasks.find((task) => task.id === row.taskId) ?? null)
+            return
+        }
+        setEditorTarget({ initialEditingItemId: row.routineItemId })
+    }
+
+    async function handleTaskSaved() {
         await reloadRoutine()
         refreshDayStatus()
     }
@@ -217,7 +226,7 @@ export function RoutineTab() {
                 onNavigate={() => row.linkKind && goToTab(ROUTINE_LINK_KIND_TARGET_TAB[row.linkKind])}
                 onMarkWithoutRegistering={() => row.routineItemId && void handleMarkDone(row.routineItemId)}
                 onConfirmDone={() => handleConfirmDone(row)}
-                onEdit={() => setEditorTarget({ initialEditingItemId: row.routineItemId })}
+                onEdit={() => handleEdit(row)}
                 onRemove={(removal) => handleRemove(row, removal)}
             />
         )
@@ -241,7 +250,12 @@ export function RoutineTab() {
         return (
             <RoutineItemsEditor
                 items={items}
+                categories={categories}
                 initialEditingItemId={editorTarget.initialEditingItemId}
+                onOpenCategories={() => {
+                    setEditorTarget(null)
+                    setIsCategoriesOpen(true)
+                }}
                 onClose={() => setEditorTarget(null)}
                 onChanged={reloadRoutine}
             />
@@ -363,16 +377,21 @@ export function RoutineTab() {
             >
                 <Plus size={FAB_ICON_SIZE} aria-hidden="true" />
             </button>
-            {isNewTaskOpen && (
+            {(isNewTaskOpen || editingTask) && (
                 <NewTaskSheet
                     initialDate={selectedDate}
+                    task={editingTask ?? undefined}
                     categories={categories}
                     onOpenCategories={() => {
                         setIsNewTaskOpen(false)
+                        setEditingTask(null)
                         setIsCategoriesOpen(true)
                     }}
-                    onClose={() => setIsNewTaskOpen(false)}
-                    onCreated={handleTaskCreated}
+                    onClose={() => {
+                        setIsNewTaskOpen(false)
+                        setEditingTask(null)
+                    }}
+                    onSaved={handleTaskSaved}
                 />
             )}
         </div>

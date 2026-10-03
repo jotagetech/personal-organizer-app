@@ -2394,6 +2394,92 @@ h1, h2, h3, h4 {
     margin-top: 4px;
 }
 
+.routine-item-form__group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.routine-item-form__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.routine-item-form__interval {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--color-text-secondary);
+}
+
+.routine-item-form__interval input {
+    width: 84px;
+    min-height: var(--touch-target);
+    padding: 10px 12px;
+    border: 1px solid var(--color-input-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-input-bg);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 16px;
+}
+
+.routine-item-form__interval input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.routine-item-form__star {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--touch-target);
+    padding: 0 14px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.routine-item-form__star--on {
+    border-color: var(--color-pending);
+    background: var(--color-pending-soft);
+    color: var(--color-pending-strong-text);
+}
+
+.routine-item-form__star--on svg {
+    fill: currentColor;
+}
+
+.routine-item-list__flags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    margin: 4px 0 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.routine-item-list__flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.routine-item-list__star {
+    fill: var(--color-pending);
+    color: var(--color-pending);
+}
+
 .workout-header__name {
     flex: 1;
     min-width: 0;
