@@ -128,6 +128,7 @@ function resolveItemRow(
         categoryId: item.category_id,
         isImportant: item.is_important,
         carriedFromDate: null,
+        movedToDate: null,
     }
 
     if (linkKind === null) {
@@ -156,8 +157,26 @@ export function resolveTaskRow(task: RoutineTaskRow): RoutineRow {
         categoryId: task.category_id,
         isImportant: task.is_important,
         carriedFromDate: task.carried_from_on,
+        movedToDate: null,
     }
     return taskRow
+}
+
+// A tarefa levada para outro dia deixa no dia de origem uma linha apagada, só
+// para leitura. carried_from_on guarda apenas a última origem, então uma
+// tarefa levada mais de uma vez só aparece assim no último dia de onde saiu.
+function resolveMovedTaskRow(task: RoutineTaskRow): RoutineRow {
+    const movedRow: RoutineRow = {
+        ...resolveTaskRow(task),
+        state: 'moved',
+        carriedFromDate: null,
+        movedToDate: task.scheduled_on,
+    }
+    return movedRow
+}
+
+function isTaskMovedAwayFrom(task: RoutineTaskRow, date: IsoDate): boolean {
+    return task.carried_from_on === date && task.scheduled_on !== null && task.scheduled_on > date
 }
 
 // Tarefas sem data não pertencem a dia nenhum: ficam fora da lista do dia e
@@ -173,11 +192,13 @@ export function isRoutineRowDone(state: RoutineRowState): boolean {
 }
 
 // Lógica pura: o "X de Y" do dia, contando como feito tanto o item vinculado
-// satisfeito pelo sinal quanto a marcação manual e a tarefa concluída.
+// satisfeito pelo sinal quanto a marcação manual e a tarefa concluída. A
+// tarefa levada para outro dia não é feita nem pendente aqui: fica de fora.
 export function countRoutineProgress(rows: RoutineRow[]): RoutineProgress {
+    const countedRows = rows.filter((row) => row.state !== 'moved')
     const progress: RoutineProgress = {
-        done: rows.filter((row) => isRoutineRowDone(row.state)).length,
-        total: rows.length,
+        done: countedRows.filter((row) => isRoutineRowDone(row.state)).length,
+        total: countedRows.length,
     }
     return progress
 }
@@ -212,7 +233,7 @@ export function shouldShowRoutineOnboarding(items: RoutineItemRow[], wasSkippedT
 // pra uma data, cruzando os itens que repetem (com a agenda que valia na
 // data) com as marcações do dia, as tarefas marcadas para ela e os sinais já
 // calculados pelas outras abas, sem consultar nada de novo. Itens vêm antes
-// das tarefas.
+// das tarefas, e as tarefas levadas para outro dia vêm por último.
 export function resolveRoutineForDate(date: IsoDate, data: RoutineData, signals: DaySignals): RoutineRow[] {
     const schedulesByItemId = groupSchedulesByItemId(data.schedules)
     const applicableItems = data.items
@@ -233,6 +254,10 @@ export function resolveRoutineForDate(date: IsoDate, data: RoutineData, signals:
         .filter((task) => task.scheduled_on === date)
         .sort(byOrderThenCreation)
         .map(resolveTaskRow)
+    const movedRows = data.tasks
+        .filter((task) => isTaskMovedAwayFrom(task, date))
+        .sort(byOrderThenCreation)
+        .map(resolveMovedTaskRow)
 
-    return [...itemRows, ...taskRows]
+    return [...itemRows, ...taskRows, ...movedRows]
 }

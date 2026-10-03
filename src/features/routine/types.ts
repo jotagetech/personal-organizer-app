@@ -54,14 +54,16 @@ export const ROUTINE_LINK_KIND_TARGET_TAB: Record<RoutineLinkKind, AppTab> = {
 }
 
 export type RoutineRowSource = 'linked' | 'manual' | 'task'
-export type RoutineRowState = 'done' | 'done_manual_override' | 'pending'
+export type RoutineRowState = 'done' | 'done_manual_override' | 'pending' | 'moved'
 
 // O que a tela de rotina mostra por linha: dado já resolvido o bastante para
 // decidir a ação de tocar (marcar, desmarcar ou ir registrar em outra aba) e
 // para saber se o item por trás dela é editável/arquivável na tela de
 // gerenciamento. Linhas de item têm routineItemId (e dayEntryId quando há
 // marcação manual na data); linhas de tarefa têm taskId. carriedFromDate só
-// é preenchido em tarefa trazida de outro dia.
+// é preenchido em tarefa trazida de outro dia. Uma linha 'moved' é a sombra,
+// no dia antigo, de uma tarefa que foi levada para movedToDate: só leitura e
+// fora de qualquer contagem.
 export type RoutineRow = {
     id: string
     title: string
@@ -74,4 +76,5 @@ export type RoutineRow = {
     categoryId: string | null
     isImportant: boolean
     carriedFromDate: IsoDate | null
+    movedToDate: IsoDate | null
 }

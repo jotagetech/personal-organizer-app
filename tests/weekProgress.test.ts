@@ -194,6 +194,21 @@ describe('buildWeekProgress', () => {
         expect(week[2]).toMatchObject({ status: 'counted', done: 1, total: 2 })
     })
 
+    it('não conta no dia antigo a tarefa levada para outro dia da semana', () => {
+        const data = buildData({
+            items: [],
+            tasks: [
+                buildTask({ id: 'moved', scheduled_on: '2026-09-30', carried_from_on: '2026-09-29' }),
+                buildTask({ id: 'stayed', scheduled_on: '2026-09-29' }),
+            ],
+        })
+
+        const week = buildWeekProgress(WEEK, data, new Map(), '2026-10-03')
+
+        expect(week[2]).toMatchObject({ status: 'counted', done: 0, total: 1 })
+        expect(week[3]).toMatchObject({ status: 'counted', done: 0, total: 1 })
+    })
+
     it('conta o item vinculado satisfeito pelo sinal do dia', () => {
         const data = buildData({ items: [buildItem({ link_kind: 'workout_finished' })] })
         const signalsByDate = new Map([['2026-09-28', buildSignals({ workout: 'finished' })]])

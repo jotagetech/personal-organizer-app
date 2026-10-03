@@ -9,7 +9,8 @@ import type {
     RoutineItemScheduleRow,
     RoutineTaskRow,
 } from '@/features/routine/types'
-import { todayInTimezone, type IsoDate } from '@/lib/dateUtils'
+import { BRING_FORWARD_WINDOW_DAYS, selectTasksToBringForward } from '@/features/routine/tasksToBringForward'
+import { shiftIsoDate, todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 import { supabase } from '@/lib/supabaseClient'
 
 async function requireCurrentUserId(): Promise<string> {
@@ -153,11 +154,13 @@ export async function listRoutineDayEntries(entryDate: IsoDate): Promise<Routine
     return data ?? []
 }
 
-export async function listRoutineTasksScheduledOn(date: IsoDate): Promise<RoutineTaskRow[]> {
+// As tarefas do dia exibido e também as levadas dele para outro dia, que
+// aparecem apagadas na lista do dia de origem.
+export async function listRoutineTasksForDay(date: IsoDate): Promise<RoutineTaskRow[]> {
     const { data, error } = await supabase
         .from('routine_tasks')
         .select('*')
-        .eq('scheduled_on', date)
+        .or(`scheduled_on.eq.${date},carried_from_on.eq.${date}`)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
 
@@ -166,6 +169,23 @@ export async function listRoutineTasksScheduledOn(date: IsoDate): Promise<Routin
     }
 
     return data ?? []
+}
+
+// Uma consulta só: as não concluídas com data na janela até ontem. A seleção
+// final é da função pura, que também descarta o que escapar da consulta.
+export async function listTasksToBringForward(today: IsoDate): Promise<RoutineTaskRow[]> {
+    const { data, error } = await supabase
+        .from('routine_tasks')
+        .select('*')
+        .is('completed_at', null)
+        .gte('scheduled_on', shiftIsoDate(today, -BRING_FORWARD_WINDOW_DAYS))
+        .lte('scheduled_on', shiftIsoDate(today, -1))
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return selectTasksToBringForward(data ?? [], today)
 }
 
 export async function listUndatedRoutineTasks(): Promise<RoutineTaskRow[]> {
@@ -192,7 +212,7 @@ export async function loadRoutineDataForDate(date: IsoDate): Promise<RoutineData
         listRoutineItems(),
         listRoutineItemSchedules(),
         listRoutineDayEntries(date),
-        listRoutineTasksScheduledOn(date),
+        listRoutineTasksForDay(date),
         listUndatedRoutineTasks(),
     ])
     const routineData: RoutineData = { items, schedules, entries, tasks: [...datedTasks, ...undatedTasks] }
@@ -445,6 +465,38 @@ async function createRepeatingRoutineItem(input: Extract<NewTaskInsert, { kind: 
 
     if (error) {
         throw new Error(error.message)
+    }
+}
+
+// Leva as tarefas para hoje. carried_from_on guarda o dia de onde cada uma
+// saiu, então há um update por dia de origem, cada um cobrindo todas as
+// tarefas daquele dia de uma vez.
+export async function bringTasksForward(tasks: RoutineTaskRow[], today: IsoDate): Promise<void> {
+    const taskIdsByOrigin = new Map<IsoDate, string[]>()
+    for (const task of tasks) {
+        if (task.scheduled_on === null) {
+            continue
+        }
+        const originTaskIds = taskIdsByOrigin.get(task.scheduled_on)
+        if (originTaskIds) {
+            originTaskIds.push(task.id)
+        } else {
+            taskIdsByOrigin.set(task.scheduled_on, [task.id])
+        }
+    }
+
+    const results = await Promise.all(
+        [...taskIdsByOrigin].map(([origin, taskIds]) =>
+            supabase
+                .from('routine_tasks')
+                .update({ scheduled_on: today, carried_from_on: origin })
+                .in('id', taskIds)
+                .is('completed_at', null),
+        ),
+    )
+    const failedResult = results.find((result) => result.error)
+    if (failedResult?.error) {
+        throw new Error(failedResult.error.message)
     }
 }
 

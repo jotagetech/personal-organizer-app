@@ -15,6 +15,9 @@ export type RoutineRowActions = {
 // arquivado depois da data exibida ainda pode aparecer na linha, mas sem
 // atalho de edição.
 export function deriveRoutineRowActions(row: RoutineRow, activeItemIds: Set<string>): RoutineRowActions {
+    if (row.state === 'moved') {
+        return { primary: 'none', canEdit: false, removal: null }
+    }
     if (row.source === 'linked' && row.state === 'pending') {
         return { primary: 'linked_register', canEdit: false, removal: null }
     }

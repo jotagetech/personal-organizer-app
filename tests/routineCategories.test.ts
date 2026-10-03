@@ -25,6 +25,7 @@ function row(id: string, overrides: Partial<RoutineRow> = {}): RoutineRow {
         categoryId: null,
         isImportant: false,
         carriedFromDate: null,
+        movedToDate: null,
         ...overrides,
     }
 }

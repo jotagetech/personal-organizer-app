@@ -302,6 +302,37 @@ describe('resolveRoutineForDate: tarefas', () => {
         expect(rows[0].carriedFromDate).toBe('2026-09-25')
     })
 
+    it('tarefa levada para outro dia aparece apagada no dia de origem e não conta', () => {
+        const movedTask = buildTask({ scheduled_on: '2026-09-30', carried_from_on: REFERENCE_DATE })
+        const data = buildData({ tasks: [movedTask, buildTask({ id: 'task-2', title: 'Outra', sort_order: 1 })] })
+
+        const rows = resolveRoutineForDate(REFERENCE_DATE, data, buildSignals())
+
+        expect(rows.map((row) => [row.title, row.state])).toEqual([
+            ['Outra', 'pending'],
+            ['Pagar boleto', 'moved'],
+        ])
+        expect(rows[1]).toMatchObject({ movedToDate: '2026-09-30', carriedFromDate: null })
+        expect(countRoutineProgress(rows)).toEqual({ done: 0, total: 1 })
+    })
+
+    it('tarefa levada conta no dia para onde foi, com a origem na linha', () => {
+        const movedTask = buildTask({ scheduled_on: '2026-09-30', carried_from_on: REFERENCE_DATE })
+
+        const rows = resolveRoutineForDate('2026-09-30', buildData({ tasks: [movedTask] }), buildSignals())
+
+        expect(rows).toHaveLength(1)
+        expect(rows[0]).toMatchObject({ state: 'pending', carriedFromDate: REFERENCE_DATE, movedToDate: null })
+        expect(countRoutineProgress(rows)).toEqual({ done: 0, total: 1 })
+    })
+
+    it('tarefa levada duas vezes não aparece no primeiro dia de origem', () => {
+        const movedTwice = buildTask({ scheduled_on: '2026-10-01', carried_from_on: '2026-09-30' })
+
+        expect(resolveTitlesOn(REFERENCE_DATE, buildData({ tasks: [movedTwice] }))).toEqual([])
+        expect(resolveTitlesOn('2026-09-30', buildData({ tasks: [movedTwice] }))).toEqual(['Pagar boleto'])
+    })
+
     it('ordena tarefas por sort_order e depois pela criação', () => {
         const later = buildTask({ id: 't-2', title: 'Segunda', sort_order: 1 })
         const earlier = buildTask({ id: 't-1', title: 'Primeira', sort_order: 0 })

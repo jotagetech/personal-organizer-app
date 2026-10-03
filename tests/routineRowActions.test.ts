@@ -16,6 +16,7 @@ function buildRow(overrides: Partial<RoutineRow> = {}): RoutineRow {
         categoryId: null,
         isImportant: false,
         carriedFromDate: null,
+        movedToDate: null,
     }
     return { ...baseRow, ...overrides }
 }
@@ -47,6 +48,14 @@ describe('deriveRoutineRowActions', () => {
         const actions = deriveRoutineRowActions(row, new Set())
 
         expect(actions).toEqual({ primary: 'confirm_done', canEdit: true, removal: 'delete_task' })
+    })
+
+    it('tarefa levada para outro dia: só leitura', () => {
+        const row = buildTaskRow({ state: 'moved', movedToDate: '2026-09-30' })
+
+        const actions = deriveRoutineRowActions(row, new Set())
+
+        expect(actions).toEqual({ primary: 'none', canEdit: false, removal: null })
     })
 
     it('tarefa trazida de outro dia: também pode ser removida', () => {

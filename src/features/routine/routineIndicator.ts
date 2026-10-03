@@ -5,15 +5,16 @@ import type { DaySignals } from '@/features/shared/daySignals'
 import type { TabIndicatorKind } from '@/features/shared/tabIndicators'
 import type { IsoDate } from '@/lib/dateUtils'
 
-// Sem nenhum item ou tarefa aplicável ao dia, não há o que soar alarme (mesmo
+// Tarefa levada para outro dia não conta. Sem nenhum item ou tarefa aplicável ao dia, não há o que soar alarme (mesmo
 // critério do indicador de treino: sem previsão, sem pendência). Com pelo
 // menos um item, o indicador reflete só se falta algo, sem contar quantos.
 export function deriveRoutineIndicatorKind(rows: RoutineRow[]): TabIndicatorKind {
-    if (rows.length === 0) {
+    const countedRows = rows.filter((row) => row.state !== 'moved')
+    if (countedRows.length === 0) {
         return 'none'
     }
 
-    const hasPendingRow = rows.some((row) => row.state === 'pending')
+    const hasPendingRow = countedRows.some((row) => row.state === 'pending')
     return hasPendingRow ? 'pending' : 'done'
 }
 

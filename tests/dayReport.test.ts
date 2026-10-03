@@ -90,6 +90,7 @@ function buildRoutineRow(overrides: Partial<RoutineRow> = {}): RoutineRow {
         categoryId: null,
         isImportant: false,
         carriedFromDate: null,
+        movedToDate: null,
     }
     return { ...baseRow, ...overrides }
 }

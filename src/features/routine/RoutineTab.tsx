@@ -11,7 +11,9 @@ import { useCurrentHour } from '@/features/account/useCurrentHour'
 import {
     deleteRoutineDayEntry,
     deleteRoutineTask,
+    bringTasksForward,
     listRoutineCategories,
+    listTasksToBringForward,
     loadRoutineDataForDate,
     loadRoutineDataForRange,
     markRoutineItemDone,
@@ -25,6 +27,7 @@ import {
     splitImportant,
     type CategoryFilter as CategoryFilterValue,
 } from '@/features/routine/categories'
+import { CarryOverBanner } from '@/features/routine/CarryOverBanner'
 import { CategoriesScreen } from '@/features/routine/CategoriesScreen'
 import { CategoryDot } from '@/features/routine/CategoryDot'
 import { CategoryFilter } from '@/features/routine/CategoryFilter'
@@ -45,6 +48,7 @@ import {
 import { deriveRoutineRowActions, type RoutineRowActions, type RoutineRowRemoval } from '@/features/routine/routineRowActions'
 import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
 import type { RoutineCategoryRow, RoutineData, RoutineRow, RoutineRowState, RoutineTaskRow } from '@/features/routine/types'
+import { dayMonthLabel } from '@/features/routine/shortDateLabel'
 import { buildWeekProgress, weekDatesOf, type WeekDayProgress } from '@/features/routine/weekProgress'
 import { fetchDaySignals, fetchDaySignalsForRange, type DaySignals } from '@/features/shared/daySignals'
 import { todayInTimezone } from '@/lib/dateUtils'
@@ -76,6 +80,7 @@ export function RoutineTab() {
     const [editorTarget, setEditorTarget] = useState<{ initialEditingItemId: string | null } | null>(null)
     const [isNewTaskOpen, setIsNewTaskOpen] = useState(false)
     const [editingTask, setEditingTask] = useState<RoutineTaskRow | null>(null)
+    const [carryOverTasks, setCarryOverTasks] = useState<RoutineTaskRow[]>([])
     const [categories, setCategories] = useState<RoutineCategoryRow[]>([])
     const [isCategoriesOpen, setIsCategoriesOpen] = useState(false)
     const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>(ALL_CATEGORIES_FILTER)
@@ -87,12 +92,15 @@ export function RoutineTab() {
         setIsLoading(true)
         setErrorMessage(null)
         try {
-            const [nextRoutineData, nextSignals, nextCategories] = await Promise.all([
+            const today = todayInTimezone()
+            const [nextRoutineData, nextSignals, nextCategories, nextCarryOverTasks] = await Promise.all([
                 loadRoutineDataForDate(selectedDate),
                 fetchDaySignals(selectedDate),
                 listRoutineCategories(),
+                selectedDate === today ? listTasksToBringForward(today) : Promise.resolve([]),
             ])
             setRoutineData(nextRoutineData)
+            setCarryOverTasks(nextCarryOverTasks)
             setCategories(nextCategories)
             setSignals(nextSignals)
             setLoadedDate(selectedDate)
@@ -190,6 +198,10 @@ export function RoutineTab() {
             setActionErrorMessage(message)
             throw actionError
         }
+    }
+
+    async function handleBringForward() {
+        await runRoutineAction(() => bringTasksForward(carryOverTasks, todayInTimezone()))
     }
 
     async function handleMarkDone(routineItemId: string) {
@@ -316,7 +328,7 @@ export function RoutineTab() {
             <div className="page-header">
                 <div className="page-header__title-group">
                     <h2 className="page-title">Rotina do dia</h2>
-                    {!isLoading && !errorMessage && rows.length > 0 && (
+                    {!isLoading && !errorMessage && progress.total > 0 && (
                         <span className="page-header__count">
                             {progress.done} de {progress.total}
                         </span>
@@ -359,6 +371,12 @@ export function RoutineTab() {
             </div>
             {!isLoading && !errorMessage && (
                 <CategoryFilter categories={categories} value={activeFilter} onChange={setCategoryFilter} />
+            )}
+            {!isLoading && !errorMessage && carryOverTasks.length > 0 && (
+                <CarryOverBanner
+                    titles={carryOverTasks.map((task) => task.title)}
+                    onBringForward={handleBringForward}
+                />
             )}
             {isLoading && <p className="text-muted">Carregando...</p>}
             {errorMessage && <div className="error-list">{errorMessage}</div>}
@@ -532,6 +550,15 @@ function RoutineRowView({
         )
     }
 
+    if (row.state === 'moved') {
+        return (
+            <div className="routine-row routine-row--moved">
+                <span className="routine-row__title routine-row__title--moved">{row.title}</span>
+                <p className="routine-row__moved-note">{movedNoteText(row.movedToDate)}</p>
+            </div>
+        )
+    }
+
     const isDone = isRoutineRowDone(row.state)
     const isTappable = actions.primary === 'confirm_done'
     const hasRowActions = actions.canEdit || actions.removal !== null
@@ -572,13 +599,16 @@ function RoutineRowView({
                     )}
                 </div>
             )}
-            {(category || showStar) && (
+            {(category || showStar || row.carriedFromDate) && (
                 <p className="routine-row__meta">
                     {showStar && (
                         <span className="routine-row__meta-item">
                             <Star size={META_ICON_SIZE} className="routine-row__star" aria-hidden="true" />
                             Importante
                         </span>
+                    )}
+                    {row.carriedFromDate && (
+                        <span className="routine-row__meta-item">Trazida de {dayMonthLabel(row.carriedFromDate)}</span>
                     )}
                     {category && (
                         <span className="routine-row__meta-item">
@@ -593,6 +623,14 @@ function RoutineRowView({
             )}
         </div>
     )
+}
+
+function movedNoteText(movedToDate: string | null): string {
+    if (movedToDate === null || movedToDate === todayInTimezone()) {
+        return 'Levada para hoje'
+    }
+
+    return `Levada para ${dayMonthLabel(movedToDate)}`
 }
 
 function removalAriaLabel(row: RoutineRow, removal: RoutineRowRemoval): string {

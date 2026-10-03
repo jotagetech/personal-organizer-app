@@ -7,6 +7,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- "Trazer de ontem" na Rotina: no dia de hoje, uma faixa avisa as tarefas
+  avulsas não feitas dos últimos 7 dias e as traz para hoje em um toque. No
+  dia de origem a tarefa fica apagada como "Levada para hoje" e sai da conta
+  daquele dia; no novo dia mostra de onde veio. Hábitos não acumulam.
 - Anel do dia na Rotina com o "X/Y" do que foi feito e, embaixo, a semana em
   7 mini anéis (domingo a sábado). Tocar num dia da semana abre aquele dia. Os
   dias passados usam a agenda que valia neles; um dia fraco não apaga os
