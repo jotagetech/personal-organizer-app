@@ -1770,6 +1770,57 @@ h1, h2, h3, h4 {
     color: var(--color-text-muted);
 }
 
+/* Linha com chave liga/desliga dentro do card do Menu. */
+.menu-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 64px;
+    padding: 10px 14px;
+}
+
+.menu-switch__control {
+    position: relative;
+    flex-shrink: 0;
+    width: 52px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 16px;
+    background: var(--color-border-strong);
+    transition: background 150ms ease;
+}
+
+.menu-switch__control[aria-checked='true'] {
+    background: var(--color-done);
+}
+
+.menu-switch__control:disabled {
+    opacity: 0.6;
+}
+
+.menu-switch__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--color-on-done);
+    transition: transform 150ms ease;
+}
+
+.menu-switch__control[aria-checked='true'] .menu-switch__thumb {
+    transform: translateX(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-switch__control,
+    .menu-switch__thumb {
+        transition: none;
+    }
+}
+
 /* Estado das notificações e o botão de ativar ou desativar, empilhados. */
 .push-settings {
     display: flex;
@@ -5561,6 +5612,43 @@ h1, h2, h3, h4 {
 @media (prefers-reduced-motion: reduce) {
     .progress-ring__arc {
         transition: none;
+    }
+}
+
+/* Comemoração do anel do dia: uma volta completa com leve aumento de escala.
+   Quem prefere menos movimento recebe só um destaque de cor que some. */
+.progress-ring__svg--celebrate {
+    animation: progress-ring-celebrate 700ms ease-in-out 1;
+}
+
+@keyframes progress-ring-celebrate {
+    0% {
+        transform: rotate(0deg) scale(1);
+    }
+    50% {
+        transform: rotate(180deg) scale(1.12);
+    }
+    100% {
+        transform: rotate(360deg) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .progress-ring__svg--celebrate {
+        animation: none;
+    }
+
+    .progress-ring__svg--celebrate .progress-ring__arc {
+        animation: progress-ring-highlight 700ms ease-out 1;
+    }
+
+    @keyframes progress-ring-highlight {
+        0% {
+            stroke: var(--color-accent);
+        }
+        100% {
+            stroke: var(--color-done);
+        }
     }
 }
 

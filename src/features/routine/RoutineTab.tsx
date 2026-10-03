@@ -44,7 +44,9 @@ import {
     listUndatedTasks,
     resolveRoutineForDate,
     resolveTaskRow,
+    type RoutineProgress,
 } from '@/features/routine/resolveRoutine'
+import { shouldCelebrate } from '@/features/routine/routineCelebration'
 import { deriveRoutineRowActions, type RoutineRowActions, type RoutineRowRemoval } from '@/features/routine/routineRowActions'
 import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
 import type { RoutineCategoryRow, RoutineData, RoutineRow, RoutineRowState, RoutineTaskRow } from '@/features/routine/types'
@@ -52,6 +54,7 @@ import { dayMonthLabel } from '@/features/routine/shortDateLabel'
 import { buildWeekProgress, weekDatesOf, type WeekDayProgress } from '@/features/routine/weekProgress'
 import { fetchDaySignals, fetchDaySignalsForRange, type DaySignals } from '@/features/shared/daySignals'
 import { todayInTimezone } from '@/lib/dateUtils'
+import { playCelebration, unlockAudio } from '@/lib/sound'
 
 const MENU_ICON_SIZE = 22
 const CHECK_ICON_SIZE = 16
@@ -65,7 +68,7 @@ export function RoutineTab() {
     const { selectedDate, setSelectedDate } = useSelectedDate()
     const { goToTab } = useAppNavigation()
     const { refreshDayStatus } = useDayStatus()
-    const { displayName } = useProfile()
+    const { displayName, routineSoundEnabled } = useProfile()
     const currentHour = useCurrentHour()
     const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [routineData, setRoutineData] = useState<RoutineData>(EMPTY_ROUTINE_DATA)
@@ -87,6 +90,9 @@ export function RoutineTab() {
     const [isUndatedOpen, setIsUndatedOpen] = useState(false)
     const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
+    const [celebrationKey, setCelebrationKey] = useState(0)
+    const lastProgressRef = useRef<{ date: string; progress: RoutineProgress } | null>(null)
+    const isTapPendingRef = useRef(false)
 
     async function loadSelectedDay() {
         setIsLoading(true)
@@ -187,6 +193,32 @@ export function RoutineTab() {
         [items],
     )
 
+    // Só a passagem para "tudo feito" causada por um toque comemora: abrir o
+    // dia já completo, trocar de dia ou recarregar apenas atualizam a referência.
+    useEffect(() => {
+        if (loadedDate !== selectedDate || !signals) {
+            return
+        }
+        const previous = lastProgressRef.current
+        lastProgressRef.current = { date: selectedDate, progress }
+        if (previous === null || previous.date !== selectedDate) {
+            isTapPendingRef.current = false
+            return
+        }
+        if (previous.progress.done === progress.done && previous.progress.total === progress.total) {
+            return
+        }
+        const isCelebrating = isTapPendingRef.current && shouldCelebrate(previous.progress, progress)
+        isTapPendingRef.current = false
+        if (isCelebrating) {
+            setCelebrationKey((key) => key + 1)
+            if (routineSoundEnabled) {
+                playCelebration()
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loadedDate, selectedDate, signals, progress.done, progress.total])
+
     async function runRoutineAction(action: () => Promise<unknown>) {
         setActionErrorMessage(null)
         try {
@@ -194,6 +226,7 @@ export function RoutineTab() {
             await reloadRoutine()
             refreshDayStatus()
         } catch (actionError) {
+            isTapPendingRef.current = false
             const message = actionError instanceof Error ? actionError.message : 'Falha ao atualizar a rotina'
             setActionErrorMessage(message)
             throw actionError
@@ -204,12 +237,21 @@ export function RoutineTab() {
         await runRoutineAction(() => bringTasksForward(carryOverTasks, todayInTimezone()))
     }
 
+    // O iPhone só libera o áudio dentro do gesto, então o desbloqueio vem antes
+    // de qualquer espera da gravação.
+    function registerCompletionTap() {
+        unlockAudio()
+        isTapPendingRef.current = true
+    }
+
     async function handleMarkDone(routineItemId: string) {
+        registerCompletionTap()
         await runRoutineAction(() => markRoutineItemDone(routineItemId, selectedDate))
     }
 
     async function handleConfirmDone(row: RoutineRow) {
         if (row.source === 'task' && row.taskId) {
+            registerCompletionTap()
             await runRoutineAction(() => markRoutineTaskDone(row.taskId!, selectedDate))
             return
         }
@@ -322,6 +364,7 @@ export function RoutineTab() {
                     today={todayInTimezone()}
                     dayProgress={loadedDate === selectedDate && signals ? progress : null}
                     week={weekProgress}
+                    celebrationKey={celebrationKey}
                     onSelectDate={setSelectedDate}
                 />
             )}

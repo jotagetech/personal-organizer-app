@@ -2,6 +2,7 @@ import { BookOpen, ChevronRight, Download, Dumbbell, Link2, type LucideIcon } fr
 import { useState } from 'react'
 
 import { useDayStatus } from '@/contexts/DayStatusContext'
+import { useProfile } from '@/contexts/ProfileContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { ProfileSection } from '@/features/account/ProfileSection'
 import { SignOutSection } from '@/features/account/SignOutSection'
@@ -13,6 +14,7 @@ import { PushNotificationsSection } from '@/features/notifications/PushNotificat
 import { formatDateLabel } from '@/features/shared/DateHeader'
 import { StoredPlansPanel } from '@/features/workout/StoredPlansPanel'
 import { todayInTimezone } from '@/lib/dateUtils'
+import { playCelebration, unlockAudio } from '@/lib/sound'
 
 type MenuToolKey = 'workout_plans' | 'exercise_history_names' | 'food_catalog' | 'period_export'
 type MenuPanel = 'home' | MenuToolKey
@@ -126,8 +128,64 @@ function MenuHome({ onOpenTool }: { onOpenTool: (toolKey: MenuToolKey) => void }
                     ))}
                 </div>
             </section>
+            <RoutineSoundSection />
             <PushNotificationsSection />
             <SignOutSection />
         </div>
+    )
+}
+
+function RoutineSoundSection() {
+    const { routineSoundEnabled, saveRoutineSoundEnabled } = useProfile()
+    const [isSaving, setIsSaving] = useState(false)
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+    async function handleToggle() {
+        const nextValue = !routineSoundEnabled
+        setIsSaving(true)
+        setErrorMessage(null)
+        if (nextValue) {
+            // Ligar toca o som uma vez: confirma que ele sai e libera o áudio no toque.
+            unlockAudio()
+            playCelebration()
+        }
+        try {
+            await saveRoutineSoundEnabled(nextValue)
+        } catch (saveError) {
+            const message = saveError instanceof Error ? saveError.message : 'Falha ao salvar a preferência'
+            setErrorMessage(message)
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    return (
+        <section className="menu-section">
+            <div className="menu-list">
+                <div className="menu-switch">
+                    <span className="menu-list__text">
+                        <span className="menu-list__label" id="routine-sound-label">
+                            Som da rotina
+                        </span>
+                        <span className="menu-list__description" id="routine-sound-description">
+                            Toca um som curto quando você completa a rotina do dia.
+                        </span>
+                    </span>
+                    <button
+                        type="button"
+                        role="switch"
+                        className="menu-switch__control"
+                        aria-checked={routineSoundEnabled}
+                        aria-labelledby="routine-sound-label"
+                        aria-describedby="routine-sound-description"
+                        disabled={isSaving}
+                        onClick={handleToggle}
+                    >
+                        <span className="menu-switch__thumb" aria-hidden="true" />
+                    </button>
+                </div>
+            </div>
+            {errorMessage && <div className="error-list">{errorMessage}</div>}
+        </section>
     )
 }

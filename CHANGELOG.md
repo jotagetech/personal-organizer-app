@@ -7,6 +7,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Ao completar a rotina do dia com um toque, o anel dá uma volta e toca um som
+  curto de três notas, que respeita a chave de silencioso do iPhone. Menu ›
+  "Som da rotina" liga e desliga o som. O bipe do descanso do treino passou a
+  usar o mesmo módulo de áudio, sem mudar de comportamento.
 - "Trazer de ontem" na Rotina: no dia de hoje, uma faixa avisa as tarefas
   avulsas não feitas dos últimos 7 dias e as traz para hoje em um toque. No
   dia de origem a tarefa fica apagada como "Levada para hoje" e sai da conta

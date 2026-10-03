@@ -21,6 +21,7 @@ type RoutineProgressSummaryProps = {
     today: IsoDate
     dayProgress: RoutineProgress | null
     week: WeekDayProgress[] | null
+    celebrationKey: number
     onSelectDate: (date: IsoDate) => void
 }
 
@@ -42,7 +43,7 @@ function weekRingLabel(day: WeekDayProgress): string {
 
 // Sem o progresso do dia carregado, guarda o espaço do anel para o resumo não
 // pular de altura quando o número chegar.
-function DayRing({ progress }: { progress: RoutineProgress | null }) {
+function DayRing({ progress, celebrationKey }: { progress: RoutineProgress | null; celebrationKey: number }) {
     if (progress === null) {
         return (
             <span
@@ -63,6 +64,7 @@ function DayRing({ progress }: { progress: RoutineProgress | null }) {
             ariaLabel={label}
             centerLabel={hasItems ? `${progress.done}/${progress.total}` : undefined}
             isMuted={!hasItems}
+            celebrationKey={celebrationKey}
         />
     )
 }
@@ -72,12 +74,13 @@ export function RoutineProgressSummary({
     today,
     dayProgress,
     week,
+    celebrationKey,
     onSelectDate,
 }: RoutineProgressSummaryProps) {
     return (
         <section className="routine-summary" aria-label="Progresso da rotina">
             <div className="routine-summary__day">
-                <DayRing progress={dayProgress} />
+                <DayRing progress={dayProgress} celebrationKey={celebrationKey} />
                 <span className="routine-summary__caption">{dayCaption(selectedDate, today)}</span>
             </div>
             {week && (

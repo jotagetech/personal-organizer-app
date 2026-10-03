@@ -9,29 +9,36 @@ type ProfileContextValue = {
     nickname: string | null
     displayName: string | null
     saveProfile: (fullName: string, nickname: string) => Promise<void>
+    routineSoundEnabled: boolean
+    saveRoutineSoundEnabled: (isEnabled: boolean) => Promise<void>
     isLoading: boolean
 }
 
 type StoredProfile = {
     fullName: string | null
     nickname: string | null
+    routineSoundEnabled: boolean
 }
 
-const EMPTY_PROFILE: StoredProfile = { fullName: null, nickname: null }
+const EMPTY_PROFILE: StoredProfile = { fullName: null, nickname: null, routineSoundEnabled: true }
 
 const ProfileContext = createContext<ProfileContextValue | null>(null)
 
 async function fetchProfile(userId: string): Promise<StoredProfile> {
     const { data, error } = await supabase
         .from('user_settings')
-        .select('full_name, nickname')
+        .select('full_name, nickname, routine_sound_enabled')
         .eq('user_id', userId)
         .maybeSingle()
 
     if (error) {
         throw new Error(error.message)
     }
-    const profile: StoredProfile = { fullName: data?.full_name ?? null, nickname: data?.nickname ?? null }
+    const profile: StoredProfile = {
+        fullName: data?.full_name ?? null,
+        nickname: data?.nickname ?? null,
+        routineSoundEnabled: data?.routine_sound_enabled ?? true,
+    }
     return profile
 }
 
@@ -75,6 +82,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
                 throw new Error('Entre na conta para salvar o perfil')
             }
             const nextProfile: StoredProfile = {
+                ...profile,
                 fullName: toNullableText(fullName),
                 nickname: toNullableText(nickname),
             }
@@ -88,6 +96,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             }
             setProfile(nextProfile)
         },
+        [userId, profile],
+    )
+
+    const saveRoutineSoundEnabled = useCallback(
+        async (isEnabled: boolean) => {
+            if (userId === null) {
+                throw new Error('Entre na conta para salvar a preferência')
+            }
+            const { error } = await supabase
+                .from('user_settings')
+                .update({ routine_sound_enabled: isEnabled })
+                .eq('user_id', userId)
+
+            if (error) {
+                throw new Error(error.message)
+            }
+            setProfile((previous) => ({ ...previous, routineSoundEnabled: isEnabled }))
+        },
         [userId],
     )
 
@@ -97,9 +123,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             nickname: profile.nickname,
             displayName: displayNameOf({ nickname: profile.nickname, fullName: profile.fullName, email }),
             saveProfile,
+            routineSoundEnabled: profile.routineSoundEnabled,
+            saveRoutineSoundEnabled,
             isLoading,
         }),
-        [profile, email, saveProfile, isLoading],
+        [profile, email, saveProfile, saveRoutineSoundEnabled, isLoading],
     )
 
     return <ProfileContext.Provider value={contextValue}>{children}</ProfileContext.Provider>

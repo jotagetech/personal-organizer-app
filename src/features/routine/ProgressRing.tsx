@@ -6,6 +6,8 @@ type ProgressRingProps = {
     ariaLabel: string
     centerLabel?: string
     isMuted?: boolean
+    // Cada valor novo e maior que zero reinicia a animação de comemoração.
+    celebrationKey?: number
 }
 
 function fractionDone(done: number, total: number): number {
@@ -24,6 +26,7 @@ export function ProgressRing({
     ariaLabel,
     centerLabel,
     isMuted = false,
+    celebrationKey = 0,
 }: ProgressRingProps) {
     const radius = (size - strokeWidth) / 2
     const circumference = 2 * Math.PI * radius
@@ -33,7 +36,14 @@ export function ProgressRing({
 
     return (
         <span className={className} style={{ width: size, height: size }} role="img" aria-label={ariaLabel}>
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+            <svg
+                key={celebrationKey}
+                className={celebrationKey > 0 ? 'progress-ring__svg progress-ring__svg--celebrate' : 'progress-ring__svg'}
+                width={size}
+                height={size}
+                viewBox={`0 0 ${size} ${size}`}
+                aria-hidden="true"
+            >
                 <circle
                     className="progress-ring__track"
                     cx={center}
