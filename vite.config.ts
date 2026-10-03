@@ -15,6 +15,7 @@ const sentryPlugins = sentryAuthToken
               org: process.env.SENTRY_ORG,
               project: process.env.SENTRY_PROJECT,
               sourcemaps: { filesToDeleteAfterUpload: ['./dist/**/*.map'] },
+              telemetry: false,
           }),
       ]
     : []
