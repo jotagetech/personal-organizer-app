@@ -10,13 +10,14 @@ import {
     createRoutineTask,
     deleteRoutineDayEntry,
     deleteRoutineTask,
+    getRoutineOnboardedAt,
     loadRoutineDataForDate,
     markRoutineItemDone,
     markRoutineTaskDone,
-    seedSuggestedRoutineItems,
     unmarkRoutineTaskDone,
 } from '@/features/routine/api'
 import { RoutineItemsEditor } from '@/features/routine/RoutineItemsEditor'
+import { RoutineOnboarding } from '@/features/routine/RoutineOnboarding'
 import {
     countRoutineProgress,
     deriveRoutineEmptyState,
@@ -46,7 +47,7 @@ export function RoutineTab() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [editorTarget, setEditorTarget] = useState<{ initialEditingItemId: string | null } | null>(null)
-    const [isCreatingSuggested, setIsCreatingSuggested] = useState(false)
+    const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null)
     const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
 
@@ -54,12 +55,14 @@ export function RoutineTab() {
         setIsLoading(true)
         setErrorMessage(null)
         try {
-            const [nextRoutineData, nextSignals] = await Promise.all([
+            const [nextRoutineData, nextSignals, onboardedAt] = await Promise.all([
                 loadRoutineDataForDate(selectedDate),
                 fetchDaySignals(selectedDate),
+                getRoutineOnboardedAt(),
             ])
             setRoutineData(nextRoutineData)
             setSignals(nextSignals)
+            setIsOnboarded(onboardedAt !== null)
         } catch (loadError) {
             const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar a rotina'
             setErrorMessage(message)
@@ -153,19 +156,13 @@ export function RoutineTab() {
         })
     }
 
-    async function handleCreateSuggested() {
-        setIsCreatingSuggested(true)
-        setErrorMessage(null)
-        try {
-            await seedSuggestedRoutineItems()
-            await reloadRoutine()
-            refreshDayStatus()
-        } catch (createError) {
-            const message = createError instanceof Error ? createError.message : 'Falha ao criar rotina sugerida'
-            setErrorMessage(message)
-        } finally {
-            setIsCreatingSuggested(false)
-        }
+    async function handleOnboardingFinished() {
+        await reloadRoutine()
+        refreshDayStatus()
+    }
+
+    if (!isLoading && !errorMessage && isOnboarded === false) {
+        return <RoutineOnboarding onFinished={handleOnboardingFinished} />
     }
 
     if (editorTarget) {
@@ -217,16 +214,15 @@ export function RoutineTab() {
             </div>
             {isLoading && <p className="text-muted">Carregando...</p>}
             {errorMessage && <div className="error-list">{errorMessage}</div>}
-            {!isLoading && !errorMessage && emptyState === 'offer_suggested' && (
+            {!isLoading && !errorMessage && emptyState === 'no_items' && (
                 <div className="card">
-                    <p className="empty-state__text">Nenhum item de rotina criado ainda.</p>
+                    <p className="empty-state__text">Sua rotina ainda não tem itens.</p>
                     <button
                         type="button"
-                        className="primary-button"
-                        disabled={isCreatingSuggested}
-                        onClick={handleCreateSuggested}
+                        className="secondary-button"
+                        onClick={() => setEditorTarget({ initialEditingItemId: null })}
                     >
-                        {isCreatingSuggested ? 'Criando...' : 'Criar rotina sugerida'}
+                        Gerenciar itens de rotina
                     </button>
                 </div>
             )}

@@ -357,21 +357,21 @@ describe('countRoutineProgress', () => {
 })
 
 describe('deriveRoutineEmptyState', () => {
-    it('oferece a rotina sugerida quando não há nenhum item', () => {
-        expect(deriveRoutineEmptyState([], [])).toBe('offer_suggested')
+    it('indica que não há itens quando a lista está vazia', () => {
+        expect(deriveRoutineEmptyState([], [])).toBe('no_items')
     })
 
-    it('oferece a rotina sugerida quando todos os itens estão arquivados', () => {
+    it('indica que não há itens quando todos estão arquivados', () => {
         const items = [buildItem({ archived_on: REFERENCE_DATE })]
 
-        expect(deriveRoutineEmptyState(items, [])).toBe('offer_suggested')
+        expect(deriveRoutineEmptyState(items, [])).toBe('no_items')
     })
 
-    it('oferece a rotina sugerida mesmo com tarefa no dia, se não há item ativo', () => {
+    it('indica que não há itens mesmo com tarefa no dia, se não há item ativo', () => {
         const items = [buildItem({ archived_on: REFERENCE_DATE })]
         const rows = resolveRoutineForDate(REFERENCE_DATE, buildData({ items, tasks: [buildTask()] }), buildSignals())
 
-        expect(deriveRoutineEmptyState(items, rows)).toBe('offer_suggested')
+        expect(deriveRoutineEmptyState(items, rows)).toBe('no_items')
         expect(rows).toHaveLength(1)
     })
 

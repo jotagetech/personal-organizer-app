@@ -182,16 +182,16 @@ export function countRoutineProgress(rows: RoutineRow[]): RoutineProgress {
     return progress
 }
 
-export type RoutineEmptyState = 'offer_suggested' | 'nothing_for_day' | 'none'
+export type RoutineEmptyState = 'no_items' | 'nothing_for_day' | 'none'
 
-// Lógica pura: decide qual estado vazio mostrar (se algum). "offer_suggested"
-// olha só pra existência de item ATIVO, nunca pra aplicabilidade num dia
-// específico, pra não reoferecer "Criar rotina sugerida" (e duplicar itens)
-// só porque nenhum item se aplica à data selecionada.
+// Lógica pura: decide qual estado vazio mostrar (se algum). "no_items" olha
+// só pra existência de item ATIVO, nunca pra aplicabilidade num dia
+// específico, pra não confundir "ainda não há itens" com "nenhum item cai
+// na data selecionada".
 export function deriveRoutineEmptyState(items: RoutineItemRow[], rows: RoutineRow[]): RoutineEmptyState {
     const hasActiveItem = items.some((item) => item.archived_on === null)
     if (!hasActiveItem) {
-        return 'offer_suggested'
+        return 'no_items'
     }
     if (rows.length === 0) {
         return 'nothing_for_day'

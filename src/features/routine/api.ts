@@ -1,3 +1,4 @@
+import type { OnboardingItemRow } from '@/features/routine/onboardingItems'
 import type { RoutineItemInput } from '@/features/routine/routineSchema'
 import type {
     RoutineCategoryRow,
@@ -294,42 +295,59 @@ export async function deleteRoutineTask(taskId: string): Promise<void> {
     }
 }
 
-const SUGGESTED_ROUTINE_WEEKDAYS_WEEKDAY_ONLY = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
-const SUGGESTED_ROUTINE_WEEKDAYS_EVERY_DAY = [
-    'segunda',
-    'terca',
-    'quarta',
-    'quinta',
-    'sexta',
-    'sabado',
-    'domingo',
-]
+// null enquanto a conta não passou pela primeira vez da aba.
+export async function getRoutineOnboardedAt(): Promise<string | null> {
+    const currentUserId = await requireCurrentUserId()
 
-// Ponto de partida sugerido pra quem nunca criou um item de rotina: cobre os
-// dois casos de uso (vinculado a outra aba e manual) sem exigir que a pessoa
-// monte a lista do zero antes de ver a tela funcionando.
-export async function seedSuggestedRoutineItems(): Promise<RoutineItemRow[]> {
+    const { data, error } = await supabase
+        .from('user_settings')
+        .select('routine_onboarded_at')
+        .eq('user_id', currentUserId)
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data?.routine_onboarded_at ?? null
+}
+
+export async function markRoutineOnboarded(): Promise<void> {
+    const currentUserId = await requireCurrentUserId()
+
+    const { error } = await supabase
+        .from('user_settings')
+        .update({ routine_onboarded_at: new Date().toISOString() })
+        .eq('user_id', currentUserId)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
+// Insert único para os itens escolhidos na primeira vez: ou entram todos ou
+// nenhum, então uma nova tentativa nunca duplica metade da lista.
+export async function createOnboardingRoutineItems(rows: OnboardingItemRow[]): Promise<RoutineItemRow[]> {
+    if (rows.length === 0) {
+        return []
+    }
     const currentUserId = await requireCurrentUserId()
     const activeFrom = todayInTimezone()
 
-    const suggestedItems = [
-        { title: 'Academia', weekdays: SUGGESTED_ROUTINE_WEEKDAYS_WEEKDAY_ONLY, link_kind: 'workout_finished' },
-        { title: 'Café da manhã', weekdays: SUGGESTED_ROUTINE_WEEKDAYS_EVERY_DAY, link_kind: 'meal:cafe_da_manha' },
-        { title: 'Almoço', weekdays: SUGGESTED_ROUTINE_WEEKDAYS_EVERY_DAY, link_kind: 'meal:almoco' },
-        { title: 'Café da tarde', weekdays: SUGGESTED_ROUTINE_WEEKDAYS_EVERY_DAY, link_kind: 'meal:lanche' },
-        { title: 'Tomar creatina', weekdays: SUGGESTED_ROUTINE_WEEKDAYS_EVERY_DAY, link_kind: null },
-    ].map((item, index) => ({
-        ...item,
-        user_id: currentUserId,
-        repeat_kind: 'weekdays' as const,
-        active_from: activeFrom,
-        sort_order: index,
-    }))
-
-    const { data, error } = await supabase.from('routine_items').insert(suggestedItems).select('*')
+    const { data, error } = await supabase
+        .from('routine_items')
+        .insert(
+            rows.map((row) => ({
+                ...row,
+                user_id: currentUserId,
+                repeat_kind: 'weekdays' as const,
+                active_from: activeFrom,
+            })),
+        )
+        .select('*')
 
     if (error || !data) {
-        throw new Error(error?.message ?? 'Falha ao criar rotina sugerida')
+        throw new Error(error?.message ?? 'Falha ao criar os itens da rotina')
     }
 
     return data
