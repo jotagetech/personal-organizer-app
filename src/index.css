@@ -5246,3 +5246,185 @@ h1, h2, h3, h4 {
 .undated-section .card {
     margin-bottom: 0;
 }
+
+/* Categorias da Rotina: paleta sem verde, âmbar, vermelho nem ciano, que já
+   significam feito, pendente, atrasado e grupo de exercícios. */
+:root {
+    --color-category-azul: #2563eb;
+    --color-category-violeta: #7c3aed;
+    --color-category-magenta: #c026d3;
+    --color-category-rosa: #db2777;
+    --color-category-laranja: #ea580c;
+    --color-category-marrom: #8b5a2b;
+    --color-category-oliva: #65731a;
+    --color-category-ardosia: #475569;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-category-azul: #60a5fa;
+        --color-category-violeta: #a78bfa;
+        --color-category-magenta: #e879f9;
+        --color-category-rosa: #f472b6;
+        --color-category-laranja: #fb923c;
+        --color-category-marrom: #c8955a;
+        --color-category-oliva: #a3b33a;
+        --color-category-ardosia: #94a3b8;
+    }
+}
+
+.category-dot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-pill);
+}
+
+.category-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.category-filter::-webkit-scrollbar {
+    display: none;
+}
+
+.category-filter .choice-chip {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.category-intro {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+}
+
+.category-create-link {
+    align-self: flex-start;
+    min-height: var(--touch-target);
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-accent-text);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.category-list {
+    padding: 0 16px;
+}
+
+.category-list__row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: var(--touch-target-large);
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    text-align: left;
+}
+
+.category-list__row + .category-list__row {
+    border-top: 1px solid var(--color-divider);
+}
+
+.category-list__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.category-list__usage {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.category-color-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 44px);
+    gap: 12px;
+}
+
+.category-color-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 2px solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+}
+
+.category-color-button .category-dot {
+    width: 24px;
+    height: 24px;
+}
+
+.category-color-button--selected {
+    border-color: var(--color-text);
+    box-shadow: 0 0 0 2px var(--color-surface) inset;
+}
+
+.routine-row__meta {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    margin: -4px 0 4px 38px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.routine-row__meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.routine-row__star {
+    fill: var(--color-pending);
+    color: var(--color-pending);
+}
+
+.important-section {
+    margin-bottom: 12px;
+}
+
+.important-section__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    min-height: var(--touch-target);
+    padding: 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.important-section__title svg {
+    fill: var(--color-pending);
+    color: var(--color-pending);
+}
+
+.important-section .card {
+    margin-bottom: 0;
+}

@@ -7,6 +7,13 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Categorias na Rotina, opcionais: cada pessoa cria as suas (Menu de três
+  pontos › Categorias) com uma de 8 cores; a tarefa nova escolhe a categoria e
+  cada item mostra uma bolinha colorida com o nome dela. Chips no topo filtram
+  o dia por categoria, sem mudar o total de feitos. Sem categoria, o item fica
+  em Geral.
+- Seção "Importantes" no topo da Rotina com os itens marcados como
+  importantes.
 - Botão + sempre visível na Rotina abre a folha "Nova tarefa": só o nome é
   obrigatório; a data sai de Hoje, Amanhã, de um calendário (com opção de
   digitar) ou fica Sem data; dá para repetir em dias da semana ou a cada N dias

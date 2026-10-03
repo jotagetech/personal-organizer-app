@@ -9,6 +9,8 @@ import {
     type NewTaskErrors,
     type NewTaskRepeat,
 } from '@/features/routine/newTaskInput'
+import { CategoryPicker } from '@/features/routine/CategoryPicker'
+import type { RoutineCategoryRow } from '@/features/routine/types'
 import { BottomSheet } from '@/features/shared/BottomSheet'
 import { MonthCalendar } from '@/features/shared/MonthCalendar'
 import { shiftIsoDate, todayInTimezone, weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
@@ -17,6 +19,8 @@ import type { Weekday } from '@/lib/workoutPlanSchema'
 
 interface NewTaskSheetProps {
     initialDate: IsoDate
+    categories: RoutineCategoryRow[]
+    onOpenCategories: () => void
     onClose: () => void
     onCreated: () => Promise<void>
 }
@@ -56,7 +60,7 @@ function weekdayButtonClassName(isSelected: boolean): string {
     return isSelected ? 'weekday-chip weekday-chip--selected' : 'weekday-chip'
 }
 
-export function NewTaskSheet({ initialDate, onClose, onCreated }: NewTaskSheetProps) {
+export function NewTaskSheet({ initialDate, categories, onOpenCategories, onClose, onCreated }: NewTaskSheetProps) {
     const today = todayInTimezone()
     const tomorrow = shiftIsoDate(today, 1)
     const fieldId = useId()
@@ -68,6 +72,7 @@ export function NewTaskSheet({ initialDate, onClose, onCreated }: NewTaskSheetPr
     const [hasPickedWeekdays, setHasPickedWeekdays] = useState(false)
     const [intervalText, setIntervalText] = useState('')
     const [isImportant, setIsImportant] = useState(false)
+    const [categoryId, setCategoryId] = useState<string | null>(null)
     const [errors, setErrors] = useState<NewTaskErrors>({})
     const [submitError, setSubmitError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -111,7 +116,7 @@ export function NewTaskSheet({ initialDate, onClose, onCreated }: NewTaskSheetPr
 
     async function handleSubmit(event: React.FormEvent) {
         event.preventDefault()
-        const validation = validateNewTask({ title, date, repeat, weekdays, intervalText, isImportant })
+        const validation = validateNewTask({ title, date, repeat, weekdays, intervalText, isImportant, categoryId })
         if (!validation.ok) {
             setErrors(validation.errors)
             return
@@ -247,6 +252,16 @@ export function NewTaskSheet({ initialDate, onClose, onCreated }: NewTaskSheetPr
                         </div>
                     )}
                     {errors.interval && <p className="new-task-form__error">{errors.interval}</p>}
+                </div>
+
+                <div className="new-task-form__group">
+                    <span className="new-task-form__label">Categoria</span>
+                    <CategoryPicker
+                        categories={categories}
+                        value={categoryId}
+                        onChange={setCategoryId}
+                        onCreateCategory={onOpenCategories}
+                    />
                 </div>
 
                 {submitError && <div className="error-list">{submitError}</div>}

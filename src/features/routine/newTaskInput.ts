@@ -15,10 +15,11 @@ export type NewTaskDraft = {
     weekdays: Weekday[]
     intervalText: string
     isImportant: boolean
+    categoryId: string | null
 }
 
 export type NewTaskInsert =
-    | { kind: 'task'; title: string; scheduledOn: IsoDate | null; isImportant: boolean }
+    | { kind: 'task'; title: string; scheduledOn: IsoDate | null; isImportant: boolean; categoryId: string | null }
     | {
           kind: 'item'
           title: string
@@ -28,6 +29,7 @@ export type NewTaskInsert =
           intervalAnchor: null
           activeFrom: IsoDate
           isImportant: boolean
+          categoryId: string | null
       }
     | {
           kind: 'item'
@@ -38,6 +40,7 @@ export type NewTaskInsert =
           intervalAnchor: IsoDate
           activeFrom: IsoDate
           isImportant: boolean
+          categoryId: string | null
       }
 
 export type NewTaskErrors = {
@@ -116,9 +119,9 @@ function buildInsert(
     weekdays: Weekday[],
     intervalDays: number,
 ): NewTaskInsert {
-    const isImportant = draft.isImportant
+    const { isImportant, categoryId } = draft
     if (draft.repeat === 'none' || date === null) {
-        return { kind: 'task', title, scheduledOn: date, isImportant }
+        return { kind: 'task', title, scheduledOn: date, isImportant, categoryId }
     }
     if (draft.repeat === 'weekdays') {
         return {
@@ -130,6 +133,7 @@ function buildInsert(
             intervalAnchor: null,
             activeFrom: date,
             isImportant,
+            categoryId,
         }
     }
 
@@ -142,5 +146,6 @@ function buildInsert(
         intervalAnchor: date,
         activeFrom: date,
         isImportant,
+        categoryId,
     }
 }

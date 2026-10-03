@@ -10,6 +10,7 @@ function draft(overrides: Partial<NewTaskDraft> = {}): NewTaskDraft {
         weekdays: [],
         intervalText: '',
         isImportant: false,
+        categoryId: null,
         ...overrides,
     }
 }
@@ -20,7 +21,7 @@ describe('validateNewTask', () => {
 
         expect(validation).toEqual({
             ok: true,
-            value: { kind: 'task', title: 'Pagar boleto', scheduledOn: '2026-10-08', isImportant: false },
+            value: { kind: 'task', title: 'Pagar boleto', scheduledOn: '2026-10-08', isImportant: false, categoryId: null },
         })
     })
 
@@ -29,8 +30,16 @@ describe('validateNewTask', () => {
 
         expect(validation).toEqual({
             ok: true,
-            value: { kind: 'task', title: 'Pagar boleto', scheduledOn: null, isImportant: true },
+            value: { kind: 'task', title: 'Pagar boleto', scheduledOn: null, isImportant: true, categoryId: null },
         })
+    })
+
+    it('leva a categoria escolhida para a tarefa e para o item que repete', () => {
+        const task = validateNewTask(draft({ categoryId: 'cat-1' }))
+        const item = validateNewTask(draft({ categoryId: 'cat-1', repeat: 'interval', intervalText: '2' }))
+
+        expect(task.ok && task.value.categoryId).toBe('cat-1')
+        expect(item.ok && item.value.categoryId).toBe('cat-1')
     })
 
     it('recusa título vazio', () => {
@@ -62,6 +71,7 @@ describe('validateNewTask', () => {
                 intervalAnchor: null,
                 activeFrom: '2026-10-08',
                 isImportant: true,
+                categoryId: null,
             },
         })
     })
@@ -86,6 +96,7 @@ describe('validateNewTask', () => {
                 intervalAnchor: '2026-10-08',
                 activeFrom: '2026-10-08',
                 isImportant: false,
+                categoryId: null,
             },
         })
     })

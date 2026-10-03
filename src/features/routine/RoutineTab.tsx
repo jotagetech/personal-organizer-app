@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, EllipsisVertical, Plus } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, EllipsisVertical, Plus, Star } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAppNavigation } from '@/contexts/AppNavigationContext'
@@ -9,11 +9,22 @@ import {
     deleteRoutineDayEntry,
     deleteRoutineTask,
     getRoutineOnboardedAt,
+    listRoutineCategories,
     loadRoutineDataForDate,
     markRoutineItemDone,
     markRoutineTaskDone,
     unmarkRoutineTaskDone,
 } from '@/features/routine/api'
+import {
+    ALL_CATEGORIES_FILTER,
+    filterRowsByCategory,
+    findCategory,
+    splitImportant,
+    type CategoryFilter as CategoryFilterValue,
+} from '@/features/routine/categories'
+import { CategoriesScreen } from '@/features/routine/CategoriesScreen'
+import { CategoryDot } from '@/features/routine/CategoryDot'
+import { CategoryFilter } from '@/features/routine/CategoryFilter'
 import { NewTaskSheet } from '@/features/routine/NewTaskSheet'
 import { RoutineItemsEditor } from '@/features/routine/RoutineItemsEditor'
 import { RoutineOnboarding } from '@/features/routine/RoutineOnboarding'
@@ -27,7 +38,7 @@ import {
 } from '@/features/routine/resolveRoutine'
 import { deriveRoutineRowActions, type RoutineRowActions, type RoutineRowRemoval } from '@/features/routine/routineRowActions'
 import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
-import type { RoutineData, RoutineRow, RoutineRowState } from '@/features/routine/types'
+import type { RoutineCategoryRow, RoutineData, RoutineRow, RoutineRowState } from '@/features/routine/types'
 import { fetchDaySignals, type DaySignals } from '@/features/shared/daySignals'
 
 const MENU_ICON_SIZE = 22
@@ -35,6 +46,7 @@ const CHECK_ICON_SIZE = 16
 const CHECK_ICON_STROKE = 3
 const FAB_ICON_SIZE = 26
 const SECTION_ICON_SIZE = 18
+const META_ICON_SIZE = 12
 const EMPTY_ROUTINE_DATA: RoutineData = { items: [], schedules: [], entries: [], tasks: [] }
 
 export function RoutineTab() {
@@ -49,6 +61,9 @@ export function RoutineTab() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [editorTarget, setEditorTarget] = useState<{ initialEditingItemId: string | null } | null>(null)
     const [isNewTaskOpen, setIsNewTaskOpen] = useState(false)
+    const [categories, setCategories] = useState<RoutineCategoryRow[]>([])
+    const [isCategoriesOpen, setIsCategoriesOpen] = useState(false)
+    const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>(ALL_CATEGORIES_FILTER)
     const [isUndatedOpen, setIsUndatedOpen] = useState(false)
     const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null)
     const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null)
@@ -58,12 +73,14 @@ export function RoutineTab() {
         setIsLoading(true)
         setErrorMessage(null)
         try {
-            const [nextRoutineData, nextSignals, onboardedAt] = await Promise.all([
+            const [nextRoutineData, nextSignals, onboardedAt, nextCategories] = await Promise.all([
                 loadRoutineDataForDate(selectedDate),
                 fetchDaySignals(selectedDate),
                 getRoutineOnboardedAt(),
+                listRoutineCategories(),
             ])
             setRoutineData(nextRoutineData)
+            setCategories(nextCategories)
             setSignals(nextSignals)
             setIsOnboarded(onboardedAt !== null)
         } catch (loadError) {
@@ -102,6 +119,15 @@ export function RoutineTab() {
                 .filter((row) => !isPendingDeletion(row.id)),
         [routineData.tasks, isPendingDeletion],
     )
+    // Um filtro que aponta para uma categoria apagada volta para todas.
+    const isFilterValid = categoryFilter === ALL_CATEGORIES_FILTER || findCategory(categories, categoryFilter) !== null
+    const activeFilter = isFilterValid ? categoryFilter : ALL_CATEGORIES_FILTER
+    const { important: importantDayRows, rest: regularDayRows } = splitImportant(
+        filterRowsByCategory(rows, activeFilter),
+    )
+    const visibleUndatedRows = filterRowsByCategory(undatedRows, activeFilter)
+    const hasFilteredOutEverything =
+        rows.length > 0 && importantDayRows.length === 0 && regularDayRows.length === 0
     const pendingUndatedCount = undatedRows.filter((row) => !isRoutineRowDone(row.state)).length
     const emptyState = useMemo(() => deriveRoutineEmptyState(items, rows), [items, rows])
     const progress = countRoutineProgress(rows)
@@ -177,11 +203,13 @@ export function RoutineTab() {
         refreshDayStatus()
     }
 
-    function renderRow(row: RoutineRow) {
+    function renderRow(row: RoutineRow, showStar = false) {
         return (
             <RoutineRowView
                 key={`${selectedDate}:${row.id}`}
                 row={row}
+                category={findCategory(categories, row.categoryId)}
+                showStar={showStar}
                 actions={deriveRoutineRowActions(row, activeItemIds)}
                 onNavigate={() => row.linkKind && goToTab(ROUTINE_LINK_KIND_TARGET_TAB[row.linkKind])}
                 onMarkWithoutRegistering={() => row.routineItemId && void handleMarkDone(row.routineItemId)}
@@ -194,6 +222,16 @@ export function RoutineTab() {
 
     if (!isLoading && !errorMessage && isOnboarded === false) {
         return <RoutineOnboarding onFinished={handleOnboardingFinished} />
+    }
+
+    if (isCategoriesOpen) {
+        return (
+            <CategoriesScreen
+                categories={categories}
+                onClose={() => setIsCategoriesOpen(false)}
+                onChanged={reloadRoutine}
+            />
+        )
     }
 
     if (editorTarget) {
@@ -239,10 +277,23 @@ export function RoutineTab() {
                             >
                                 Gerenciar itens de rotina
                             </button>
+                            <button
+                                type="button"
+                                className="overflow-menu__item"
+                                onClick={() => {
+                                    setIsCategoriesOpen(true)
+                                    setIsMenuOpen(false)
+                                }}
+                            >
+                                Categorias
+                            </button>
                         </div>
                     )}
                 </div>
             </div>
+            {!isLoading && !errorMessage && (
+                <CategoryFilter categories={categories} value={activeFilter} onChange={setCategoryFilter} />
+            )}
             {isLoading && <p className="text-muted">Carregando...</p>}
             {errorMessage && <div className="error-list">{errorMessage}</div>}
             {!isLoading && !errorMessage && emptyState === 'no_items' && (
@@ -263,10 +314,24 @@ export function RoutineTab() {
                 </div>
             )}
             {actionErrorMessage && <div className="error-list">{actionErrorMessage}</div>}
-            {!isLoading && !errorMessage && rows.length > 0 && (
-                <div className="card">{rows.map(renderRow)}</div>
+            {!isLoading && !errorMessage && importantDayRows.length > 0 && (
+                <section className="important-section">
+                    <h3 className="important-section__title">
+                        <Star size={SECTION_ICON_SIZE} aria-hidden="true" />
+                        Importantes
+                    </h3>
+                    <div className="card">{importantDayRows.map((row) => renderRow(row))}</div>
+                </section>
             )}
-            {!isLoading && !errorMessage && undatedRows.length > 0 && (
+            {!isLoading && !errorMessage && regularDayRows.length > 0 && (
+                <div className="card">{regularDayRows.map((row) => renderRow(row))}</div>
+            )}
+            {!isLoading && !errorMessage && hasFilteredOutEverything && (
+                <div className="card">
+                    <p className="empty-state__text">Nada nesta categoria hoje.</p>
+                </div>
+            )}
+            {!isLoading && !errorMessage && visibleUndatedRows.length > 0 && (
                 <section className="undated-section">
                     <button
                         type="button"
@@ -281,7 +346,9 @@ export function RoutineTab() {
                         )}
                         Sem data ({pendingUndatedCount})
                     </button>
-                    {isUndatedOpen && <div className="card">{undatedRows.map(renderRow)}</div>}
+                    {isUndatedOpen && (
+                        <div className="card">{visibleUndatedRows.map((row) => renderRow(row, row.isImportant))}</div>
+                    )}
                 </section>
             )}
             <button
@@ -295,6 +362,11 @@ export function RoutineTab() {
             {isNewTaskOpen && (
                 <NewTaskSheet
                     initialDate={selectedDate}
+                    categories={categories}
+                    onOpenCategories={() => {
+                        setIsNewTaskOpen(false)
+                        setIsCategoriesOpen(true)
+                    }}
                     onClose={() => setIsNewTaskOpen(false)}
                     onCreated={handleTaskCreated}
                 />
@@ -305,6 +377,8 @@ export function RoutineTab() {
 
 type RoutineRowViewProps = {
     row: RoutineRow
+    category: RoutineCategoryRow | null
+    showStar: boolean
     actions: RoutineRowActions
     onNavigate: () => void
     onMarkWithoutRegistering: () => void
@@ -315,6 +389,8 @@ type RoutineRowViewProps = {
 
 function RoutineRowView({
     row,
+    category,
+    showStar,
     actions,
     onNavigate,
     onMarkWithoutRegistering,
@@ -424,6 +500,22 @@ function RoutineRowView({
                         </button>
                     )}
                 </div>
+            )}
+            {(category || showStar) && (
+                <p className="routine-row__meta">
+                    {showStar && (
+                        <span className="routine-row__meta-item">
+                            <Star size={META_ICON_SIZE} className="routine-row__star" aria-hidden="true" />
+                            Importante
+                        </span>
+                    )}
+                    {category && (
+                        <span className="routine-row__meta-item">
+                            <CategoryDot color={category.color} />
+                            {category.name}
+                        </span>
+                    )}
+                </p>
             )}
             {row.state === 'done_manual_override' && (
                 <p className="routine-row__hint">Marcado sem registro na aba de origem.</p>

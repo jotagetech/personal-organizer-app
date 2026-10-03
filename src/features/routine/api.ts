@@ -36,6 +36,82 @@ export async function listRoutineCategories(): Promise<RoutineCategoryRow[]> {
     return data ?? []
 }
 
+const UNIQUE_VIOLATION_CODE = '23505'
+
+// O nome já existe na conta (a unicidade do banco ignora maiúsculas).
+export class RoutineCategoryNameTakenError extends Error {}
+
+export async function createRoutineCategory(
+    name: string,
+    color: string,
+    sortOrder: number,
+): Promise<RoutineCategoryRow> {
+    const currentUserId = await requireCurrentUserId()
+
+    const { data, error } = await supabase
+        .from('routine_categories')
+        .insert({ user_id: currentUserId, name, color, sort_order: sortOrder })
+        .select('*')
+        .single()
+
+    if (error?.code === UNIQUE_VIOLATION_CODE) {
+        throw new RoutineCategoryNameTakenError(error.message)
+    }
+    if (error || !data) {
+        throw new Error(error?.message ?? 'Falha ao criar categoria')
+    }
+
+    return data
+}
+
+export async function updateRoutineCategory(
+    categoryId: string,
+    name: string,
+    color: string,
+): Promise<RoutineCategoryRow> {
+    const { data, error } = await supabase
+        .from('routine_categories')
+        .update({ name, color })
+        .eq('id', categoryId)
+        .select('*')
+        .single()
+
+    if (error?.code === UNIQUE_VIOLATION_CODE) {
+        throw new RoutineCategoryNameTakenError(error.message)
+    }
+    if (error || !data) {
+        throw new Error(error?.message ?? 'Falha ao atualizar categoria')
+    }
+
+    return data
+}
+
+// Os itens e tarefas da categoria ficam sem categoria: o banco faz isso.
+export async function deleteRoutineCategory(categoryId: string): Promise<void> {
+    const { error } = await supabase.from('routine_categories').delete().eq('id', categoryId)
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
+// Categorias dos itens não arquivados e das tarefas ainda não concluídas, uma
+// entrada por linha, para a tela de categorias contar o uso de cada uma.
+export async function listActiveCategoryAssignments(): Promise<(string | null)[]> {
+    const [itemsResult, tasksResult] = await Promise.all([
+        supabase.from('routine_items').select('category_id').is('archived_on', null),
+        supabase.from('routine_tasks').select('category_id').is('completed_at', null),
+    ])
+    if (itemsResult.error) {
+        throw new Error(itemsResult.error.message)
+    }
+    if (tasksResult.error) {
+        throw new Error(tasksResult.error.message)
+    }
+    const assignments = [...(itemsResult.data ?? []), ...(tasksResult.data ?? [])].map((row) => row.category_id)
+
+    return assignments
+}
+
 export async function listRoutineItems(): Promise<RoutineItemRow[]> {
     const { data, error } = await supabase
         .from('routine_items')
@@ -259,6 +335,7 @@ async function createRoutineTask(input: Extract<NewTaskInsert, { kind: 'task' }>
         title: input.title,
         scheduled_on: input.scheduledOn,
         is_important: input.isImportant,
+        category_id: input.categoryId,
         sort_order: count ?? 0,
     })
 
@@ -288,6 +365,7 @@ async function createRepeatingRoutineItem(input: Extract<NewTaskInsert, { kind: 
         interval_anchor: input.intervalAnchor,
         active_from: input.activeFrom,
         is_important: input.isImportant,
+        category_id: input.categoryId,
         sort_order: count ?? 0,
     })
 
