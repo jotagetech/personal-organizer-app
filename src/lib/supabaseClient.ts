@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
+import { createClockSkewRetryFetch } from '@/lib/clockSkewRetryFetch'
 import type { Database } from '@/lib/databaseTypes'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -11,4 +12,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
     )
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    global: { fetch: createClockSkewRetryFetch() },
+})

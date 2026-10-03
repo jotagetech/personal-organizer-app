@@ -184,6 +184,11 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Corrigido
 
+- Ao voltar do segundo plano, uma tela podia mostrar "JWT issued at future"
+  no lugar dos dados até recarregar o app: o token renovado chegava ao banco
+  um instante antes de o relógio dele alcançar o horário de emissão. Toda
+  requisição recusada por esse motivo agora é repetida sozinha depois de uma
+  pausa curta.
 - Série confirmada com a rede oscilando no iPhone ficava presa como "falha no
   envio" para sempre e bloqueava a correção das séries do dia: a queda de
   rede no Safari ("Load failed") era tomada por erro definitivo. Agora ela,
