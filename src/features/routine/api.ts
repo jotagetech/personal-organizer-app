@@ -1,3 +1,4 @@
+import type { NewTaskInsert } from '@/features/routine/newTaskInput'
 import type { OnboardingItemRow } from '@/features/routine/onboardingItems'
 import type { RoutineItemInput } from '@/features/routine/routineSchema'
 import type {
@@ -107,15 +108,18 @@ export async function listUndatedRoutineTasks(): Promise<RoutineTaskRow[]> {
 }
 
 // Tudo o que a resolução de uma data precisa: os itens com todas as versões
-// de agenda, as marcações do dia e as tarefas marcadas para ele.
+// de agenda, as marcações do dia e as tarefas marcadas para ele. As tarefas
+// sem data vão junto em tasks; a resolução do dia as ignora e a seção
+// própria as lista.
 export async function loadRoutineDataForDate(date: IsoDate): Promise<RoutineData> {
-    const [items, schedules, entries, tasks] = await Promise.all([
+    const [items, schedules, entries, datedTasks, undatedTasks] = await Promise.all([
         listRoutineItems(),
         listRoutineItemSchedules(),
         listRoutineDayEntries(date),
         listRoutineTasksScheduledOn(date),
+        listUndatedRoutineTasks(),
     ])
-    const routineData: RoutineData = { items, schedules, entries, tasks }
+    const routineData: RoutineData = { items, schedules, entries, tasks: [...datedTasks, ...undatedTasks] }
 
     return routineData
 }
@@ -225,36 +229,71 @@ export async function deleteRoutineDayEntry(dayEntryId: string): Promise<void> {
     }
 }
 
-// sort_order é calculado a partir da contagem de tarefas já marcadas para a
-// data de destino, que pode não ser a aberta na tela.
-export async function createRoutineTask(scheduledOn: IsoDate, title: string): Promise<RoutineTaskRow> {
+// Cria a tarefa avulsa ou o item que repete descrito pela folha de nova
+// tarefa. A versão da agenda do item é gravada pelo banco.
+export async function createNewRoutineEntry(input: NewTaskInsert): Promise<void> {
+    if (input.kind === 'task') {
+        await createRoutineTask(input)
+        return
+    }
+    await createRepeatingRoutineItem(input)
+}
+
+// sort_order é calculado a partir da contagem de tarefas já na mesma data de
+// destino (ou já sem data), que pode não ser a aberta na tela.
+async function createRoutineTask(input: Extract<NewTaskInsert, { kind: 'task' }>): Promise<void> {
     const currentUserId = await requireCurrentUserId()
 
-    const { count, error: countError } = await supabase
-        .from('routine_tasks')
-        .select('id', { count: 'exact', head: true })
-        .eq('scheduled_on', scheduledOn)
+    const countQuery = supabase.from('routine_tasks').select('id', { count: 'exact', head: true })
+    const { count, error: countError } =
+        input.scheduledOn === null
+            ? await countQuery.is('scheduled_on', null)
+            : await countQuery.eq('scheduled_on', input.scheduledOn)
 
     if (countError) {
         throw new Error(countError.message)
     }
 
-    const { data, error } = await supabase
-        .from('routine_tasks')
-        .insert({
-            user_id: currentUserId,
-            title,
-            scheduled_on: scheduledOn,
-            sort_order: count ?? 0,
-        })
-        .select('*')
-        .single()
+    const { error } = await supabase.from('routine_tasks').insert({
+        user_id: currentUserId,
+        title: input.title,
+        scheduled_on: input.scheduledOn,
+        is_important: input.isImportant,
+        sort_order: count ?? 0,
+    })
 
-    if (error || !data) {
-        throw new Error(error?.message ?? 'Falha ao criar tarefa')
+    if (error) {
+        throw new Error(error.message)
+    }
+}
+
+async function createRepeatingRoutineItem(input: Extract<NewTaskInsert, { kind: 'item' }>): Promise<void> {
+    const currentUserId = await requireCurrentUserId()
+
+    const { count, error: countError } = await supabase
+        .from('routine_items')
+        .select('id', { count: 'exact', head: true })
+
+    if (countError) {
+        throw new Error(countError.message)
     }
 
-    return data
+    const { error } = await supabase.from('routine_items').insert({
+        user_id: currentUserId,
+        title: input.title,
+        link_kind: null,
+        repeat_kind: input.repeatKind,
+        weekdays: input.weekdays,
+        interval_days: input.intervalDays,
+        interval_anchor: input.intervalAnchor,
+        active_from: input.activeFrom,
+        is_important: input.isImportant,
+        sort_order: count ?? 0,
+    })
+
+    if (error) {
+        throw new Error(error.message)
+    }
 }
 
 // completedOn é o dia exibido na tela, não necessariamente hoje.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildMonthGrid, formatMonthTitle, parseTypedDate } from '@/features/shared/monthCalendar'
+import { buildMonthGrid, formatMonthTitle, parseTypedDate } from '@/features/shared/monthGrid'
 
 function leadingBlanks(grid: (string | null)[]): number {
     const firstDayIndex = grid.findIndex((cell) => cell !== null)

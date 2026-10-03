@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-import { buildMonthGrid, formatMonthTitle, parseTypedDate } from '@/features/shared/monthCalendar'
+import { buildMonthGrid, formatMonthTitle, parseTypedDate } from '@/features/shared/monthGrid'
 import type { IsoDate } from '@/lib/dateUtils'
 
 interface MonthCalendarProps {

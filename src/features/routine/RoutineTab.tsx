@@ -1,13 +1,11 @@
-import { Check, EllipsisVertical, Plus } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, EllipsisVertical, Plus } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAppNavigation } from '@/contexts/AppNavigationContext'
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { useUndoableActions } from '@/contexts/UndoableActionContext'
-import { validateAdhocTaskInput } from '@/features/routine/adhocTaskInput'
 import {
-    createRoutineTask,
     deleteRoutineDayEntry,
     deleteRoutineTask,
     getRoutineOnboardedAt,
@@ -16,24 +14,27 @@ import {
     markRoutineTaskDone,
     unmarkRoutineTaskDone,
 } from '@/features/routine/api'
+import { NewTaskSheet } from '@/features/routine/NewTaskSheet'
 import { RoutineItemsEditor } from '@/features/routine/RoutineItemsEditor'
 import { RoutineOnboarding } from '@/features/routine/RoutineOnboarding'
 import {
     countRoutineProgress,
     deriveRoutineEmptyState,
     isRoutineRowDone,
+    listUndatedTasks,
     resolveRoutineForDate,
+    resolveTaskRow,
 } from '@/features/routine/resolveRoutine'
 import { deriveRoutineRowActions, type RoutineRowActions, type RoutineRowRemoval } from '@/features/routine/routineRowActions'
 import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
 import type { RoutineData, RoutineRow, RoutineRowState } from '@/features/routine/types'
 import { fetchDaySignals, type DaySignals } from '@/features/shared/daySignals'
-import type { IsoDate } from '@/lib/dateUtils'
 
 const MENU_ICON_SIZE = 22
 const CHECK_ICON_SIZE = 16
 const CHECK_ICON_STROKE = 3
-const BUTTON_ICON_SIZE = 18
+const FAB_ICON_SIZE = 26
+const SECTION_ICON_SIZE = 18
 const EMPTY_ROUTINE_DATA: RoutineData = { items: [], schedules: [], entries: [], tasks: [] }
 
 export function RoutineTab() {
@@ -47,6 +48,8 @@ export function RoutineTab() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [editorTarget, setEditorTarget] = useState<{ initialEditingItemId: string | null } | null>(null)
+    const [isNewTaskOpen, setIsNewTaskOpen] = useState(false)
+    const [isUndatedOpen, setIsUndatedOpen] = useState(false)
     const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null)
     const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
@@ -92,6 +95,14 @@ export function RoutineTab() {
         [selectedDate, routineData, signals],
     )
     const rows = resolvedRows.filter((row) => !(row.source === 'task' && isPendingDeletion(row.id)))
+    const undatedRows = useMemo(
+        () =>
+            listUndatedTasks(routineData.tasks)
+                .map(resolveTaskRow)
+                .filter((row) => !isPendingDeletion(row.id)),
+        [routineData.tasks, isPendingDeletion],
+    )
+    const pendingUndatedCount = undatedRows.filter((row) => !isRoutineRowDone(row.state)).length
     const emptyState = useMemo(() => deriveRoutineEmptyState(items, rows), [items, rows])
     const progress = countRoutineProgress(rows)
     const activeItemIds = useMemo(
@@ -156,9 +167,29 @@ export function RoutineTab() {
         })
     }
 
+    async function handleTaskCreated() {
+        await reloadRoutine()
+        refreshDayStatus()
+    }
+
     async function handleOnboardingFinished() {
         await reloadRoutine()
         refreshDayStatus()
+    }
+
+    function renderRow(row: RoutineRow) {
+        return (
+            <RoutineRowView
+                key={`${selectedDate}:${row.id}`}
+                row={row}
+                actions={deriveRoutineRowActions(row, activeItemIds)}
+                onNavigate={() => row.linkKind && goToTab(ROUTINE_LINK_KIND_TARGET_TAB[row.linkKind])}
+                onMarkWithoutRegistering={() => row.routineItemId && void handleMarkDone(row.routineItemId)}
+                onConfirmDone={() => handleConfirmDone(row)}
+                onEdit={() => setEditorTarget({ initialEditingItemId: row.routineItemId })}
+                onRemove={(removal) => handleRemove(row, removal)}
+            />
+        )
     }
 
     if (!isLoading && !errorMessage && isOnboarded === false) {
@@ -233,22 +264,41 @@ export function RoutineTab() {
             )}
             {actionErrorMessage && <div className="error-list">{actionErrorMessage}</div>}
             {!isLoading && !errorMessage && rows.length > 0 && (
-                <div className="card">
-                    {rows.map((row) => (
-                        <RoutineRowView
-                            key={`${selectedDate}:${row.id}`}
-                            row={row}
-                            actions={deriveRoutineRowActions(row, activeItemIds)}
-                            onNavigate={() => row.linkKind && goToTab(ROUTINE_LINK_KIND_TARGET_TAB[row.linkKind])}
-                            onMarkWithoutRegistering={() => row.routineItemId && void handleMarkDone(row.routineItemId)}
-                            onConfirmDone={() => handleConfirmDone(row)}
-                            onEdit={() => setEditorTarget({ initialEditingItemId: row.routineItemId })}
-                            onRemove={(removal) => handleRemove(row, removal)}
-                        />
-                    ))}
-                </div>
+                <div className="card">{rows.map(renderRow)}</div>
             )}
-            {!isLoading && !errorMessage && <NewAdhocTaskField entryDate={selectedDate} onCreated={reloadRoutine} />}
+            {!isLoading && !errorMessage && undatedRows.length > 0 && (
+                <section className="undated-section">
+                    <button
+                        type="button"
+                        className="undated-section__toggle"
+                        aria-expanded={isUndatedOpen}
+                        onClick={() => setIsUndatedOpen((previous) => !previous)}
+                    >
+                        {isUndatedOpen ? (
+                            <ChevronDown size={SECTION_ICON_SIZE} aria-hidden="true" />
+                        ) : (
+                            <ChevronRight size={SECTION_ICON_SIZE} aria-hidden="true" />
+                        )}
+                        Sem data ({pendingUndatedCount})
+                    </button>
+                    {isUndatedOpen && <div className="card">{undatedRows.map(renderRow)}</div>}
+                </section>
+            )}
+            <button
+                type="button"
+                className="fab"
+                aria-label="Nova tarefa"
+                onClick={() => setIsNewTaskOpen(true)}
+            >
+                <Plus size={FAB_ICON_SIZE} aria-hidden="true" />
+            </button>
+            {isNewTaskOpen && (
+                <NewTaskSheet
+                    initialDate={selectedDate}
+                    onClose={() => setIsNewTaskOpen(false)}
+                    onCreated={handleTaskCreated}
+                />
+            )}
         </div>
     )
 }
@@ -399,80 +449,4 @@ function routineCheckClassName(state: RoutineRowState): string {
     }
 
     return 'routine-row__check'
-}
-
-type NewAdhocTaskFieldProps = {
-    entryDate: IsoDate
-    onCreated: () => Promise<void>
-}
-
-function NewAdhocTaskField({ entryDate, onCreated }: NewAdhocTaskFieldProps) {
-    const [title, setTitle] = useState('')
-    const [targetDate, setTargetDate] = useState<string>(entryDate)
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [errorMessage, setErrorMessage] = useState<string | null>(null)
-    const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null)
-
-    async function handleSubmit(event: React.FormEvent) {
-        event.preventDefault()
-        const validation = validateAdhocTaskInput(title, targetDate)
-        if (!validation.ok) {
-            setErrorMessage(validation.message)
-            return
-        }
-        const input = validation.value
-
-        setErrorMessage(null)
-        setConfirmationMessage(null)
-        setIsSubmitting(true)
-        try {
-            await createRoutineTask(input.scheduledOn, input.title)
-            setTitle('')
-            if (input.scheduledOn === entryDate) {
-                await onCreated()
-            } else {
-                // Data diferente da selecionada na tela: a confirmação local
-                // deixa claro pra qual dia a tarefa foi.
-                setConfirmationMessage(`Tarefa adicionada para ${formatDayMonthLabel(input.scheduledOn)}.`)
-            }
-        } catch (submitError) {
-            const message = submitError instanceof Error ? submitError.message : 'Falha ao criar tarefa'
-            setErrorMessage(message)
-        } finally {
-            setIsSubmitting(false)
-        }
-    }
-
-    return (
-        <form className="card adhoc-task-form" onSubmit={handleSubmit}>
-            {errorMessage && <div className="error-list">{errorMessage}</div>}
-            {confirmationMessage && <p className="adhoc-task-form__confirmation">{confirmationMessage}</p>}
-            <input
-                type="text"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="+ Nova tarefa avulsa"
-                aria-label="Nova tarefa avulsa"
-                className="adhoc-task-form__input"
-            />
-            <div className="adhoc-task-form__dates">
-                <input
-                    type="date"
-                    value={targetDate}
-                    onChange={(event) => setTargetDate(event.target.value)}
-                    aria-label="Data da tarefa"
-                    className="adhoc-task-form__input"
-                />
-            </div>
-            <button type="submit" className="primary-button adhoc-task-form__submit" disabled={isSubmitting}>
-                <Plus size={BUTTON_ICON_SIZE} aria-hidden="true" />
-                {isSubmitting ? 'Adicionando...' : 'Adicionar'}
-            </button>
-        </form>
-    )
-}
-
-function formatDayMonthLabel(isoDate: IsoDate): string {
-    const [, month, day] = isoDate.split('-')
-    return `${day}/${month}`
 }

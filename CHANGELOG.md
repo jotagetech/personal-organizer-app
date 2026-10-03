@@ -7,6 +7,11 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Botão + sempre visível na Rotina abre a folha "Nova tarefa": só o nome é
+  obrigatório; a data sai de Hoje, Amanhã, de um calendário (com opção de
+  digitar) ou fica Sem data; dá para repetir em dias da semana ou a cada N dias
+  e marcar como importante. Tarefas sem data ficam numa seção própria no fim da
+  lista e não contam no total do dia. Sai o formulário fixo de tarefa avulsa.
 - Primeira vez na Rotina: quem ainda não montou a rotina escolhe até 3 coisas
   para começar (itens que se marcam sozinhos, como Academia nos dias de treino
   do plano, peso e sono, hábitos comuns ou um escrito na hora) ou pula. Sai o
