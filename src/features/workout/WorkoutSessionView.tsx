@@ -32,6 +32,7 @@ import {
     type LastTimeByExercise,
 } from '@/features/workout/groupPresentation'
 import { IntervalStep } from '@/features/workout/IntervalStep'
+import { prefillLoadKgOf } from '@/features/workout/loadPrefill'
 import { recordingLockNotice, type RecordingLock } from '@/features/workout/recordableDate'
 import { RestPanel } from '@/features/workout/RestPanel'
 import { decideRestPushAction, planRestPush, type RestPushPlan } from '@/features/workout/restPush'
@@ -1085,8 +1086,15 @@ export function WorkoutSessionView({
         restAfterSet(snapshot, position, effectiveSetsByKey) !== null &&
         findNextUnresolvedPosition(snapshot, effectiveSetsByKey, position) !== null
     const groupHint = groupHintOf(snapshot, groupContext, hasRestAfterSet, lastTimeByKey)
+    const currentLastTime = lastTimeByKey.get(currentExercicio.exercise_key) ?? null
+    const prefillLoadKg = prefillLoadKgOf({
+        exerciseKey: currentExercicio.exercise_key,
+        setIndex: currentSet.set_index,
+        setsByKey: effectiveSetsByKey,
+        lastTime: currentLastTime,
+    })
     const lastTimeText = formatLastTimeText(
-        lastTimeByKey.get(currentExercicio.exercise_key) ?? null,
+        currentLastTime,
         currentSet.set_index,
         currentExercicio.forma_carga,
         currentSet.metrica,
@@ -1247,6 +1255,7 @@ export function WorkoutSessionView({
                                     }
                                     groupHint={currentSet.quedas.length === 0 ? groupHint : null}
                                     lastTimeText={lastTimeText}
+                                    prefillLoadKg={prefillLoadKg}
                                     onConfirmed={handleSetConfirmed}
                                     onSkipped={handleSetSkipped}
                                     onSkipExercise={handleSkipExercise}

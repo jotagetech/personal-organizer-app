@@ -62,6 +62,8 @@ type ExerciseSetRowProps = {
     // Resultado da última vez que o exercício foi feito; nulo sem histórico
     // (ou enquanto ele ainda não chegou).
     lastTimeText: string | null
+    // Última carga usada no exercício; preenche o campo de série sem registro.
+    prefillLoadKg: number | null
     onConfirmed: (row: WorkoutSetRow) => void
     onSkipped: (row: WorkoutSetRow) => void
     onSkipExercise: (row: WorkoutSetRow) => void
@@ -78,6 +80,7 @@ export function ExerciseSetRow({
     confirmLabel,
     groupHint,
     lastTimeText,
+    prefillLoadKg,
     onConfirmed,
     onSkipped,
     onSkipExercise,
@@ -89,7 +92,7 @@ export function ExerciseSetRow({
     const metric = serie.metrica
     const formaCarga = exercicio.forma_carga
     const hasPlannedDrops = serie.quedas.length > 0
-    const [fields, setFields] = useState<SetFieldState>(() => toFieldState(existingSet, metric))
+    const [fields, setFields] = useState<SetFieldState>(() => toFieldState(existingSet, metric, prefillLoadKg))
     const [isNoteOpen, setIsNoteOpen] = useState(() => Boolean(existingSet?.note))
     const [hasEverSaved, setHasEverSaved] = useState(() => Boolean(existingSet))
     const fieldsRef = useRef(fields)
@@ -118,8 +121,12 @@ export function ExerciseSetRow({
         if (hasUnsavedTypingRef.current) {
             return
         }
-        const incomingFields = toFieldState(existingSet, metric)
-        const currentFieldsAsSaved = toFieldState(buildLocalRow(valuesFromFields(fieldsRef.current)), metric)
+        const incomingFields = toFieldState(existingSet, metric, prefillLoadKg)
+        const currentFieldsAsSaved = toFieldState(
+            buildLocalRow(valuesFromFields(fieldsRef.current)),
+            metric,
+            prefillLoadKg,
+        )
         if (isSameFieldState(incomingFields, currentFieldsAsSaved)) {
             return
         }
@@ -129,6 +136,20 @@ export function ExerciseSetRow({
         setHasEverSaved(Boolean(existingSet))
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [existingSet])
+
+    // O histórico chega depois de a série abrir: a carga só entra num campo
+    // vazio que ninguém tocou, de série ainda sem registro. Fica só na tela;
+    // vai para a fila ao confirmar, como qualquer valor digitado.
+    useEffect(() => {
+        const isUntouchedEmptyLoad =
+            !existingSet && !hasUnsavedTypingRef.current && fieldsRef.current.loadKgText === ''
+        if (!isUntouchedEmptyLoad || prefillLoadKg === null) {
+            return
+        }
+
+        updateFields({ ...fieldsRef.current, loadKgText: loadTextOf({ load_kg: prefillLoadKg }) })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [prefillLoadKg])
 
     // Sair da série sem tirar o foco do campo (trocando de série ou de data)
     // não pode perder a última digitação: o autosave pendente é enviado pra
@@ -523,9 +544,14 @@ function isSameFieldState(first: SetFieldState, second: SetFieldState): boolean 
     return hasSameValues
 }
 
-function toFieldState(existingSet: WorkoutSetRow | undefined, metric: SetMetric): SetFieldState {
+function toFieldState(
+    existingSet: WorkoutSetRow | undefined,
+    metric: SetMetric,
+    prefillLoadKg: number | null,
+): SetFieldState {
+    const loadColumns = existingSet ?? { load_kg: prefillLoadKg }
     const fieldState: SetFieldState = {
-        loadKgText: loadTextOf(existingSet),
+        loadKgText: loadTextOf(loadColumns),
         resultText: resultTextOf(metric, existingSet),
         rirText: existingSet?.rir != null ? String(existingSet.rir) : '',
         noteText: existingSet?.note ?? '',

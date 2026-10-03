@@ -7,6 +7,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- O campo de carga de uma série ainda sem registro já vem preenchido com a
+  última carga usada no exercício: a da série concluída mais cedo no mesmo
+  treino ou, sem ela, a da série de mesmo número na sessão anterior. Basta
+  confirmar ou trocar o número; nada é gravado antes de confirmar.
 - Monitoramento de erros em produção pelo Sentry: erro que derruba a tela
   (com uma tela de "Recarregar" no lugar do app em branco), falha
   definitiva da fila de envio com alerta e falha passageira como log. Nenhum
