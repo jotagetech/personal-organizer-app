@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
     countRoutineProgress,
     deriveRoutineEmptyState,
+    shouldShowRoutineOnboarding,
     listUndatedTasks,
     resolveRoutineForDate,
 } from '@/features/routine/resolveRoutine'
@@ -386,5 +387,20 @@ describe('deriveRoutineEmptyState', () => {
         const rows = resolveRoutineForDate(REFERENCE_DATE, buildData({ items }), buildSignals())
 
         expect(deriveRoutineEmptyState(items, rows)).toBe('none')
+    })
+})
+
+describe('shouldShowRoutineOnboarding', () => {
+    it('mostra a primeira vez sem nenhum item ativo', () => {
+        expect(shouldShowRoutineOnboarding([], false)).toBe(true)
+        expect(shouldShowRoutineOnboarding([buildItem({ archived_on: '2026-10-01' })], false)).toBe(true)
+    })
+
+    it('esconde com algum item ativo', () => {
+        expect(shouldShowRoutineOnboarding([buildItem()], false)).toBe(false)
+    })
+
+    it('esconde depois de pular nesta sessão', () => {
+        expect(shouldShowRoutineOnboarding([], true)).toBe(false)
     })
 })

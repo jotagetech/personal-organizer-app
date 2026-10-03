@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { useProfile } from '@/contexts/ProfileContext'
 import { createOnboardingRoutineItems, markRoutineOnboarded } from '@/features/routine/api'
+import { markRoutineOnboardingSkipped } from '@/features/routine/onboardingSession'
 import {
     buildOnboardingItems,
     COMMON_ONBOARDING_PRESETS,
@@ -98,16 +99,8 @@ export function RoutineOnboarding({ onFinished }: RoutineOnboardingProps) {
     }
 
     async function handleSkip() {
-        setErrorMessage(null)
-        setIsSaving(true)
-        try {
-            await markRoutineOnboarded()
-            await onFinished()
-        } catch {
-            setErrorMessage(SAVE_ERROR_MESSAGE)
-        } finally {
-            setIsSaving(false)
-        }
+        markRoutineOnboardingSkipped()
+        await onFinished()
     }
 
     function renderPresetChip(preset: OnboardingPreset) {

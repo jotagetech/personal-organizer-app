@@ -413,22 +413,6 @@ export async function deleteRoutineTask(taskId: string): Promise<void> {
 }
 
 // null enquanto a conta não passou pela primeira vez da aba.
-export async function getRoutineOnboardedAt(): Promise<string | null> {
-    const currentUserId = await requireCurrentUserId()
-
-    const { data, error } = await supabase
-        .from('user_settings')
-        .select('routine_onboarded_at')
-        .eq('user_id', currentUserId)
-        .maybeSingle()
-
-    if (error) {
-        throw new Error(error.message)
-    }
-
-    return data?.routine_onboarded_at ?? null
-}
-
 export async function markRoutineOnboarded(): Promise<void> {
     const currentUserId = await requireCurrentUserId()
 

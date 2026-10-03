@@ -11,7 +11,6 @@ import { useCurrentHour } from '@/features/account/useCurrentHour'
 import {
     deleteRoutineDayEntry,
     deleteRoutineTask,
-    getRoutineOnboardedAt,
     listRoutineCategories,
     loadRoutineDataForDate,
     markRoutineItemDone,
@@ -31,9 +30,11 @@ import { CategoryFilter } from '@/features/routine/CategoryFilter'
 import { NewTaskSheet } from '@/features/routine/NewTaskSheet'
 import { RoutineItemsEditor } from '@/features/routine/RoutineItemsEditor'
 import { RoutineOnboarding } from '@/features/routine/RoutineOnboarding'
+import { wasRoutineOnboardingSkipped } from '@/features/routine/onboardingSession'
 import {
     countRoutineProgress,
     deriveRoutineEmptyState,
+    shouldShowRoutineOnboarding,
     isRoutineRowDone,
     listUndatedTasks,
     resolveRoutineForDate,
@@ -70,7 +71,6 @@ export function RoutineTab() {
     const [isCategoriesOpen, setIsCategoriesOpen] = useState(false)
     const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>(ALL_CATEGORIES_FILTER)
     const [isUndatedOpen, setIsUndatedOpen] = useState(false)
-    const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null)
     const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
 
@@ -78,16 +78,14 @@ export function RoutineTab() {
         setIsLoading(true)
         setErrorMessage(null)
         try {
-            const [nextRoutineData, nextSignals, onboardedAt, nextCategories] = await Promise.all([
+            const [nextRoutineData, nextSignals, nextCategories] = await Promise.all([
                 loadRoutineDataForDate(selectedDate),
                 fetchDaySignals(selectedDate),
-                getRoutineOnboardedAt(),
                 listRoutineCategories(),
             ])
             setRoutineData(nextRoutineData)
             setCategories(nextCategories)
             setSignals(nextSignals)
-            setIsOnboarded(onboardedAt !== null)
         } catch (loadError) {
             const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar a rotina'
             setErrorMessage(message)
@@ -225,7 +223,7 @@ export function RoutineTab() {
         )
     }
 
-    if (!isLoading && !errorMessage && isOnboarded === false) {
+    if (!isLoading && !errorMessage && shouldShowRoutineOnboarding(items, wasRoutineOnboardingSkipped())) {
         return <RoutineOnboarding onFinished={handleOnboardingFinished} />
     }
 

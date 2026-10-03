@@ -25,7 +25,8 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
   lista e não contam no total do dia. Sai o formulário fixo de tarefa avulsa.
 - Primeira vez na Rotina: quem ainda não montou a rotina escolhe até 3 coisas
   para começar (itens que se marcam sozinhos, como Academia nos dias de treino
-  do plano, peso e sono, hábitos comuns ou um escrito na hora) ou pula. Sai o
+  do plano, peso e sono, hábitos comuns ou um escrito na hora) ou pula. A tela volta a aparecer enquanto a pessoa não tiver nenhum hábito
+  ativo (pular vale até abrir o app de novo). Sai o
   botão "Criar rotina sugerida", que criava 5 itens de uma vez.
 - O campo de carga de uma série ainda sem registro já vem preenchido com a
   última carga usada no exercício: a da série concluída mais cedo no mesmo

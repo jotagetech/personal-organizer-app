@@ -199,6 +199,15 @@ export function deriveRoutineEmptyState(items: RoutineItemRow[], rows: RoutineRo
     return 'none'
 }
 
+// Lógica pura: a primeira vez volta enquanto a conta não tiver nenhum item
+// que repete ativo. Pular esconde a tela só até o app ser aberto de novo, e
+// tarefa avulsa sozinha não conta como rotina montada.
+export function shouldShowRoutineOnboarding(items: RoutineItemRow[], wasSkippedThisSession: boolean): boolean {
+    const hasActiveItem = items.some((item) => item.archived_on === null)
+    const shouldShow = !hasActiveItem && !wasSkippedThisSession
+    return shouldShow
+}
+
 // Lógica pura (sem chamada de rede): decide o que a tela de rotina mostra
 // pra uma data, cruzando os itens que repetem (com a agenda que valia na
 // data) com as marcações do dia, as tarefas marcadas para ela e os sinais já
