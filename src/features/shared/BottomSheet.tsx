@@ -1,5 +1,7 @@
 import { X } from 'lucide-react'
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type FocusEvent, type ReactNode } from 'react'
+
+import { useVisualViewportFrame } from '@/features/shared/useVisualViewportFrame'
 
 interface BottomSheetProps {
     title: string
@@ -8,6 +10,9 @@ interface BottomSheetProps {
 }
 
 const CLOSE_ICON_SIZE = 22
+// Tempo da animação do teclado do iPhone; antes disso a área visível ainda
+// não encolheu e a rolagem cairia no lugar errado.
+const KEYBOARD_SETTLE_MS = 320
 const FOCUSABLE_SELECTOR = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href]'
 
 // Primeiro campo de texto do conteúdo; sem ele, o primeiro controle focável.
@@ -26,6 +31,7 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
     const panelRef = useRef<HTMLDivElement>(null)
     const onCloseRef = useRef(onClose)
     const titleId = useId()
+    const frameStyle = useVisualViewportFrame()
 
     useEffect(() => {
         onCloseRef.current = onClose
@@ -56,7 +62,7 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
     }, [])
 
     return (
-        <div className="bottom-sheet" role="presentation">
+        <div className="bottom-sheet" role="presentation" style={frameStyle}>
             <div className="bottom-sheet__backdrop" onClick={onClose} aria-hidden="true" />
             <div
                 ref={panelRef}
@@ -74,7 +80,9 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
                         <X size={CLOSE_ICON_SIZE} aria-hidden="true" />
                     </button>
                 </div>
-                <div className="bottom-sheet__body">{children}</div>
+                <div className="bottom-sheet__body" onFocus={keepFocusedFieldVisible}>
+                    {children}
+                </div>
             </div>
         </div>
     )
@@ -99,4 +107,16 @@ function keepFocusInside(event: KeyboardEvent, panel: HTMLElement) {
         event.preventDefault()
         first.focus()
     }
+}
+
+// O campo em foco continua à vista depois que o teclado termina de abrir e a
+// folha encolhe para caber acima dele.
+function keepFocusedFieldVisible(event: FocusEvent<HTMLDivElement>) {
+    const field = event.target
+    if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {
+        return
+    }
+    window.setTimeout(() => {
+        field.scrollIntoView({ block: 'nearest' })
+    }, KEYBOARD_SETTLE_MS)
 }

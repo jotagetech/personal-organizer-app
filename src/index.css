@@ -5021,8 +5021,7 @@ h1, h2, h3, h4 {
     flex-direction: column;
     width: 100%;
     max-width: 560px;
-    max-height: 92vh;
-    max-height: 92dvh;
+    max-height: calc(100% - 12px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--color-surface);

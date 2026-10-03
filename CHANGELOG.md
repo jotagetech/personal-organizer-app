@@ -201,6 +201,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Corrigido
 
+- No iPhone, com o teclado aberto, a folha de nova tarefa ficava desalinhada:
+  o campo que se estava digitando saía da tela e o Salvar ficava atrás da
+  barra do teclado. A folha agora acompanha a área visível acima do teclado e
+  mantém o campo em foco à vista.
 - Ao voltar do segundo plano, uma tela podia mostrar "JWT issued at future"
   no lugar dos dados até recarregar o app: o token renovado chegava ao banco
   um instante antes de o relógio dele alcançar o horário de emissão. Toda
