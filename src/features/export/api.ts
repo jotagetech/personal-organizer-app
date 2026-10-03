@@ -5,8 +5,8 @@ import { getCurrentCycle } from '@/features/cycle/api'
 import type { PeriodExportMeta, PeriodExportRawData } from '@/features/export/buildPeriodExport'
 import type { ExportPeriod } from '@/features/export/period'
 import type { FoodEntryRow } from '@/features/food/types'
-import { listRoutineItems } from '@/features/routine/api'
-import type { RoutineDayEntryRow } from '@/features/routine/types'
+import { listRoutineItemSchedules, listRoutineItems } from '@/features/routine/api'
+import type { RoutineDayEntryRow, RoutineTaskRow } from '@/features/routine/types'
 import { normalizeSessionRows } from '@/features/workout/api'
 import type { WorkoutSessionRow, WorkoutSetDropRow, WorkoutSetRow } from '@/features/workout/types'
 import { DEFAULT_TIMEZONE } from '@/lib/dateUtils'
@@ -135,18 +135,14 @@ function listRoutineEntriesInPeriod(period: ExportPeriod): Promise<RoutineDayEnt
     )
 }
 
-// Tarefas avulsas com prazo criadas antes do período que ainda aparecem nele
-// (não concluídas, ou concluídas no início do período ou depois); a
-// visibilidade exata por dia é decidida depois por resolveRoutineForDate.
-function listCarriedAdhocEntriesIntoPeriod(period: ExportPeriod): Promise<RoutineDayEntryRow[]> {
+// Tarefas sem data não pertencem a dia nenhum do período e ficam de fora.
+function listRoutineTasksInPeriod(period: ExportPeriod): Promise<RoutineTaskRow[]> {
     return fetchAllPages((from, to) =>
         supabase
-            .from('routine_day_entries')
+            .from('routine_tasks')
             .select('*')
-            .is('routine_item_id', null)
-            .not('due_date', 'is', null)
-            .lt('entry_date', period.start)
-            .or(`completed_on.is.null,completed_on.gte.${period.start}`)
+            .gte('scheduled_on', period.start)
+            .lte('scheduled_on', period.end)
             .order('id', { ascending: true })
             .range(from, to),
     )
@@ -194,8 +190,9 @@ export async function fetchPeriodExportData(
         activityTypes,
         foodEntries,
         routineItems,
-        routineDayEntries,
-        carriedAdhocEntries,
+        routineSchedules,
+        routineEntries,
+        routineTasks,
         bodyWeightEntries,
         sleepEntries,
         timezone,
@@ -206,8 +203,9 @@ export async function fetchPeriodExportData(
         listActivityTypes(),
         listFoodEntriesInPeriod(period),
         listRoutineItems(),
+        listRoutineItemSchedules(),
         listRoutineEntriesInPeriod(period),
-        listCarriedAdhocEntriesIntoPeriod(period),
+        listRoutineTasksInPeriod(period),
         listBodyWeightEntriesInPeriod(period),
         listSleepEntriesInPeriod(period),
         getUserTimezone(),
@@ -225,7 +223,9 @@ export async function fetchPeriodExportData(
             activityTypes,
             foodEntries,
             routineItems,
-            routineEntries: [...routineDayEntries, ...carriedAdhocEntries],
+            routineSchedules,
+            routineEntries,
+            routineTasks,
             bodyWeightEntries,
             sleepEntries,
         },

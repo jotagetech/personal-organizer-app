@@ -68,7 +68,7 @@ export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onCha
                                 <RoutineItemForm
                                     initialValues={{
                                         title: item.title,
-                                        weekdays: item.weekdays as Weekday[],
+                                        weekdays: (item.weekdays ?? []) as Weekday[],
                                         linkKind: (item.link_kind as RoutineLinkKind | null) ?? undefined,
                                     }}
                                     submitLabel="Salvar"
@@ -81,7 +81,7 @@ export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onCha
                                 <div className="routine-item-list__text">
                                     <strong className="routine-item-list__title">{item.title}</strong>
                                     <p className="routine-item-list__meta">
-                                        {formatWeekdays(item.weekdays as Weekday[])}
+                                        {formatSchedule(item)}
                                         {item.link_kind
                                             ? ` · ${ROUTINE_LINK_KIND_LABELS[item.link_kind as RoutineLinkKind]}`
                                             : ''}
@@ -127,6 +127,14 @@ export function RoutineItemsEditor({ items, initialEditingItemId, onClose, onCha
             )}
         </div>
     )
+}
+
+function formatSchedule(item: RoutineItemRow): string {
+    if (item.repeat_kind === 'interval') {
+        return `A cada ${item.interval_days} dias`
+    }
+
+    return formatWeekdays((item.weekdays ?? []) as Weekday[])
 }
 
 function formatWeekdays(weekdays: Weekday[]): string {

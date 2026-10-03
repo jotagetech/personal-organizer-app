@@ -140,6 +140,15 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Alterado
 
+- Rotina com modelo novo no banco (migração `20261003000000`): categorias,
+  hábitos que repetem por dia da semana ou a cada N dias, tarefas com ou sem
+  data e a agenda de cada hábito guardada com a data em que passou a valer,
+  para que mudar os dias de um hábito não altere os dias que já passaram. Os
+  dados de rotina de todas as contas foram apagados para recomeçar do zero;
+  treino, comida, peso e sono não foram tocados. A tarefa avulsa deixou de ter
+  prazo. A exportação por período passou para `format_version` 2: cada item da
+  rotina sai como `title`, `source` (`linked`, `manual` ou `task`) e `state`,
+  sem `due_date` nem `overdue`.
 - Série de tempo (prancha, isometria): Iniciar abre um preparo de 5 s com
   contagem e bipe a cada segundo, e então o cronômetro conta para baixo a
   partir da meta máxima, avisa ao passar do mínimo e termina sozinho no zero,

@@ -9,7 +9,7 @@ import { computeDailyTotals, lacksNutrition } from '@/features/food/dailyTotals'
 import { FOOD_UNIT_LABELS, MEAL_CATEGORIES, MEAL_CATEGORY_LABELS } from '@/features/food/types'
 import type { FoodEntryRow, FoodUnit } from '@/features/food/types'
 import { getDaySummary, type DaySummary } from '@/features/results/api'
-import { buildDayReport, type DayReport, type DayReportPendingItem } from '@/features/results/dayReport'
+import { buildDayReport, type DayReport } from '@/features/results/dayReport'
 import { summarizeWorkoutSets } from '@/features/results/daySummary'
 import { replaceSetRow } from '@/features/results/setCorrection'
 import type { SetCorrectionTarget } from '@/features/results/SetCorrectionItem'
@@ -158,7 +158,7 @@ function DayReportSection({ report, isToday }: DayReportSectionProps) {
                     <p className="day-report__pending-label">{isToday ? 'Ainda falta: ' : 'Não foi feito: '}</p>
                     <ul className="day-report__chips">
                         {report.pendingItems.map((item) => (
-                            <li key={item.title} className={pendingChipClassName(item)}>
+                            <li key={item.title} className="day-report__chip">
                                 {item.title}
                             </li>
                         ))}
@@ -174,12 +174,6 @@ function DayReportSection({ report, isToday }: DayReportSectionProps) {
             )}
         </div>
     )
-}
-
-function pendingChipClassName(item: DayReportPendingItem): string {
-    const className = item.isOverdue ? 'day-report__chip day-report__chip--overdue' : 'day-report__chip'
-
-    return className
 }
 
 type WorkoutDaySectionProps = {

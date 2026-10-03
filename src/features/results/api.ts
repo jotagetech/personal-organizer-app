@@ -4,7 +4,7 @@ import { listActivityTypes, listCardioEntriesForDate } from '@/features/cardio/a
 import type { CardioActivityTypeRow, CardioEntryRow } from '@/features/cardio/types'
 import { listFoodEntriesForDate } from '@/features/food/api'
 import type { FoodEntryRow } from '@/features/food/types'
-import { listRoutineEntriesVisibleOn, listRoutineItems } from '@/features/routine/api'
+import { loadRoutineDataForDate } from '@/features/routine/api'
 import { resolveRoutineForDate } from '@/features/routine/resolveRoutine'
 import type { RoutineRow } from '@/features/routine/types'
 import { deriveDaySignals } from '@/features/shared/daySignals'
@@ -43,7 +43,7 @@ export type DaySummary = {
 }
 
 export async function getDaySummary(date: IsoDate): Promise<DaySummary> {
-    const [workout, cardioEntries, activityTypes, foodEntries, bodyWeightEntry, sleepEntry, routineItems, routineDayEntries] =
+    const [workout, cardioEntries, activityTypes, foodEntries, bodyWeightEntry, sleepEntry, routineData] =
         await Promise.all([
             getSessionForDate(date),
             listCardioEntriesForDate(date),
@@ -51,8 +51,7 @@ export async function getDaySummary(date: IsoDate): Promise<DaySummary> {
             listFoodEntriesForDate(date),
             getBodyWeightForDate(date),
             getSleepForDate(date),
-            listRoutineItems(),
-            listRoutineEntriesVisibleOn(date),
+            loadRoutineDataForDate(date),
         ])
 
     const signals = deriveDaySignals({
@@ -62,7 +61,7 @@ export async function getDaySummary(date: IsoDate): Promise<DaySummary> {
         sleepEntry,
         cardioEntries,
     })
-    const routineRows = resolveRoutineForDate(date, routineItems, routineDayEntries, signals)
+    const routineRows = resolveRoutineForDate(date, routineData, signals)
 
     const daySummary: DaySummary = {
         workoutSession: workout?.session ?? null,

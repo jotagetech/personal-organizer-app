@@ -9,7 +9,12 @@ import {
     type PeriodExportRawData,
 } from '@/features/export/buildPeriodExport'
 import type { FoodEntryRow } from '@/features/food/types'
-import type { RoutineDayEntryRow, RoutineItemRow } from '@/features/routine/types'
+import type {
+    RoutineDayEntryRow,
+    RoutineItemRow,
+    RoutineItemScheduleRow,
+    RoutineTaskRow,
+} from '@/features/routine/types'
 import type { WorkoutSessionRow, WorkoutSetDropRow, WorkoutSetRow, WorkoutSnapshot } from '@/features/workout/types'
 import { EMPTY_SET_METRIC_COLUMNS, repsSnapshotSet, SNAPSHOT_EXERCISE_DEFAULTS } from './workoutFixtures'
 
@@ -126,13 +131,33 @@ function buildRoutineItem(overrides: Partial<RoutineItemRow>): RoutineItemRow {
         id: 'routine-item',
         user_id: 'user-1',
         title: 'Academia',
-        weekdays: ['segunda', 'terca', 'quarta'],
         link_kind: 'workout_finished',
-        sort_order: 0,
+        category_id: null,
+        is_important: false,
+        repeat_kind: 'weekdays',
+        weekdays: ['segunda', 'terca', 'quarta'],
+        interval_days: null,
+        interval_anchor: null,
         active_from: '2026-01-01',
         archived_on: null,
+        sort_order: 0,
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
+        ...overrides,
+    }
+}
+
+function buildRoutineSchedule(overrides: Partial<RoutineItemScheduleRow>): RoutineItemScheduleRow {
+    return {
+        id: 'routine-schedule',
+        user_id: 'user-1',
+        routine_item_id: 'ri-academia',
+        effective_from: '2026-01-01',
+        repeat_kind: 'weekdays',
+        weekdays: ['segunda', 'terca', 'quarta'],
+        interval_days: null,
+        interval_anchor: null,
+        created_at: '2026-01-01T00:00:00.000Z',
         ...overrides,
     }
 }
@@ -141,12 +166,25 @@ function buildRoutineEntry(overrides: Partial<RoutineDayEntryRow>): RoutineDayEn
     return {
         id: 'routine-entry',
         user_id: 'user-1',
-        entry_date: '2026-09-26',
-        routine_item_id: null,
+        routine_item_id: 'ri-creatina',
+        entry_date: '2026-09-29',
+        completed_at: '2026-09-29T09:00:00.000Z',
+        created_at: '2026-09-29T09:00:00.000Z',
+        ...overrides,
+    }
+}
+
+function buildRoutineTask(overrides: Partial<RoutineTaskRow>): RoutineTaskRow {
+    return {
+        id: 'routine-task',
+        user_id: 'user-1',
         title: 'Pagar boleto',
-        completed_at: null,
-        due_date: '2026-09-27',
+        scheduled_on: '2026-09-28',
+        carried_from_on: null,
+        category_id: null,
+        is_important: false,
         completed_on: null,
+        completed_at: null,
         sort_order: 0,
         created_at: '2026-09-26T08:00:00.000Z',
         updated_at: '2026-09-26T08:00:00.000Z',
@@ -221,8 +259,29 @@ function buildRawData(overrides: Partial<PeriodExportRawData> = {}): PeriodExpor
             }),
             buildFood({ id: 'f1' }),
         ],
-        routineItems: [buildRoutineItem({ id: 'ri-academia' })],
-        routineEntries: [buildRoutineEntry({ id: 're-boleto' })],
+        routineItems: [
+            buildRoutineItem({ id: 'ri-academia' }),
+            buildRoutineItem({
+                id: 'ri-creatina',
+                title: 'Tomar creatina',
+                link_kind: null,
+                weekdays: ['terca'],
+                sort_order: 1,
+            }),
+        ],
+        routineSchedules: [],
+        routineEntries: [buildRoutineEntry({ id: 're-creatina' })],
+        routineTasks: [
+            buildRoutineTask({ id: 'rt-boleto' }),
+            buildRoutineTask({
+                id: 'rt-banco',
+                title: 'Ligar pro banco',
+                scheduled_on: '2026-09-30',
+                completed_on: '2026-09-30',
+                completed_at: '2026-09-30T14:00:00.000Z',
+            }),
+            buildRoutineTask({ id: 'rt-sem-data', title: 'Algum dia', scheduled_on: null }),
+        ],
         bodyWeightEntries: [buildBodyWeight('2026-09-30', 81.2), buildBodyWeight('2026-09-28', 81.6)],
         sleepEntries: [buildSleep('2026-09-29', 7.5)],
         ...overrides,
@@ -372,42 +431,50 @@ describe('buildPeriodExport', () => {
         ])
     })
 
-    it('resolve a rotina de cada dia com os sinais do próprio período, incluindo avulsa atrasada', () => {
+    it('resolve a rotina de cada dia com os sinais do próprio período, marcações e tarefas', () => {
         const periodExport = buildPeriodExport(buildRawData(), PERIOD, META)
 
-        expect(periodExport.routine.map((day) => day.date)).toEqual(['2026-09-28', '2026-09-29', '2026-09-30'])
-        expect(periodExport.routine[0].items).toEqual([
-            { title: 'Academia', source: 'linked', state: 'done', due_date: null, overdue: false },
-            { title: 'Pagar boleto', source: 'adhoc', state: 'pending', due_date: '2026-09-27', overdue: true },
+        expect(periodExport.routine).toEqual([
+            {
+                date: '2026-09-28',
+                items: [
+                    { title: 'Academia', source: 'linked', state: 'done' },
+                    { title: 'Pagar boleto', source: 'task', state: 'pending' },
+                ],
+            },
+            {
+                date: '2026-09-29',
+                items: [
+                    { title: 'Academia', source: 'linked', state: 'pending' },
+                    { title: 'Tomar creatina', source: 'manual', state: 'done' },
+                ],
+            },
+            {
+                date: '2026-09-30',
+                items: [
+                    { title: 'Academia', source: 'linked', state: 'pending' },
+                    { title: 'Ligar pro banco', source: 'task', state: 'done' },
+                ],
+            },
         ])
-        expect(periodExport.routine[1].items[0]).toMatchObject({ title: 'Academia', state: 'pending' })
-        expect(periodExport.routine[2].items[1]).toMatchObject({ title: 'Pagar boleto', overdue: true })
     })
 
-    it('tira a avulsa da rotina depois do dia em que foi concluída', () => {
+    it('resolve cada dia com a agenda que valia nele', () => {
         const periodExport = buildPeriodExport(
             buildRawData({
-                routineEntries: [
-                    buildRoutineEntry({
-                        id: 're-boleto',
-                        completed_at: '2026-09-29T15:00:00.000Z',
-                        completed_on: '2026-09-29',
-                    }),
+                routineSchedules: [
+                    buildRoutineSchedule({ id: 'v1', effective_from: '2026-01-01', weekdays: ['segunda'] }),
+                    buildRoutineSchedule({ id: 'v2', effective_from: '2026-09-30', weekdays: ['segunda', 'terca', 'quarta'] }),
                 ],
             }),
             PERIOD,
             META,
         )
 
-        const boletoStateByDate = periodExport.routine.map((day) => [
-            day.date,
-            day.items.find((item) => item.title === 'Pagar boleto')?.state ?? null,
-        ])
-        expect(boletoStateByDate).toEqual([
-            ['2026-09-28', 'pending'],
-            ['2026-09-29', 'done'],
-            ['2026-09-30', null],
-        ])
+        const academiaDates = periodExport.routine
+            .filter((day) => day.items.some((item) => item.title === 'Academia'))
+            .map((day) => day.date)
+        expect(academiaDates).toEqual(['2026-09-28', '2026-09-30'])
     })
 
     it('ordena peso e sono por data e preenche o meta', () => {
@@ -422,7 +489,7 @@ describe('buildPeriodExport', () => {
             period: PERIOD,
             timezone: 'America/Sao_Paulo',
             generated_at: '2026-09-30T23:00:00.000Z',
-            format_version: 1,
+            format_version: 2,
             current_cycle_start_date: '2026-09-01',
             units: { load: 'kg', weight: 'kg', sleep: 'hours', distance: 'km', duration: 'minutes' },
         })
@@ -698,7 +765,9 @@ describe('summarizePeriodExport', () => {
             cardioEntries: [],
             foodEntries: [],
             routineItems: [],
+            routineSchedules: [],
             routineEntries: [],
+            routineTasks: [],
             bodyWeightEntries: [],
             sleepEntries: [],
         })

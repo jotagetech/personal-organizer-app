@@ -29,6 +29,8 @@ type UserSettingsRow = {
     user_id: string
     active_plan_id: string | null
     timezone: string
+    routine_sound_enabled: boolean
+    routine_onboarded_at: string | null
 }
 
 type PlanActivationRow = {
@@ -174,28 +176,65 @@ type SleepEntryRow = {
     created_at: string
 }
 
+type RoutineCategoryRow = {
+    id: string
+    user_id: string
+    name: string
+    color: string
+    sort_order: number
+    created_at: string
+    updated_at: string
+}
+
 type RoutineItemRow = {
     id: string
     user_id: string
     title: string
-    weekdays: string[]
     link_kind: string | null
-    sort_order: number
+    category_id: string | null
+    is_important: boolean
+    repeat_kind: 'weekdays' | 'interval'
+    weekdays: string[] | null
+    interval_days: number | null
+    interval_anchor: string | null
     active_from: string
     archived_on: string | null
+    sort_order: number
     created_at: string
     updated_at: string
+}
+
+type RoutineItemScheduleRow = {
+    id: string
+    user_id: string
+    routine_item_id: string
+    effective_from: string
+    repeat_kind: 'weekdays' | 'interval'
+    weekdays: string[] | null
+    interval_days: number | null
+    interval_anchor: string | null
+    created_at: string
 }
 
 type RoutineDayEntryRow = {
     id: string
     user_id: string
+    routine_item_id: string
     entry_date: string
-    routine_item_id: string | null
-    title: string | null
-    completed_at: string | null
-    due_date: string | null
+    completed_at: string
+    created_at: string
+}
+
+type RoutineTaskRow = {
+    id: string
+    user_id: string
+    title: string
+    scheduled_on: string | null
+    carried_from_on: string | null
+    category_id: string | null
+    is_important: boolean
     completed_on: string | null
+    completed_at: string | null
     sort_order: number
     created_at: string
     updated_at: string
@@ -240,7 +279,7 @@ export type Database = {
             >
             user_settings: TableDefinition<
                 UserSettingsRow,
-                Record<never, never>,
+                { routine_sound_enabled?: boolean; routine_onboarded_at?: string | null },
                 Record<never, never>
             >
             plan_activations: TableDefinition<
@@ -345,6 +384,11 @@ export type Database = {
                 { id?: string; created_at?: string },
                 Record<never, never>
             >
+            routine_categories: TableDefinition<
+                RoutineCategoryRow,
+                { id?: string; created_at?: string; updated_at?: string; sort_order?: number },
+                Record<never, never>
+            >
             routine_items: TableDefinition<
                 RoutineItemRow,
                 {
@@ -352,23 +396,38 @@ export type Database = {
                     created_at?: string
                     updated_at?: string
                     link_kind?: string | null
-                    sort_order?: number
-                    active_from?: string
+                    category_id?: string | null
+                    is_important?: boolean
+                    weekdays?: string[] | null
+                    interval_days?: number | null
+                    interval_anchor?: string | null
                     archived_on?: string | null
+                    sort_order?: number
                 },
+                Record<never, never>
+            >
+            routine_item_schedules: TableDefinition<
+                RoutineItemScheduleRow,
+                { id?: string; created_at?: string },
                 Record<never, never>
             >
             routine_day_entries: TableDefinition<
                 RoutineDayEntryRow,
+                { id?: string; completed_at?: string; created_at?: string },
+                Record<never, never>
+            >
+            routine_tasks: TableDefinition<
+                RoutineTaskRow,
                 {
                     id?: string
                     created_at?: string
                     updated_at?: string
-                    routine_item_id?: string | null
-                    title?: string | null
-                    completed_at?: string | null
-                    due_date?: string | null
+                    scheduled_on?: string | null
+                    carried_from_on?: string | null
+                    category_id?: string | null
+                    is_important?: boolean
                     completed_on?: string | null
+                    completed_at?: string | null
                     sort_order?: number
                 },
                 Record<never, never>

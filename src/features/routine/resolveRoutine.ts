@@ -1,20 +1,73 @@
 import type { DaySignals } from '@/features/shared/daySignals'
 import type {
+    RoutineData,
     RoutineDayEntryRow,
     RoutineItemRow,
+    RoutineItemScheduleRow,
     RoutineLinkKind,
     RoutineRow,
-    RoutineRowDeadline,
+    RoutineRowState,
+    RoutineTaskRow,
 } from '@/features/routine/types'
-import { weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
+import { diffInDays, weekdayOfIsoDate, type IsoDate } from '@/lib/dateUtils'
 
-function isTemplateActiveOnDate(item: RoutineItemRow, date: IsoDate): boolean {
-    const weekday = weekdayOfIsoDate(date)
-    const isScheduledOnWeekday = item.weekdays.includes(weekday)
+type RoutineSchedule = Pick<RoutineItemRow, 'repeat_kind' | 'weekdays' | 'interval_days' | 'interval_anchor'>
+
+export type RoutineProgress = {
+    done: number
+    total: number
+}
+
+// A versão vigente numa data é a de maior effective_from que já começou.
+// Sem nenhuma versão até a data, vale a agenda da própria linha do item, que
+// é sempre a mais recente.
+export function resolveScheduleOnDate(
+    item: RoutineItemRow,
+    itemSchedules: RoutineItemScheduleRow[],
+    date: IsoDate,
+): RoutineSchedule {
+    const startedSchedules = itemSchedules.filter((schedule) => schedule.effective_from <= date)
+    if (startedSchedules.length === 0) {
+        return item
+    }
+
+    const currentSchedule = startedSchedules.reduce((latest, schedule) =>
+        schedule.effective_from > latest.effective_from ? schedule : latest,
+    )
+    return currentSchedule
+}
+
+function isScheduledOnDate(schedule: RoutineSchedule, date: IsoDate): boolean {
+    if (schedule.repeat_kind === 'weekdays') {
+        return (schedule.weekdays ?? []).includes(weekdayOfIsoDate(date))
+    }
+    if (schedule.interval_anchor === null || schedule.interval_days === null) {
+        return false
+    }
+
+    const daysSinceAnchor = diffInDays(schedule.interval_anchor, date)
+    return daysSinceAnchor >= 0 && daysSinceAnchor % schedule.interval_days === 0
+}
+
+function isItemActiveOnDate(item: RoutineItemRow, date: IsoDate): boolean {
     const hasStarted = item.active_from <= date
     const isNotArchivedYet = item.archived_on === null || item.archived_on > date
 
-    return isScheduledOnWeekday && hasStarted && isNotArchivedYet
+    return hasStarted && isNotArchivedYet
+}
+
+function groupSchedulesByItemId(schedules: RoutineItemScheduleRow[]): Map<string, RoutineItemScheduleRow[]> {
+    const schedulesByItemId = new Map<string, RoutineItemScheduleRow[]>()
+    for (const schedule of schedules) {
+        const itemSchedules = schedulesByItemId.get(schedule.routine_item_id)
+        if (itemSchedules) {
+            itemSchedules.push(schedule)
+        } else {
+            schedulesByItemId.set(schedule.routine_item_id, [schedule])
+        }
+    }
+
+    return schedulesByItemId
 }
 
 function isSignalSatisfied(linkKind: RoutineLinkKind, signals: DaySignals): boolean {
@@ -46,51 +99,11 @@ function byOrderThenCreation<T extends { sort_order: number; created_at: string 
     return rowA.created_at.localeCompare(rowB.created_at)
 }
 
-function resolveTemplateRow(
-    item: RoutineItemRow,
-    manualEntry: RoutineDayEntryRow | undefined,
-    signals: DaySignals,
-): RoutineRow {
-    const linkKind = item.link_kind as RoutineLinkKind | null
-    const hasManualCompletion = manualEntry?.completed_at != null
-    const dayEntryId = hasManualCompletion && manualEntry ? manualEntry.id : null
-
-    if (linkKind === null) {
-        return {
-            id: item.id,
-            title: item.title,
-            source: 'manual',
-            state: hasManualCompletion ? 'done' : 'pending',
-            linkKind: null,
-            routineItemId: item.id,
-            dayEntryId,
-            dueDate: null,
-            deadline: null,
-            carriedFromDate: null,
-        }
-    }
-
-    const state = resolveLinkedItemState(linkKind, hasManualCompletion, signals)
-
-    return {
-        id: item.id,
-        title: item.title,
-        source: 'linked',
-        state,
-        linkKind,
-        routineItemId: item.id,
-        dayEntryId,
-        dueDate: null,
-        deadline: null,
-        carriedFromDate: null,
-    }
-}
-
 function resolveLinkedItemState(
     linkKind: RoutineLinkKind,
     hasManualCompletion: boolean,
     signals: DaySignals,
-): RoutineRow['state'] {
+): RoutineRowState {
     if (hasManualCompletion) {
         return 'done_manual_override'
     }
@@ -98,67 +111,75 @@ function resolveLinkedItemState(
     return isSignalSatisfied(linkKind, signals) ? 'done' : 'pending'
 }
 
-// Uma tarefa avulsa sem prazo vive só no próprio entry_date. Com prazo, ela
-// segue aparecendo em todo dia seguinte até o dia em que foi concluída (e
-// indefinidamente, se nunca for).
-export function isAdhocVisibleOnDate(entry: RoutineDayEntryRow, date: IsoDate): boolean {
-    if (entry.entry_date === date) {
-        return true
-    }
-    if (entry.due_date === null || entry.entry_date > date) {
-        return false
+function resolveItemRow(
+    item: RoutineItemRow,
+    manualEntry: RoutineDayEntryRow | undefined,
+    signals: DaySignals,
+): RoutineRow {
+    const linkKind = item.link_kind as RoutineLinkKind | null
+    const hasManualCompletion = manualEntry !== undefined
+    const baseRow = {
+        id: item.id,
+        title: item.title,
+        linkKind,
+        routineItemId: item.id,
+        dayEntryId: manualEntry?.id ?? null,
+        taskId: null,
+        categoryId: item.category_id,
+        isImportant: item.is_important,
+        carriedFromDate: null,
     }
 
-    const completedOn = resolveCompletedOn(entry)
-    return completedOn === null || completedOn >= date
+    if (linkKind === null) {
+        const manualRow: RoutineRow = { ...baseRow, source: 'manual', state: hasManualCompletion ? 'done' : 'pending' }
+        return manualRow
+    }
+
+    const linkedRow: RoutineRow = {
+        ...baseRow,
+        source: 'linked',
+        state: resolveLinkedItemState(linkKind, hasManualCompletion, signals),
+    }
+    return linkedRow
 }
 
-// Registros anteriores à coluna completed_on só têm completed_at: nesse caso a
-// conclusão vale para o próprio entry_date.
-function resolveCompletedOn(entry: RoutineDayEntryRow): IsoDate | null {
-    if (entry.completed_on !== null) {
-        return entry.completed_on
-    }
-
-    return entry.completed_at !== null ? entry.entry_date : null
-}
-
-export function deriveDeadline(dueDate: IsoDate | null, date: IsoDate): RoutineRowDeadline | null {
-    if (dueDate === null) {
-        return null
-    }
-    if (date < dueDate) {
-        return 'on_time'
-    }
-
-    return date === dueDate ? 'due_today' : 'overdue'
-}
-
-export function resolveAdhocRow(entry: RoutineDayEntryRow, date: IsoDate): RoutineRow {
-    const isDoneOnDate = resolveCompletedOn(entry) === date
-
-    return {
-        id: entry.id,
-        title: entry.title ?? '',
-        source: 'adhoc',
-        state: isDoneOnDate ? 'done' : 'pending',
+export function resolveTaskRow(task: RoutineTaskRow): RoutineRow {
+    const taskRow: RoutineRow = {
+        id: task.id,
+        title: task.title,
+        source: 'task',
+        state: task.completed_at !== null ? 'done' : 'pending',
         linkKind: null,
         routineItemId: null,
-        dayEntryId: entry.id,
-        dueDate: entry.due_date,
-        deadline: deriveDeadline(entry.due_date, date),
-        carriedFromDate: entry.entry_date < date ? entry.entry_date : null,
+        dayEntryId: null,
+        taskId: task.id,
+        categoryId: task.category_id,
+        isImportant: task.is_important,
+        carriedFromDate: task.carried_from_on,
     }
+    return taskRow
 }
 
-function byDueDateThenCreation(entryA: RoutineDayEntryRow, entryB: RoutineDayEntryRow): number {
-    const dueDateA = entryA.due_date ?? ''
-    const dueDateB = entryB.due_date ?? ''
-    if (dueDateA !== dueDateB) {
-        return dueDateA.localeCompare(dueDateB)
-    }
+// Tarefas sem data não pertencem a dia nenhum: ficam fora da lista do dia e
+// são listadas à parte.
+export function listUndatedTasks(tasks: RoutineTaskRow[]): RoutineTaskRow[] {
+    const undatedTasks = tasks.filter((task) => task.scheduled_on === null).sort(byOrderThenCreation)
 
-    return entryA.created_at.localeCompare(entryB.created_at)
+    return undatedTasks
+}
+
+export function isRoutineRowDone(state: RoutineRowState): boolean {
+    return state === 'done' || state === 'done_manual_override'
+}
+
+// Lógica pura: o "X de Y" do dia, contando como feito tanto o item vinculado
+// satisfeito pelo sinal quanto a marcação manual e a tarefa concluída.
+export function countRoutineProgress(rows: RoutineRow[]): RoutineProgress {
+    const progress: RoutineProgress = {
+        done: rows.filter((row) => isRoutineRowDone(row.state)).length,
+        total: rows.length,
+    }
+    return progress
 }
 
 export type RoutineEmptyState = 'offer_suggested' | 'nothing_for_day' | 'none'
@@ -179,34 +200,30 @@ export function deriveRoutineEmptyState(items: RoutineItemRow[], rows: RoutineRo
 }
 
 // Lógica pura (sem chamada de rede): decide o que a tela de rotina mostra
-// pra uma data, cruzando os templates recorrentes com os registros do dia e
-// com os sinais já calculados pelas outras abas, sem consultar nada de novo.
-export function resolveRoutineForDate(
-    date: IsoDate,
-    items: RoutineItemRow[],
-    dayEntries: RoutineDayEntryRow[],
-    signals: DaySignals,
-): RoutineRow[] {
-    const applicableItems = items.filter((item) => isTemplateActiveOnDate(item, date)).sort(byOrderThenCreation)
+// pra uma data, cruzando os itens que repetem (com a agenda que valia na
+// data) com as marcações do dia, as tarefas marcadas para ela e os sinais já
+// calculados pelas outras abas, sem consultar nada de novo. Itens vêm antes
+// das tarefas.
+export function resolveRoutineForDate(date: IsoDate, data: RoutineData, signals: DaySignals): RoutineRow[] {
+    const schedulesByItemId = groupSchedulesByItemId(data.schedules)
+    const applicableItems = data.items
+        .filter(
+            (item) =>
+                isItemActiveOnDate(item, date) &&
+                isScheduledOnDate(resolveScheduleOnDate(item, schedulesByItemId.get(item.id) ?? [], date), date),
+        )
+        .sort(byOrderThenCreation)
     const manualEntryByItemId = new Map(
-        dayEntries
-            .filter((entry) => entry.routine_item_id !== null && entry.entry_date === date)
+        data.entries
+            .filter((entry) => entry.entry_date === date)
             .map((entry) => [entry.routine_item_id, entry]),
     )
-    const templateRows = applicableItems.map((item) =>
-        resolveTemplateRow(item, manualEntryByItemId.get(item.id), signals),
-    )
+    const itemRows = applicableItems.map((item) => resolveItemRow(item, manualEntryByItemId.get(item.id), signals))
 
-    const visibleAdhocEntries = dayEntries.filter(
-        (entry) => entry.routine_item_id === null && isAdhocVisibleOnDate(entry, date),
-    )
-    const carriedEntries = visibleAdhocEntries
-        .filter((entry) => entry.entry_date < date)
-        .sort(byDueDateThenCreation)
-    const sameDayEntries = visibleAdhocEntries
-        .filter((entry) => entry.entry_date === date)
+    const taskRows = data.tasks
+        .filter((task) => task.scheduled_on === date)
         .sort(byOrderThenCreation)
-    const adhocRows = [...carriedEntries, ...sameDayEntries].map((entry) => resolveAdhocRow(entry, date))
+        .map(resolveTaskRow)
 
-    return [...templateRows, ...adhocRows]
+    return [...itemRows, ...taskRows]
 }

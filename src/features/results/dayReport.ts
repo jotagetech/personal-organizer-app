@@ -1,6 +1,7 @@
 import { computeDailyTotals } from '@/features/food/dailyTotals'
 import type { DaySummary } from '@/features/results/api'
 import { summarizeWorkoutSets } from '@/features/results/daySummary'
+import { countRoutineProgress } from '@/features/routine/resolveRoutine'
 import type { RoutineRow } from '@/features/routine/types'
 import { formatDurationMinutes, resolveSessionDuration } from '@/features/workout/sessionDuration'
 import type { IsoDate } from '@/lib/dateUtils'
@@ -9,7 +10,6 @@ export type DayReportBand = 'no_routine' | 'complete' | 'mostly' | 'partial' | '
 
 export type DayReportPendingItem = {
     title: string
-    isOverdue: boolean
 }
 
 export type DayReport = {
@@ -33,14 +33,9 @@ export function buildDayReport(
     today: IsoDate,
 ): DayReport {
     const isToday = date === today
-    const routineTotalCount = routineRows.length
-    const routineDoneCount = routineRows.filter(
-        (row) => row.state === 'done' || row.state === 'done_manual_override',
-    ).length
-    const pendingItems = routineRows
-        .filter((row) => row.state === 'pending')
-        .map((row) => ({ title: row.title, isOverdue: row.deadline === 'overdue' }))
-    const pendingTitles = pendingItems.map((item) => (item.isOverdue ? `${item.title} (atrasada)` : item.title))
+    const { done: routineDoneCount, total: routineTotalCount } = countRoutineProgress(routineRows)
+    const pendingItems = routineRows.filter((row) => row.state === 'pending').map((row) => ({ title: row.title }))
+    const pendingTitles = pendingItems.map((item) => item.title)
     const band = deriveBand(routineDoneCount, routineTotalCount)
     const highlights = buildHighlights(summary)
     const headline = buildHeadline(band, { isToday, doneCount: routineDoneCount, totalCount: routineTotalCount }, date)

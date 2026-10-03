@@ -1,7 +1,38 @@
 import type { RoutineItemInput } from '@/features/routine/routineSchema'
-import type { RoutineDayEntryRow, RoutineItemRow } from '@/features/routine/types'
-import type { IsoDate } from '@/lib/dateUtils'
+import type {
+    RoutineCategoryRow,
+    RoutineData,
+    RoutineDayEntryRow,
+    RoutineItemRow,
+    RoutineItemScheduleRow,
+    RoutineTaskRow,
+} from '@/features/routine/types'
+import { todayInTimezone, type IsoDate } from '@/lib/dateUtils'
 import { supabase } from '@/lib/supabaseClient'
+
+async function requireCurrentUserId(): Promise<string> {
+    const { data: authData } = await supabase.auth.getUser()
+    const currentUserId = authData.user?.id
+    if (!currentUserId) {
+        throw new Error('Usuário não autenticado')
+    }
+
+    return currentUserId
+}
+
+export async function listRoutineCategories(): Promise<RoutineCategoryRow[]> {
+    const { data, error } = await supabase
+        .from('routine_categories')
+        .select('*')
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
+}
 
 export async function listRoutineItems(): Promise<RoutineItemRow[]> {
     const { data, error } = await supabase
@@ -17,20 +48,102 @@ export async function listRoutineItems(): Promise<RoutineItemRow[]> {
     return data ?? []
 }
 
-export async function createRoutineItem(input: RoutineItemInput, sortOrder: number): Promise<RoutineItemRow> {
-    const { data: authData } = await supabase.auth.getUser()
-    const currentUserId = authData.user?.id
-    if (!currentUserId) {
-        throw new Error('Usuário não autenticado')
+// Todas as versões de agenda da conta: são poucas por item (uma por dia em
+// que a agenda mudou) e a resolução de qualquer data pode precisar de uma
+// versão antiga.
+export async function listRoutineItemSchedules(): Promise<RoutineItemScheduleRow[]> {
+    const { data, error } = await supabase
+        .from('routine_item_schedules')
+        .select('*')
+        .order('routine_item_id', { ascending: true })
+        .order('effective_from', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
     }
+
+    return data ?? []
+}
+
+export async function listRoutineDayEntries(entryDate: IsoDate): Promise<RoutineDayEntryRow[]> {
+    const { data, error } = await supabase.from('routine_day_entries').select('*').eq('entry_date', entryDate)
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
+}
+
+export async function listRoutineTasksScheduledOn(date: IsoDate): Promise<RoutineTaskRow[]> {
+    const { data, error } = await supabase
+        .from('routine_tasks')
+        .select('*')
+        .eq('scheduled_on', date)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
+}
+
+export async function listUndatedRoutineTasks(): Promise<RoutineTaskRow[]> {
+    const { data, error } = await supabase
+        .from('routine_tasks')
+        .select('*')
+        .is('scheduled_on', null)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
+}
+
+// Tudo o que a resolução de uma data precisa: os itens com todas as versões
+// de agenda, as marcações do dia e as tarefas marcadas para ele.
+export async function loadRoutineDataForDate(date: IsoDate): Promise<RoutineData> {
+    const [items, schedules, entries, tasks] = await Promise.all([
+        listRoutineItems(),
+        listRoutineItemSchedules(),
+        listRoutineDayEntries(date),
+        listRoutineTasksScheduledOn(date),
+    ])
+    const routineData: RoutineData = { items, schedules, entries, tasks }
+
+    return routineData
+}
+
+// O formulário atual só conhece dias da semana; as colunas de intervalo vão
+// nulas explicitamente para a linha nunca misturar os dois tipos de agenda.
+function weekdaysScheduleColumns(input: RoutineItemInput) {
+    const scheduleColumns = {
+        repeat_kind: 'weekdays' as const,
+        weekdays: input.weekdays,
+        interval_days: null,
+        interval_anchor: null,
+    }
+    return scheduleColumns
+}
+
+// active_from sai do dia da conta no cliente: o banco roda em UTC e não tem
+// como saber, sem consulta, qual é "hoje" para quem está usando.
+export async function createRoutineItem(input: RoutineItemInput, sortOrder: number): Promise<RoutineItemRow> {
+    const currentUserId = await requireCurrentUserId()
 
     const { data, error } = await supabase
         .from('routine_items')
         .insert({
             user_id: currentUserId,
             title: input.title,
-            weekdays: input.weekdays,
             link_kind: input.linkKind ?? null,
+            ...weekdaysScheduleColumns(input),
+            active_from: todayInTimezone(),
             sort_order: sortOrder,
         })
         .select('*')
@@ -48,8 +161,8 @@ export async function updateRoutineItem(itemId: string, input: RoutineItemInput)
         .from('routine_items')
         .update({
             title: input.title,
-            weekdays: input.weekdays,
             link_kind: input.linkKind ?? null,
+            ...weekdaysScheduleColumns(input),
         })
         .eq('id', itemId)
         .select('*')
@@ -77,105 +190,22 @@ export async function archiveRoutineItem(itemId: string, archivedOn: IsoDate): P
     return data
 }
 
-export async function listRoutineDayEntries(entryDate: IsoDate): Promise<RoutineDayEntryRow[]> {
-    const { data, error } = await supabase
-        .from('routine_day_entries')
-        .select('*')
-        .eq('entry_date', entryDate)
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true })
-
-    if (error) {
-        throw new Error(error.message)
-    }
-
-    return data ?? []
-}
-
-// Tarefas avulsas com prazo criadas em dias anteriores que ainda valem pra
-// data: não concluídas, ou concluídas nela ou depois. O filtro puro em
-// resolveRoutine decide a visibilidade final, então trazer a mais é inofensivo.
-async function listCarriedAdhocEntries(date: IsoDate): Promise<RoutineDayEntryRow[]> {
-    const { data, error } = await supabase
-        .from('routine_day_entries')
-        .select('*')
-        .is('routine_item_id', null)
-        .not('due_date', 'is', null)
-        .lt('entry_date', date)
-        .or(`completed_on.is.null,completed_on.gte.${date}`)
-
-    if (error) {
-        throw new Error(error.message)
-    }
-
-    return data ?? []
-}
-
-// Tudo o que pode aparecer na rotina de uma data: os registros do próprio dia
-// mais as tarefas avulsas com prazo carregadas de dias anteriores.
-export async function listRoutineEntriesVisibleOn(date: IsoDate): Promise<RoutineDayEntryRow[]> {
-    const [dayEntries, carriedEntries] = await Promise.all([
-        listRoutineDayEntries(date),
-        listCarriedAdhocEntries(date),
-    ])
-    const entryById = new Map<string, RoutineDayEntryRow>()
-    for (const entry of [...dayEntries, ...carriedEntries]) {
-        entryById.set(entry.id, entry)
-    }
-
-    return Array.from(entryById.values())
-}
-
-// A unicidade de (user_id, routine_item_id, entry_date) é um índice parcial
-// (só quando routine_item_id não é nulo), então um upsert de verdade não tem
-// como inferir o índice como alvo de conflito; buscar antes de decidir entre
-// inserir e atualizar evita depender disso.
+// Marcar de novo um item já marcado no dia só renova completed_at, graças ao
+// upsert na unicidade (routine_item_id, entry_date).
 export async function markRoutineItemDone(routineItemId: string, entryDate: IsoDate): Promise<RoutineDayEntryRow> {
-    const { data: authData } = await supabase.auth.getUser()
-    const currentUserId = authData.user?.id
-    if (!currentUserId) {
-        throw new Error('Usuário não autenticado')
-    }
-
-    const { data: existingEntry, error: selectError } = await supabase
-        .from('routine_day_entries')
-        .select('*')
-        .eq('routine_item_id', routineItemId)
-        .eq('entry_date', entryDate)
-        .maybeSingle()
-
-    if (selectError) {
-        throw new Error(selectError.message)
-    }
-
-    const completedAt = new Date().toISOString()
-
-    if (existingEntry) {
-        const { data, error } = await supabase
-            .from('routine_day_entries')
-            .update({ completed_at: completedAt, completed_on: entryDate })
-            .eq('id', existingEntry.id)
-            .select('*')
-            .single()
-
-        if (error || !data) {
-            throw new Error(error?.message ?? 'Falha ao marcar item de rotina')
-        }
-
-        return data
-    }
+    const currentUserId = await requireCurrentUserId()
 
     const { data, error } = await supabase
         .from('routine_day_entries')
-        .insert({
-            user_id: currentUserId,
-            entry_date: entryDate,
-            routine_item_id: routineItemId,
-            title: null,
-            completed_at: completedAt,
-            completed_on: entryDate,
-            sort_order: 0,
-        })
+        .upsert(
+            {
+                user_id: currentUserId,
+                routine_item_id: routineItemId,
+                entry_date: entryDate,
+                completed_at: new Date().toISOString(),
+            },
+            { onConflict: 'routine_item_id,entry_date' },
+        )
         .select('*')
         .single()
 
@@ -186,10 +216,7 @@ export async function markRoutineItemDone(routineItemId: string, entryDate: IsoD
     return data
 }
 
-// Remove por completo o registro do dia: usado tanto pra desmarcar um item
-// manual (sem vínculo) quanto pra derrubar uma marcação manual sobre um item
-// vinculado, casos em que a linha só existe pra guardar a marcação em si, sem
-// nenhum outro dado que valha a pena preservar.
+// Desmarcar apaga a linha: ela só existe para guardar a marcação em si.
 export async function deleteRoutineDayEntry(dayEntryId: string): Promise<void> {
     const { error } = await supabase.from('routine_day_entries').delete().eq('id', dayEntryId)
     if (error) {
@@ -197,85 +224,74 @@ export async function deleteRoutineDayEntry(dayEntryId: string): Promise<void> {
     }
 }
 
-// sort_order é calculado a partir da contagem de registros já existentes na
-// data de destino (não na data selecionada na tela), já que uma tarefa avulsa
-// pode ser criada pra uma data diferente da que está aberta no momento.
-export async function createAdhocRoutineEntry(
-    entryDate: IsoDate,
-    title: string,
-    dueDate: IsoDate | null,
-): Promise<RoutineDayEntryRow> {
-    const { data: authData } = await supabase.auth.getUser()
-    const currentUserId = authData.user?.id
-    if (!currentUserId) {
-        throw new Error('Usuário não autenticado')
-    }
+// sort_order é calculado a partir da contagem de tarefas já marcadas para a
+// data de destino, que pode não ser a aberta na tela.
+export async function createRoutineTask(scheduledOn: IsoDate, title: string): Promise<RoutineTaskRow> {
+    const currentUserId = await requireCurrentUserId()
 
     const { count, error: countError } = await supabase
-        .from('routine_day_entries')
+        .from('routine_tasks')
         .select('id', { count: 'exact', head: true })
-        .eq('entry_date', entryDate)
+        .eq('scheduled_on', scheduledOn)
 
     if (countError) {
         throw new Error(countError.message)
     }
 
     const { data, error } = await supabase
-        .from('routine_day_entries')
+        .from('routine_tasks')
         .insert({
             user_id: currentUserId,
-            entry_date: entryDate,
-            routine_item_id: null,
             title,
-            completed_at: null,
-            due_date: dueDate,
+            scheduled_on: scheduledOn,
             sort_order: count ?? 0,
         })
         .select('*')
         .single()
 
     if (error || !data) {
-        throw new Error(error?.message ?? 'Falha ao criar tarefa avulsa')
+        throw new Error(error?.message ?? 'Falha ao criar tarefa')
     }
 
     return data
 }
 
-// completedOn é o dia selecionado na tela, não necessariamente hoje: uma
-// tarefa com prazo pode ser dada como feita num dia qualquer em que aparece.
-// Sempre enviado explicitamente pra nunca herdar a data de uma conclusão
-// anterior da mesma linha.
-export async function markAdhocRoutineEntryDone(
-    dayEntryId: string,
-    completedOn: IsoDate,
-): Promise<RoutineDayEntryRow> {
+// completedOn é o dia exibido na tela, não necessariamente hoje.
+export async function markRoutineTaskDone(taskId: string, completedOn: IsoDate): Promise<RoutineTaskRow> {
     const { data, error } = await supabase
-        .from('routine_day_entries')
-        .update({ completed_at: new Date().toISOString(), completed_on: completedOn })
-        .eq('id', dayEntryId)
+        .from('routine_tasks')
+        .update({ completed_on: completedOn, completed_at: new Date().toISOString() })
+        .eq('id', taskId)
         .select('*')
         .single()
 
     if (error || !data) {
-        throw new Error(error?.message ?? 'Falha ao marcar tarefa avulsa')
+        throw new Error(error?.message ?? 'Falha ao marcar tarefa')
     }
 
     return data
 }
 
-export async function unmarkAdhocRoutineEntryDone(dayEntryId: string): Promise<RoutineDayEntryRow> {
+export async function unmarkRoutineTaskDone(taskId: string): Promise<RoutineTaskRow> {
     const { data, error } = await supabase
-        .from('routine_day_entries')
-        .update({ completed_at: null, completed_on: null })
-        .eq('id', dayEntryId)
+        .from('routine_tasks')
+        .update({ completed_on: null, completed_at: null })
+        .eq('id', taskId)
         .select('*')
         .single()
 
     if (error || !data) {
-        throw new Error(error?.message ?? 'Falha ao desmarcar tarefa avulsa')
+        throw new Error(error?.message ?? 'Falha ao desmarcar tarefa')
     }
 
     return data
+}
+
+export async function deleteRoutineTask(taskId: string): Promise<void> {
+    const { error } = await supabase.from('routine_tasks').delete().eq('id', taskId)
+    if (error) {
+        throw new Error(error.message)
+    }
 }
 
 const SUGGESTED_ROUTINE_WEEKDAYS_WEEKDAY_ONLY = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
@@ -293,11 +309,8 @@ const SUGGESTED_ROUTINE_WEEKDAYS_EVERY_DAY = [
 // dois casos de uso (vinculado a outra aba e manual) sem exigir que a pessoa
 // monte a lista do zero antes de ver a tela funcionando.
 export async function seedSuggestedRoutineItems(): Promise<RoutineItemRow[]> {
-    const { data: authData } = await supabase.auth.getUser()
-    const currentUserId = authData.user?.id
-    if (!currentUserId) {
-        throw new Error('Usuário não autenticado')
-    }
+    const currentUserId = await requireCurrentUserId()
+    const activeFrom = todayInTimezone()
 
     const suggestedItems = [
         { title: 'Academia', weekdays: SUGGESTED_ROUTINE_WEEKDAYS_WEEKDAY_ONLY, link_kind: 'workout_finished' },
@@ -305,7 +318,13 @@ export async function seedSuggestedRoutineItems(): Promise<RoutineItemRow[]> {
         { title: 'Almoço', weekdays: SUGGESTED_ROUTINE_WEEKDAYS_EVERY_DAY, link_kind: 'meal:almoco' },
         { title: 'Café da tarde', weekdays: SUGGESTED_ROUTINE_WEEKDAYS_EVERY_DAY, link_kind: 'meal:lanche' },
         { title: 'Tomar creatina', weekdays: SUGGESTED_ROUTINE_WEEKDAYS_EVERY_DAY, link_kind: null },
-    ].map((item, index) => ({ ...item, user_id: currentUserId, sort_order: index }))
+    ].map((item, index) => ({
+        ...item,
+        user_id: currentUserId,
+        repeat_kind: 'weekdays' as const,
+        active_from: activeFrom,
+        sort_order: index,
+    }))
 
     const { data, error } = await supabase.from('routine_items').insert(suggestedItems).select('*')
 

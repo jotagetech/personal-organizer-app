@@ -4,7 +4,15 @@ import { listDatesInPeriod, type ExportPeriod } from '@/features/export/period'
 import { computeDailyTotals } from '@/features/food/dailyTotals'
 import type { FoodEntryRow } from '@/features/food/types'
 import { resolveRoutineForDate } from '@/features/routine/resolveRoutine'
-import type { RoutineDayEntryRow, RoutineItemRow, RoutineRowSource, RoutineRowState } from '@/features/routine/types'
+import type {
+    RoutineData,
+    RoutineDayEntryRow,
+    RoutineItemRow,
+    RoutineItemScheduleRow,
+    RoutineRowSource,
+    RoutineRowState,
+    RoutineTaskRow,
+} from '@/features/routine/types'
 import { deriveDaySignals } from '@/features/shared/deriveDaySignals'
 import {
     deriveSessionActiveWindow,
@@ -27,7 +35,7 @@ import type {
     SetMetric,
 } from '@/lib/workoutPlanSchema'
 
-export const EXPORT_FORMAT_VERSION = 1
+export const EXPORT_FORMAT_VERSION = 2
 
 export type PeriodExportRawData = {
     workoutSessions: WorkoutSessionRow[]
@@ -37,7 +45,9 @@ export type PeriodExportRawData = {
     activityTypes: CardioActivityTypeRow[]
     foodEntries: FoodEntryRow[]
     routineItems: RoutineItemRow[]
+    routineSchedules: RoutineItemScheduleRow[]
     routineEntries: RoutineDayEntryRow[]
+    routineTasks: RoutineTaskRow[]
     bodyWeightEntries: BodyWeightEntryRow[]
     sleepEntries: SleepEntryRow[]
 }
@@ -201,8 +211,6 @@ export type ExportedRoutineItem = {
     title: string
     source: RoutineRowSource
     state: RoutineRowState
-    due_date: IsoDate | null
-    overdue: boolean
 }
 
 export type PeriodExport = {
@@ -373,6 +381,12 @@ function buildRoutine(
     const sessionByDate = new Map(sessionsInPeriod.map((session) => [session.session_date, session]))
     const bodyWeightByDate = new Map(raw.bodyWeightEntries.map((entry) => [entry.entry_date, entry]))
     const sleepByDate = new Map(raw.sleepEntries.map((entry) => [entry.entry_date, entry]))
+    const routineData: RoutineData = {
+        items: raw.routineItems,
+        schedules: raw.routineSchedules,
+        entries: raw.routineEntries,
+        tasks: raw.routineTasks,
+    }
 
     return listDatesInPeriod(period)
         .map((date) => {
@@ -384,14 +398,12 @@ function buildRoutine(
                 sleepEntry: sleepByDate.get(date) ?? null,
                 cardioEntries: cardioByDate.get(date) ?? [],
             })
-            const rows = resolveRoutineForDate(date, raw.routineItems, raw.routineEntries, signals)
+            const rows = resolveRoutineForDate(date, routineData, signals)
             const items = rows.map(
                 (row): ExportedRoutineItem => ({
                     title: row.title,
                     source: row.source,
                     state: row.state,
-                    due_date: row.dueDate,
-                    overdue: row.deadline === 'overdue',
                 }),
             )
 

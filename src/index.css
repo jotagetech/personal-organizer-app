@@ -1432,12 +1432,6 @@ h1, h2, h3, h4 {
     overflow-wrap: anywhere;
 }
 
-.day-report__chip--overdue {
-    background: var(--color-overdue-soft);
-    color: var(--color-overdue-text);
-    box-shadow: inset 0 0 0 1px var(--color-overdue-border);
-}
-
 .day-report__highlights {
     margin: 0;
     padding: 10px 0 0;
@@ -2286,25 +2280,6 @@ h1, h2, h3, h4 {
     color: var(--color-pending-text);
 }
 
-.routine-row__hint--muted {
-    color: var(--color-text-muted);
-}
-
-.routine-row__hint--overdue {
-    color: var(--color-overdue-text);
-}
-
-.routine-row--overdue {
-    background: var(--color-overdue-soft);
-    border-radius: var(--radius-sm);
-    margin-inline: -8px;
-    padding-inline: 8px;
-}
-
-.routine-row--overdue .routine-row__title {
-    color: var(--color-overdue-text);
-}
-
 .routine-row__linked-actions {
     flex-shrink: 0;
     display: flex;
@@ -2385,10 +2360,6 @@ h1, h2, h3, h4 {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
-}
-
-.adhoc-task-form__due-date {
-    grid-column: 1 / -1;
 }
 
 .adhoc-task-form__input {

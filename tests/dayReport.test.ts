@@ -86,38 +86,47 @@ function buildRoutineRow(overrides: Partial<RoutineRow> = {}): RoutineRow {
         linkKind: null,
         routineItemId: 'item-1',
         dayEntryId: null,
-        dueDate: null,
-        deadline: null,
+        taskId: null,
+        categoryId: null,
+        isImportant: false,
         carriedFromDate: null,
     }
     return { ...baseRow, ...overrides }
 }
 
 describe('buildDayReport', () => {
-    it('marca como atrasada a tarefa pendente com prazo vencido', () => {
+    it('lista as tarefas pendentes pelo título', () => {
         const rows = [
-            buildRoutineRow({ id: 'a', title: 'Pagar boleto', source: 'adhoc', deadline: 'overdue' }),
-            buildRoutineRow({ id: 'b', title: 'Ligar pro dentista', source: 'adhoc', deadline: 'due_today' }),
+            buildRoutineRow({ id: 'a', title: 'Pagar boleto', source: 'task', routineItemId: null, taskId: 'a' }),
+            buildRoutineRow({ id: 'b', title: 'Ligar pro dentista', source: 'task', routineItemId: null, taskId: 'b' }),
         ]
 
         const report = buildDayReport(buildSummary(), rows, TODAY, TODAY)
 
-        expect(report.pendingTitles).toEqual(['Pagar boleto (atrasada)', 'Ligar pro dentista'])
+        expect(report.pendingTitles).toEqual(['Pagar boleto', 'Ligar pro dentista'])
     })
 
-    it('expõe as pendências estruturadas, com o título limpo e o atraso como flag', () => {
+    it('expõe as pendências estruturadas, sem as já feitas', () => {
         const rows = [
-            buildRoutineRow({ id: 'a', title: 'Pagar boleto', source: 'adhoc', deadline: 'overdue' }),
-            buildRoutineRow({ id: 'b', title: 'Ligar pro dentista', source: 'adhoc', deadline: 'due_today' }),
+            buildRoutineRow({ id: 'a', title: 'Pagar boleto', source: 'task', routineItemId: null, taskId: 'a' }),
+            buildRoutineRow({ id: 'b', title: 'Ligar pro dentista', source: 'task', routineItemId: null, taskId: 'b' }),
             buildRoutineRow({ id: 'c', title: 'Academia', state: 'done' }),
         ]
 
         const report = buildDayReport(buildSummary(), rows, TODAY, TODAY)
 
-        expect(report.pendingItems).toEqual([
-            { title: 'Pagar boleto', isOverdue: true },
-            { title: 'Ligar pro dentista', isOverdue: false },
-        ])
+        expect(report.pendingItems).toEqual([{ title: 'Pagar boleto' }, { title: 'Ligar pro dentista' }])
+    })
+
+    it('conta tarefa concluída como feita', () => {
+        const rows = [
+            buildRoutineRow({ id: 'a', title: 'Pagar boleto', source: 'task', state: 'done', taskId: 'a' }),
+            buildRoutineRow({ id: 'b', title: 'Academia', state: 'pending' }),
+        ]
+
+        const report = buildDayReport(buildSummary(), rows, TODAY, TODAY)
+
+        expect(report).toMatchObject({ routineDoneCount: 1, routineTotalCount: 2 })
     })
 
     it('classifica como no_routine quando não há nenhum item de rotina no dia', () => {

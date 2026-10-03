@@ -2,8 +2,22 @@ import type { AppTab } from '@/features/shared/BottomNav'
 import type { Database } from '@/lib/databaseTypes'
 import type { IsoDate } from '@/lib/dateUtils'
 
+export type RoutineCategoryRow = Database['public']['Tables']['routine_categories']['Row']
 export type RoutineItemRow = Database['public']['Tables']['routine_items']['Row']
+export type RoutineItemScheduleRow = Database['public']['Tables']['routine_item_schedules']['Row']
 export type RoutineDayEntryRow = Database['public']['Tables']['routine_day_entries']['Row']
+export type RoutineTaskRow = Database['public']['Tables']['routine_tasks']['Row']
+
+// Tudo o que a resolução de um dia precisa da rotina: os itens que repetem,
+// as versões de agenda deles, as marcações manuais e as tarefas que não
+// repetem. Quem busca decide o recorte (um dia, um período); a resolução
+// filtra por data sozinha.
+export type RoutineData = {
+    items: RoutineItemRow[]
+    schedules: RoutineItemScheduleRow[]
+    entries: RoutineDayEntryRow[]
+    tasks: RoutineTaskRow[]
+}
 
 export const ROUTINE_LINK_KINDS = [
     'workout_finished',
@@ -39,16 +53,15 @@ export const ROUTINE_LINK_KIND_TARGET_TAB: Record<RoutineLinkKind, AppTab> = {
     sleep: 'menu',
 }
 
-export type RoutineRowSource = 'linked' | 'manual' | 'adhoc'
-export type RoutineRowDeadline = 'on_time' | 'due_today' | 'overdue'
+export type RoutineRowSource = 'linked' | 'manual' | 'task'
 export type RoutineRowState = 'done' | 'done_manual_override' | 'pending'
 
 // O que a tela de rotina mostra por linha: dado já resolvido o bastante para
 // decidir a ação de tocar (marcar, desmarcar ou ir registrar em outra aba) e
 // para saber se o item por trás dela é editável/arquivável na tela de
-// gerenciamento (só os que vieram de um template, nunca os avulsos do dia).
-// carriedFromDate só é preenchido pra tarefa avulsa com prazo trazida de um
-// dia anterior ao exibido.
+// gerenciamento. Linhas de item têm routineItemId (e dayEntryId quando há
+// marcação manual na data); linhas de tarefa têm taskId. carriedFromDate só
+// é preenchido em tarefa trazida de outro dia.
 export type RoutineRow = {
     id: string
     title: string
@@ -57,7 +70,8 @@ export type RoutineRow = {
     linkKind: RoutineLinkKind | null
     routineItemId: string | null
     dayEntryId: string | null
-    dueDate: IsoDate | null
-    deadline: RoutineRowDeadline | null
+    taskId: string | null
+    categoryId: string | null
+    isImportant: boolean
     carriedFromDate: IsoDate | null
 }
