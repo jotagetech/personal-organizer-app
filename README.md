@@ -194,6 +194,29 @@ order by start_time desc limit 20`, `select * from net._http_response order
 by created desc limit 20` (resposta da função, com a contagem de enviados) e
 os logs da função no painel.
 
+## Monitoramento de erros
+
+Erros do app em produção vão para o Sentry (`src/lib/monitoring.ts`). Só o
+build de produção com `VITE_SENTRY_DSN` envia algo; o dev local e os testes
+nunca enviam.
+
+- **O que chega**: erro não tratado (a tela de "Recarregar" aparece quando a
+  renderização inteira cai), falha definitiva da fila de envio como problema
+  com alerta, e falha passageira da fila como log (tipo de operação, data,
+  tentativas, código e status do erro).
+- **O que nunca chega**: valores registrados (carga, repetições, comentários,
+  peso, sono, refeições), corpo das requisições, consultas ao banco e o
+  e-mail da conta. A pessoa é identificada só pelo id do Supabase.
+
+Variáveis na Vercel (produção):
+
+- `VITE_SENTRY_DSN`: o DSN do projeto no Sentry. Não é segredo, vai no
+  JavaScript do navegador.
+- `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` e `SENTRY_PROJECT` (opcionais): com o
+  token, o build gera os source maps, envia ao Sentry e apaga de `dist/`,
+  para o stack trace mostrar o código original sem publicá-lo. O token é
+  segredo e fica só na Vercel.
+
 ## Funcionalidades
 
 - **Rotina**: checklist diário de hábitos recorrentes (ex: academia seg-sex,

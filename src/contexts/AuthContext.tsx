@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 
+import { identifyMonitoredUser } from '@/lib/monitoring'
 import { supabase } from '@/lib/supabaseClient'
 
 type AuthContextValue = {
@@ -19,11 +20,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
             setSession(data.session)
+            identifyMonitoredUser(data.session?.user.id ?? null)
             setIsLoadingSession(false)
         })
 
         const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
             setSession(nextSession)
+            identifyMonitoredUser(nextSession?.user.id ?? null)
         })
 
         return () => subscription.subscription.unsubscribe()

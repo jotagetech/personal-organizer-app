@@ -12,6 +12,7 @@ import {
     naturalKeyOf,
     removeSentOperation,
     replaceSentOperation,
+    type OutboxErrorClassification,
     type OutboxOperation,
     type SendStep,
     type SessionPauseValues,
@@ -40,6 +41,9 @@ export type OutboxQueueAccess = {
     // A operação a caminho do servidor agora: cancelar o início precisa saber
     // se ele pode estar chegando lá neste instante.
     setInFlight: (operation: OutboxOperation | null) => void
+    // Avisa quem acompanha a fila de fora (monitoramento) de cada envio que
+    // falhou, já com a decisão de tentar de novo ou desistir.
+    reportFailure: (operation: OutboxOperation, error: unknown, classification: OutboxErrorClassification) => void
 }
 
 function isStillQueued(queue: OutboxOperation[], operation: OutboxOperation): boolean {
@@ -172,6 +176,7 @@ export async function runSendPass(access: OutboxQueueAccess, transport: OutboxTr
         } catch (sendError) {
             const classification = classifyOutboxError(sendError)
             const attemptedOperation = markOperationAttempt(operation, classification)
+            access.reportFailure(attemptedOperation, sendError, classification)
             access.write(replaceSentOperation(access.read(), operation, attemptedOperation))
             // O que vem depois de uma exclusão que não chegou ao servidor
             // cairia na sessão antiga, então a data para por aqui.

@@ -45,6 +45,7 @@ import {
 } from '@/lib/outbox/outboxQueue'
 import { runSendPass, type OutboxTransport } from '@/lib/outbox/outboxSender'
 import { loadOutboxQueue, saveOutboxQueue } from '@/lib/outbox/outboxStorage'
+import { reportOutboxFailure } from '@/lib/monitoring'
 
 type EnqueueUpsertSetInput = {
     sessionDate: string
@@ -245,6 +246,7 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
                     setInFlight: (operation) => {
                         inFlightOperationRef.current = operation
                     },
+                    reportFailure: reportOutboxFailure,
                 },
                 SUPABASE_TRANSPORT,
             )

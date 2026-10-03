@@ -174,6 +174,7 @@ function createFakeServer() {
 function createQueueAccess(initialQueue: OutboxOperation[]) {
     let queue = initialQueue
     let inFlight: OutboxOperation | null = null
+    const reportedFailures: { kind: OutboxOperation['kind']; classification: string }[] = []
     const access: OutboxQueueAccess = {
         read: () => queue,
         write: (nextQueue) => {
@@ -182,9 +183,12 @@ function createQueueAccess(initialQueue: OutboxOperation[]) {
         setInFlight: (operation) => {
             inFlight = operation
         },
+        reportFailure: (operation, _error, classification) => {
+            reportedFailures.push({ kind: operation.kind, classification })
+        },
     }
 
-    return { access, currentQueue: () => queue, currentInFlight: () => inFlight }
+    return { access, currentQueue: () => queue, currentInFlight: () => inFlight, reportedFailures }
 }
 
 async function waitUntil(condition: () => boolean): Promise<void> {
@@ -257,6 +261,7 @@ describe('runSendPass com exclusão do treino do dia', () => {
         const [pendingDeletion, pendingStart] = queueAccess.currentQueue()
         expect(pendingDeletion).toMatchObject({ kind: 'delete_session', status: 'pending', attempts: 1 })
         expect(pendingStart.kind).toBe('start_session')
+        expect(queueAccess.reportedFailures).toEqual([{ kind: 'delete_session', classification: 'retry' }])
     })
 
     it('uma exclusão recusada de vez segura a data também nas passadas seguintes', async () => {

@@ -6,8 +6,12 @@ import '@fontsource/barlow-condensed/600.css'
 import '@fontsource/barlow-condensed/700.css'
 
 import { App } from '@/App'
+import { AppCrashFallback } from '@/features/shared/AppCrashFallback'
 import { registerServiceWorker } from '@/features/notifications/pushApi'
+import { initMonitoring, MonitoringErrorBoundary } from '@/lib/monitoring'
 import '@/index.css'
+
+initMonitoring()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) {
@@ -16,7 +20,9 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
     <StrictMode>
-        <App />
+        <MonitoringErrorBoundary fallback={<AppCrashFallback />}>
+            <App />
+        </MonitoringErrorBoundary>
     </StrictMode>,
 )
 
