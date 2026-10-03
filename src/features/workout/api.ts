@@ -1,6 +1,7 @@
 import { appendExtraExercise, type PastSessionSnapshot } from '@/features/workout/extraExercises'
 import { canonicalizeJson, sha256Hex } from '@/lib/canonicalJson'
 import { supabase } from '@/lib/supabaseClient'
+import { SupabaseRequestError } from '@/lib/supabaseRequestError'
 import type { OutboxDropValues } from '@/lib/outbox/outboxQueue'
 import {
     normalizeStoredWorkoutPlan,
@@ -180,7 +181,7 @@ export async function listSetDrops(setIds: string[]): Promise<WorkoutSetDropRow[
         return []
     }
 
-    const { data, error } = await supabase
+    const { data, error, status } = await supabase
         .from('workout_set_drops')
         .select('*')
         .in('set_id', setIds)
@@ -188,7 +189,7 @@ export async function listSetDrops(setIds: string[]): Promise<WorkoutSetDropRow[
         .abortSignal(AbortSignal.timeout(CRITICAL_READ_TIMEOUT_MS))
 
     if (error) {
-        throw new Error(error.message)
+        throw new SupabaseRequestError(error, status)
     }
 
     return data ?? []
@@ -197,7 +198,7 @@ export async function listSetDrops(setIds: string[]): Promise<WorkoutSetDropRow[
 export async function getSessionForDate(
     sessionDate: string,
 ): Promise<{ session: WorkoutSessionRow; sets: WorkoutSetRow[]; drops: WorkoutSetDropRow[] } | null> {
-    const { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError, status: sessionStatus } = await supabase
         .from('workout_sessions')
         .select('*')
         .eq('session_date', sessionDate)
@@ -205,20 +206,20 @@ export async function getSessionForDate(
         .maybeSingle()
 
     if (sessionError) {
-        throw new Error(sessionError.message)
+        throw new SupabaseRequestError(sessionError, sessionStatus)
     }
     if (!session) {
         return null
     }
 
-    const { data: sets, error: setsError } = await supabase
+    const { data: sets, error: setsError, status: setsStatus } = await supabase
         .from('workout_sets')
         .select('*')
         .eq('session_id', session.id)
         .abortSignal(AbortSignal.timeout(CRITICAL_READ_TIMEOUT_MS))
 
     if (setsError) {
-        throw new Error(setsError.message)
+        throw new SupabaseRequestError(setsError, setsStatus)
     }
 
     const setRows = sets ?? []
@@ -249,13 +250,16 @@ export async function createSession(params: {
         { onConflict: 'user_id,session_date', ignoreDuplicates: true },
     )
 
-    const { data: session, error } = await supabase
+    const { data: session, error, status } = await supabase
         .from('workout_sessions')
         .select('*')
         .eq('session_date', params.sessionDate)
         .single()
 
-    if (error || !session) {
+    if (error) {
+        throw new SupabaseRequestError(error, status)
+    }
+    if (!session) {
         throw new Error('Não foi possível criar ou recuperar a sessão do dia')
     }
 
@@ -285,14 +289,17 @@ export async function replaceSessionWorkout(params: {
 // está lá: reenviar depois de uma resposta perdida não duplica, e dois extras
 // enviados em sequência somam em vez de um sobrescrever o outro.
 export async function appendSessionExercise(sessionId: string, exercise: WorkoutSnapshotExercise): Promise<void> {
-    const { data, error } = await supabase
+    const { data, error, status } = await supabase
         .from('workout_sessions')
         .select('workout_snapshot')
         .eq('id', sessionId)
         .single()
 
-    if (error || !data) {
-        throw new Error(error?.message ?? 'Sessão não encontrada para acrescentar o exercício')
+    if (error) {
+        throw new SupabaseRequestError(error, status)
+    }
+    if (!data) {
+        throw new Error('Sessão não encontrada para acrescentar o exercício')
     }
 
     const currentSnapshot = normalizeWorkoutSnapshot(data.workout_snapshot)
@@ -301,13 +308,13 @@ export async function appendSessionExercise(sessionId: string, exercise: Workout
         return
     }
 
-    const { error: updateError } = await supabase
+    const { error: updateError, status: updateStatus } = await supabase
         .from('workout_sessions')
         .update({ workout_snapshot: nextSnapshot })
         .eq('id', sessionId)
 
     if (updateError) {
-        throw new Error(updateError.message)
+        throw new SupabaseRequestError(updateError, updateStatus)
     }
 }
 
@@ -357,7 +364,7 @@ export type SetInput = {
 }
 
 export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
-    const { data, error } = await supabase
+    const { data, error, status } = await supabase
         .from('workout_sets')
         .upsert(
             {
@@ -382,8 +389,11 @@ export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
         .select('*')
         .single()
 
-    if (error || !data) {
-        throw new Error(error?.message ?? 'Falha ao salvar série')
+    if (error) {
+        throw new SupabaseRequestError(error, status)
+    }
+    if (!data) {
+        throw new Error('Falha ao salvar série')
     }
 
     if (input.drops) {
@@ -396,7 +406,7 @@ export async function upsertSet(input: SetInput): Promise<WorkoutSetRow> {
 // Substitui todas as quedas da série numa única transação no banco, para uma
 // edição que remove quedas nunca deixar sobra das antigas.
 export async function replaceSetDrops(setId: string, drops: OutboxDropValues[]): Promise<WorkoutSetDropRow[]> {
-    const { data, error } = await supabase.rpc('replace_workout_set_drops', {
+    const { data, error, status } = await supabase.rpc('replace_workout_set_drops', {
         p_set_id: setId,
         p_drops: drops.map((drop) => ({
             load_kg: drop.loadKg,
@@ -407,22 +417,25 @@ export async function replaceSetDrops(setId: string, drops: OutboxDropValues[]):
     })
 
     if (error) {
-        throw new Error(error.message)
+        throw new SupabaseRequestError(error, status)
     }
 
     return data ?? []
 }
 
 export async function finishSession(sessionId: string, finishedAt?: string): Promise<WorkoutSessionRow> {
-    const { data, error } = await supabase
+    const { data, error, status } = await supabase
         .from('workout_sessions')
         .update({ finished_at: finishedAt ?? new Date().toISOString() })
         .eq('id', sessionId)
         .select('*')
         .single()
 
-    if (error || !data) {
-        throw new Error(error?.message ?? 'Falha ao finalizar treino')
+    if (error) {
+        throw new SupabaseRequestError(error, status)
+    }
+    if (!data) {
+        throw new Error('Falha ao finalizar treino')
     }
 
     return normalizeSessionRow(data)
@@ -432,14 +445,14 @@ export async function finishSession(sessionId: string, finishedAt?: string): Pro
 // outro aparelho que também marcou o início) nunca empurra started_at para
 // depois. Nenhuma linha atualizada não é erro, é o início já gravado antes.
 export async function recordSessionStart(sessionId: string, startedAt: string): Promise<void> {
-    const { error } = await supabase
+    const { error, status } = await supabase
         .from('workout_sessions')
         .update({ started_at: startedAt })
         .eq('id', sessionId)
         .is('started_at', null)
 
     if (error) {
-        throw new Error(error.message)
+        throw new SupabaseRequestError(error, status)
     }
 }
 
@@ -449,27 +462,27 @@ export async function recordSessionPause(
     sessionId: string,
     pause: { pausedAt: string | null; pausedSeconds: number },
 ): Promise<void> {
-    const { error } = await supabase
+    const { error, status } = await supabase
         .from('workout_sessions')
         .update({ paused_at: pause.pausedAt, paused_seconds: pause.pausedSeconds })
         .eq('id', sessionId)
 
     if (error) {
-        throw new Error(error.message)
+        throw new SupabaseRequestError(error, status)
     }
 }
 
 // Volta a sessão para antes de "Iniciar treino". Uma sessão já finalizada
 // nunca perde o início; nenhuma linha atualizada, nesse caso, não é erro.
 export async function clearSessionStart(sessionId: string): Promise<void> {
-    const { error } = await supabase
+    const { error, status } = await supabase
         .from('workout_sessions')
         .update({ started_at: null, paused_at: null, paused_seconds: 0 })
         .eq('id', sessionId)
         .is('finished_at', null)
 
     if (error) {
-        throw new Error(error.message)
+        throw new SupabaseRequestError(error, status)
     }
 }
 
@@ -496,9 +509,9 @@ export async function updateSessionFeeling(
 // e extras e avaliação moram na própria linha. Nenhuma linha apagada não é
 // erro: a sessão pode nunca ter chegado ao servidor.
 export async function deleteSessionForDate(sessionDate: string): Promise<void> {
-    const { error } = await supabase.from('workout_sessions').delete().eq('session_date', sessionDate)
+    const { error, status } = await supabase.from('workout_sessions').delete().eq('session_date', sessionDate)
 
     if (error) {
-        throw new Error(error.message)
+        throw new SupabaseRequestError(error, status)
     }
 }

@@ -35,6 +35,7 @@ import {
     operationsWithStatus,
     removeOperation,
     removePendingExtraExercises,
+    retryFailedOperation,
     type AddExtraExerciseOperation,
     type OutboxOperation,
     type OutboxSetValues,
@@ -99,6 +100,7 @@ type OutboxContextValue = {
     // meio de uma leitura assíncrona que começou antes da exclusão.
     hasPendingSessionDeletion: (sessionDate: string) => boolean
     discardOperation: (naturalKey: string) => void
+    retryOperation: (naturalKey: string) => void
     listFailedOperations: () => OutboxOperation[]
 }
 
@@ -394,6 +396,13 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
             hasPendingSessionDeletion: (sessionDate: string) => hasSessionDeletion(queueRef.current, sessionDate),
             discardOperation: (naturalKey: string) => {
                 updateQueue(removeOperation(queueRef.current, naturalKey))
+            },
+            // Pedido explícito de quem está olhando a falha: envia já, sem
+            // esperar o intervalo crescente das tentativas automáticas.
+            retryOperation: (naturalKey: string) => {
+                updateQueue(retryFailedOperation(queueRef.current, naturalKey))
+                backoffDelayRef.current = null
+                void runFlushCycle()
             },
             listFailedOperations: () => operationsWithStatus(queue, 'failed'),
         }

@@ -163,6 +163,11 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Corrigido
 
+- Série confirmada com a rede oscilando no iPhone ficava presa como "falha no
+  envio" para sempre e bloqueava a correção das séries do dia: a queda de
+  rede no Safari ("Load failed") era tomada por erro definitivo. Agora ela,
+  o tempo esgotado e o token vencido voltam a ser tentados sozinhos, e o
+  painel de falhas ganhou "Tentar de novo" ao lado de "Descartar".
 - Relógio do treino pausado oscilava 1 s para cima e para baixo: o tempo
   total e o da pausa eram arredondados cada um por si.
 - Gráficos dos exercícios ocupam a largura da tela em vez de ficarem com

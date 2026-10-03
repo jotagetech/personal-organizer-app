@@ -2190,8 +2190,8 @@ h1, h2, h3, h4 {
 
 .sync-status-badge__panel-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
     font-size: 12px;
     padding: 6px 4px;
@@ -2200,6 +2200,15 @@ h1, h2, h3, h4 {
 
 .sync-status-badge__panel-row:last-child {
     border-bottom: none;
+}
+
+.sync-status-badge__panel-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.sync-status-badge__panel-actions > button {
+    flex: 1;
 }
 
 .routine-row {

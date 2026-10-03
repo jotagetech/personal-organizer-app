@@ -14,11 +14,13 @@ import {
     overlayPendingSets,
     removeSentOperation,
     replaceSentOperation,
+    retryFailedOperation,
     type FinishSessionOperation,
     type OutboxOperation,
     type StartSessionOperation,
     type UpsertSetOperation,
 } from '@/lib/outbox/outboxQueue'
+import { SupabaseRequestError } from '@/lib/supabaseRequestError'
 import { clearOutboxQueue, loadOutboxQueue, saveOutboxQueue, type OutboxStorageAdapter } from '@/lib/outbox/outboxStorage'
 import { findFirstIncompletePosition } from '@/features/workout/sessionProgress'
 import { setKey, type WorkoutSetRow, type WorkoutSnapshot } from '@/features/workout/types'
@@ -191,6 +193,37 @@ describe('classifyOutboxError', () => {
 
     it('classifica erro desconhecido como terminal por padrão', () => {
         expect(classifyOutboxError(new Error('algo inesperado'))).toBe('terminal')
+    })
+
+    it('classifica queda de rede no Safari, como a API lança, como retry', () => {
+        const safariNetworkError = new SupabaseRequestError({ message: 'TypeError: Load failed', code: '' }, 0)
+        expect(classifyOutboxError(safariNetworkError)).toBe('retry')
+    })
+
+    it('classifica a mensagem "Load failed" sem status como retry', () => {
+        expect(classifyOutboxError(new Error('TypeError: Load failed'))).toBe('retry')
+    })
+
+    it('classifica token vencido (401) como retry', () => {
+        const expiredTokenError = new SupabaseRequestError({ message: 'JWT expired', code: 'PGRST303' }, 401)
+        expect(classifyOutboxError(expiredTokenError)).toBe('retry')
+    })
+
+    it('classifica restrição violada, como a API lança, como terminal', () => {
+        const checkViolation = new SupabaseRequestError({ message: 'violates check constraint', code: '23514' }, 400)
+        expect(classifyOutboxError(checkViolation)).toBe('terminal')
+    })
+})
+
+describe('retryFailedOperation', () => {
+    it('devolve a operação com falha para o envio, zerando as tentativas', () => {
+        const failedOperation = upsertSetOperation({ status: 'failed', attempts: 1 })
+        const otherOperation = upsertSetOperation({ setIndex: 2, status: 'failed', attempts: 1 })
+
+        const nextQueue = retryFailedOperation([failedOperation, otherOperation], naturalKeyOf(failedOperation))
+
+        expect(nextQueue[0]).toMatchObject({ status: 'pending', attempts: 0 })
+        expect(nextQueue[1]).toBe(otherOperation)
     })
 })
 

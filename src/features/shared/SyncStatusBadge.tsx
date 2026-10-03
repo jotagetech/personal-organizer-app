@@ -9,7 +9,7 @@ const SYNC_ICON_SIZE = 18
 // No cabeçalho só cabe o ícone e a contagem; a descrição completa do que está
 // na fila aparece no painel ao tocar.
 export function SyncStatusBadge() {
-    const { pendingCount, failedCount, isOnline, listFailedOperations, discardOperation } = useOutbox()
+    const { pendingCount, failedCount, isOnline, listFailedOperations, discardOperation, retryOperation } = useOutbox()
     const [isPanelOpen, setIsPanelOpen] = useState(false)
 
     if (pendingCount === 0 && failedCount === 0) {
@@ -42,13 +42,22 @@ export function SyncStatusBadge() {
                     {listFailedOperations().map((operation) => (
                         <div key={naturalKeyOf(operation)} className="sync-status-badge__panel-row">
                             <span>{describeOperation(operation)}</span>
-                            <button
-                                type="button"
-                                className="secondary-button"
-                                onClick={() => discardOperation(naturalKeyOf(operation))}
-                            >
-                                Descartar
-                            </button>
+                            <div className="sync-status-badge__panel-actions">
+                                <button
+                                    type="button"
+                                    className="secondary-button"
+                                    onClick={() => retryOperation(naturalKeyOf(operation))}
+                                >
+                                    Tentar de novo
+                                </button>
+                                <button
+                                    type="button"
+                                    className="secondary-button"
+                                    onClick={() => discardOperation(naturalKeyOf(operation))}
+                                >
+                                    Descartar
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>

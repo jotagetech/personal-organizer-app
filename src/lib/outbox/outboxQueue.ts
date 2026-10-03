@@ -160,6 +160,11 @@ export type SendStep =
 
 export const BACKOFF_SCHEDULE_MS = [5000, 15000, 30000, 60000] as const
 
+const NO_RESPONSE_STATUS = 0
+const EXPIRED_TOKEN_STATUS = 401
+const TOO_MANY_REQUESTS_STATUS = 429
+const FIRST_SERVER_ERROR_STATUS = 500
+
 // Chave de agrupamento natural: uma nova operação para a mesma série, para o
 // mesmo início ou para a mesma finalização de sessão substitui a anterior,
 // então autosaves repetidos nunca acumulam mais de uma entrada pendente.
@@ -238,6 +243,20 @@ export function enqueueOperations(queue: OutboxOperation[], operations: OutboxOp
 
 export function removeOperation(queue: OutboxOperation[], naturalKey: string): OutboxOperation[] {
     return queue.filter((operation) => naturalKeyOf(operation) !== naturalKey)
+}
+
+// Uma falha pode ter sido um erro passageiro tomado por definitivo; devolver
+// a operação à fila de envio não perde o que foi registrado, ao contrário de
+// descartá-la.
+export function retryFailedOperation(queue: OutboxOperation[], naturalKey: string): OutboxOperation[] {
+    const nextQueue = queue.map((operation): OutboxOperation => {
+        const isTarget = naturalKeyOf(operation) === naturalKey && operation.status === 'failed'
+        const nextOperation: OutboxOperation = isTarget ? { ...operation, attempts: 0, status: 'pending' } : operation
+
+        return nextOperation
+    })
+
+    return nextQueue
 }
 
 // O envio é assíncrono e a fila continua aceitando escritas durante ele: uma
@@ -381,10 +400,25 @@ export function nextBackoffDelayMs(previousDelayMs: number | null): number {
     return BACKOFF_SCHEDULE_MS[cappedIndex]
 }
 
+// Status 0 é a requisição que nem chegou a ter resposta (rede caiu ou o
+// tempo esgotou). 401 é o token vencido com o app em segundo plano: o
+// cliente do Supabase renova a sessão sozinho e a próxima passada passa.
+function isRetryableHttpStatus(httpStatus: number): boolean {
+    const isRetryable =
+        httpStatus === NO_RESPONSE_STATUS ||
+        httpStatus === EXPIRED_TOKEN_STATUS ||
+        httpStatus === TOO_MANY_REQUESTS_STATUS ||
+        httpStatus >= FIRST_SERVER_ERROR_STATUS
+
+    return isRetryable
+}
+
 export function classifyOutboxError(error: unknown): OutboxErrorClassification {
     const httpStatus = extractHttpStatus(error)
     if (httpStatus !== null) {
-        return httpStatus >= 500 || httpStatus === 429 ? 'retry' : 'terminal'
+        const classification: OutboxErrorClassification = isRetryableHttpStatus(httpStatus) ? 'retry' : 'terminal'
+
+        return classification
     }
 
     const postgresErrorCode = extractPostgresErrorCode(error)
@@ -432,7 +466,9 @@ function isNetworkFailure(error: unknown): boolean {
         return false
     }
 
-    return error instanceof TypeError || /network|fetch/i.test(error.message)
+    // "Load failed" é como o Safari descreve a mesma falha que o Chrome
+    // chama de "Failed to fetch".
+    return error instanceof TypeError || /network|fetch|load failed/i.test(error.message)
 }
 
 // Enquanto o início não chega ao servidor, é a hora guardada na fila que a
