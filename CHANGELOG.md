@@ -7,6 +7,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Ao finalizar o treino, o painel mostra um card da rotina do dia: o anel, até
+  5 pendências para marcar ali mesmo (importantes primeiro) e o atalho para a
+  Rotina. A Academia já aparece feita mesmo antes de a finalização chegar ao
+  servidor. Quem ainda não tem rotina vê o convite para montar a sua.
 - Ao completar a rotina do dia com um toque, o anel dá uma volta e toca um som
   curto de três notas, que respeita a chave de silencioso do iPhone. Menu ›
   "Som da rotina" liga e desliga o som. O bipe do descanso do treino passou a

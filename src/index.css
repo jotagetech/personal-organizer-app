@@ -5809,3 +5809,55 @@ h1, h2, h3, h4 {
     font-weight: 500;
     color: var(--color-text-muted);
 }
+
+.routine-day-card__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.routine-day-card__heading {
+    min-width: 0;
+}
+
+.routine-day-card__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.routine-day-card__subtitle {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+.routine-day-card__list {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+}
+
+.routine-day-card__setup {
+    width: 100%;
+    margin-top: 12px;
+}
+
+.routine-day-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: var(--touch-target);
+    margin-top: 4px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-accent-text);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.routine-day-card .save-status {
+    margin: 8px 0 0;
+}

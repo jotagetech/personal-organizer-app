@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { CardioSection } from '@/features/cardio/CardioSection'
 import { FeelingScaleInput } from '@/features/cardio/FeelingScaleInput'
 import { feelingEmoji, feelingLabel } from '@/features/cardio/types'
+import { RoutineDayCard } from '@/features/routine/RoutineDayCard'
 import { summarizeWorkoutSetsWithDrops } from '@/features/results/daySummary'
 import type { SetCorrectionTarget } from '@/features/results/SetCorrectionItem'
 import { WorkoutSummaryView } from '@/features/results/WorkoutSummaryView'
@@ -179,6 +180,7 @@ export function WorkoutFinishPanel({
                 )}
                 <SaveStatusLabel status={saveStatus} />
             </div>
+            <RoutineDayCard sessionDate={sessionDate} />
             <CardioSection sessionDate={sessionDate} />
         </div>
     )
