@@ -200,6 +200,33 @@ export async function loadRoutineDataForDate(date: IsoDate): Promise<RoutineData
     return routineData
 }
 
+// A rotina de um intervalo de datas em poucas consultas: os itens e as
+// versões de agenda são os mesmos de qualquer dia; as marcações e as tarefas
+// são só as do intervalo. Tarefas sem data não pertencem a dia nenhum e ficam
+// de fora.
+export async function loadRoutineDataForRange(start: IsoDate, end: IsoDate): Promise<RoutineData> {
+    const [items, schedules, entriesResult, tasksResult] = await Promise.all([
+        listRoutineItems(),
+        listRoutineItemSchedules(),
+        supabase.from('routine_day_entries').select('*').gte('entry_date', start).lte('entry_date', end),
+        supabase.from('routine_tasks').select('*').gte('scheduled_on', start).lte('scheduled_on', end),
+    ])
+    if (entriesResult.error) {
+        throw new Error(entriesResult.error.message)
+    }
+    if (tasksResult.error) {
+        throw new Error(tasksResult.error.message)
+    }
+    const routineData: RoutineData = {
+        items,
+        schedules,
+        entries: entriesResult.data ?? [],
+        tasks: tasksResult.data ?? [],
+    }
+
+    return routineData
+}
+
 // As colunas dos dois tipos de agenda vão sempre juntas, com as do tipo
 // que não vale nulas, para a linha nunca misturar os dois.
 function scheduleColumns(input: RoutineItemInput) {

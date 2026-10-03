@@ -5523,6 +5523,106 @@ h1, h2, h3, h4 {
     color: var(--color-accent);
 }
 
+/* Anel de progresso: fundo na cor de borda, arco na cor de feito, começando
+   no topo. O número fica centrado sobre o anel. */
+.progress-ring {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.progress-ring__track {
+    stroke: var(--color-border-strong);
+}
+
+.progress-ring__arc {
+    stroke: var(--color-done);
+    transition: stroke-dashoffset 300ms ease, opacity 150ms ease;
+}
+
+.progress-ring--muted {
+    opacity: 0.45;
+}
+
+.progress-ring__label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-numeric);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .progress-ring__arc {
+        transition: none;
+    }
+}
+
+/* Resumo do topo da Rotina: anel do dia e a semana em 7 mini anéis. */
+.routine-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 4px 0 14px;
+}
+
+.routine-summary__day {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.routine-summary__day-placeholder {
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.routine-summary__caption {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.routine-summary__week {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.routine-summary__week-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-muted);
+    font: inherit;
+    cursor: pointer;
+}
+
+.routine-summary__week-day--selected {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.routine-summary__week-initial {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.routine-summary__week-day--selected .routine-summary__week-initial {
+    font-weight: 700;
+}
+
 /* Perfil no Menu: campos empilhados, dica, prévia da saudação e ação. */
 .profile-section {
     display: flex;

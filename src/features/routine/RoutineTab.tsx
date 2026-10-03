@@ -13,6 +13,7 @@ import {
     deleteRoutineTask,
     listRoutineCategories,
     loadRoutineDataForDate,
+    loadRoutineDataForRange,
     markRoutineItemDone,
     markRoutineTaskDone,
     unmarkRoutineTaskDone,
@@ -28,6 +29,7 @@ import { CategoriesScreen } from '@/features/routine/CategoriesScreen'
 import { CategoryDot } from '@/features/routine/CategoryDot'
 import { CategoryFilter } from '@/features/routine/CategoryFilter'
 import { NewTaskSheet } from '@/features/routine/NewTaskSheet'
+import { RoutineProgressSummary } from '@/features/routine/RoutineProgressSummary'
 import { RoutineItemsEditor } from '@/features/routine/RoutineItemsEditor'
 import { RoutineOnboarding } from '@/features/routine/RoutineOnboarding'
 import { wasRoutineOnboardingSkipped } from '@/features/routine/onboardingSession'
@@ -43,7 +45,9 @@ import {
 import { deriveRoutineRowActions, type RoutineRowActions, type RoutineRowRemoval } from '@/features/routine/routineRowActions'
 import { ROUTINE_LINK_KIND_TARGET_TAB } from '@/features/routine/types'
 import type { RoutineCategoryRow, RoutineData, RoutineRow, RoutineRowState, RoutineTaskRow } from '@/features/routine/types'
-import { fetchDaySignals, type DaySignals } from '@/features/shared/daySignals'
+import { buildWeekProgress, weekDatesOf, type WeekDayProgress } from '@/features/routine/weekProgress'
+import { fetchDaySignals, fetchDaySignalsForRange, type DaySignals } from '@/features/shared/daySignals'
+import { todayInTimezone } from '@/lib/dateUtils'
 
 const MENU_ICON_SIZE = 22
 const CHECK_ICON_SIZE = 16
@@ -54,7 +58,7 @@ const META_ICON_SIZE = 12
 const EMPTY_ROUTINE_DATA: RoutineData = { items: [], schedules: [], entries: [], tasks: [] }
 
 export function RoutineTab() {
-    const { selectedDate } = useSelectedDate()
+    const { selectedDate, setSelectedDate } = useSelectedDate()
     const { goToTab } = useAppNavigation()
     const { refreshDayStatus } = useDayStatus()
     const { displayName } = useProfile()
@@ -62,6 +66,10 @@ export function RoutineTab() {
     const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [routineData, setRoutineData] = useState<RoutineData>(EMPTY_ROUTINE_DATA)
     const [signals, setSignals] = useState<DaySignals | null>(null)
+    const [loadedDate, setLoadedDate] = useState<string | null>(null)
+    const [weekProgress, setWeekProgress] = useState<WeekDayProgress[] | null>(null)
+    const [weekRefreshTick, setWeekRefreshTick] = useState(0)
+    const weekRequestRef = useRef(0)
     const [isLoading, setIsLoading] = useState(true)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -75,7 +83,7 @@ export function RoutineTab() {
     const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
 
-    async function reloadRoutine() {
+    async function loadSelectedDay() {
         setIsLoading(true)
         setErrorMessage(null)
         try {
@@ -87,6 +95,7 @@ export function RoutineTab() {
             setRoutineData(nextRoutineData)
             setCategories(nextCategories)
             setSignals(nextSignals)
+            setLoadedDate(selectedDate)
         } catch (loadError) {
             const message = loadError instanceof Error ? loadError.message : 'Falha ao carregar a rotina'
             setErrorMessage(message)
@@ -95,10 +104,40 @@ export function RoutineTab() {
         }
     }
 
+    // A semana é recarregada à parte, sem passar pelo estado de carregamento
+    // da lista: os anéis mantêm o valor anterior até o novo chegar.
+    async function reloadRoutine() {
+        await loadSelectedDay()
+        setWeekRefreshTick((previous) => previous + 1)
+    }
+
     useEffect(() => {
-        void reloadRoutine()
+        void loadSelectedDay()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedDate])
+
+    const weekStart = weekDatesOf(selectedDate)[0]
+
+    useEffect(() => {
+        const weekDates = weekDatesOf(weekStart)
+        const requestId = weekRequestRef.current + 1
+        weekRequestRef.current = requestId
+
+        async function loadWeek() {
+            try {
+                const [weekRoutineData, signalsByDate] = await Promise.all([
+                    loadRoutineDataForRange(weekDates[0], weekDates[6]),
+                    fetchDaySignalsForRange(weekDates[0], weekDates[6]),
+                ])
+                if (weekRequestRef.current === requestId) {
+                    setWeekProgress(buildWeekProgress(weekDates, weekRoutineData, signalsByDate, todayInTimezone()))
+                }
+            } catch {
+                // Sem a semana a tela segue útil: os anéis ficam como estavam.
+            }
+        }
+        void loadWeek()
+    }, [weekStart, weekRefreshTick])
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -265,6 +304,15 @@ export function RoutineTab() {
     return (
         <div>
             <p className="routine-greeting">{greetingText(currentHour, displayName)}</p>
+            {!errorMessage && (
+                <RoutineProgressSummary
+                    selectedDate={selectedDate}
+                    today={todayInTimezone()}
+                    dayProgress={loadedDate === selectedDate && signals ? progress : null}
+                    week={weekProgress}
+                    onSelectDate={setSelectedDate}
+                />
+            )}
             <div className="page-header">
                 <div className="page-header__title-group">
                     <h2 className="page-title">Rotina do dia</h2>

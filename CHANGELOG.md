@@ -7,6 +7,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Anel do dia na Rotina com o "X/Y" do que foi feito e, embaixo, a semana em
+  7 mini anéis (domingo a sábado). Tocar num dia da semana abre aquele dia. Os
+  dias passados usam a agenda que valia neles; um dia fraco não apaga os
+  outros.
 - Gerenciar itens da rotina: cada hábito ganha categoria, importante e a
   opção de repetir a cada N dias a partir de uma data, além dos dias da semana;
   a lista mostra a categoria, a estrela e a agenda ("Seg, Qua, Sex" ou "A cada
