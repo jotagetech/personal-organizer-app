@@ -7,6 +7,10 @@ datas no lugar de versão semântica (projeto pessoal, sem releases numeradas).
 
 ### Adicionado
 
+- Perfil no Menu: nome e "como quer ser chamado" (migração
+  `20261003010000`). A Rotina cumprimenta com Bom dia, Boa tarde ou Boa noite
+  conforme a hora do aparelho, seguido do apelido (ou do primeiro nome, ou do
+  começo do e-mail).
 - Categorias na Rotina, opcionais: cada pessoa cria as suas (Menu de três
   pontos › Categorias) com uma de 8 cores; a tarefa nova escolhe a categoria e
   cada item mostra uma bolinha colorida com o nome dela. Chips no topo filtram

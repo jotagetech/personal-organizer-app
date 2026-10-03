@@ -31,6 +31,8 @@ type UserSettingsRow = {
     timezone: string
     routine_sound_enabled: boolean
     routine_onboarded_at: string | null
+    full_name: string | null
+    nickname: string | null
 }
 
 type PlanActivationRow = {
@@ -279,7 +281,12 @@ export type Database = {
             >
             user_settings: TableDefinition<
                 UserSettingsRow,
-                { routine_sound_enabled?: boolean; routine_onboarded_at?: string | null },
+                {
+                    routine_sound_enabled?: boolean
+                    routine_onboarded_at?: string | null
+                    full_name?: string | null
+                    nickname?: string | null
+                },
                 Record<never, never>
             >
             plan_activations: TableDefinition<

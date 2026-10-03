@@ -3,8 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAppNavigation } from '@/contexts/AppNavigationContext'
 import { useDayStatus } from '@/contexts/DayStatusContext'
+import { useProfile } from '@/contexts/ProfileContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
 import { useUndoableActions } from '@/contexts/UndoableActionContext'
+import { greetingText } from '@/features/account/profileGreeting'
+import { useCurrentHour } from '@/features/account/useCurrentHour'
 import {
     deleteRoutineDayEntry,
     deleteRoutineTask,
@@ -53,6 +56,8 @@ export function RoutineTab() {
     const { selectedDate } = useSelectedDate()
     const { goToTab } = useAppNavigation()
     const { refreshDayStatus } = useDayStatus()
+    const { displayName } = useProfile()
+    const currentHour = useCurrentHour()
     const { scheduleDeletion, isPendingDeletion } = useUndoableActions()
     const [routineData, setRoutineData] = useState<RoutineData>(EMPTY_ROUTINE_DATA)
     const [signals, setSignals] = useState<DaySignals | null>(null)
@@ -247,6 +252,7 @@ export function RoutineTab() {
 
     return (
         <div>
+            <p className="routine-greeting">{greetingText(currentHour, displayName)}</p>
             <div className="page-header">
                 <div className="page-header__title-group">
                     <h2 className="page-title">Rotina do dia</h2>

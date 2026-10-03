@@ -99,14 +99,3 @@ export function buildOnboardingItems(choices: OnboardingChoice[], context: Onboa
     const rows = choices.map((choice, index) => buildRow(choice, index, context))
     return rows
 }
-
-// Nome de saudação: parte do e-mail antes do @, com a primeira letra
-// maiúscula. Sem e-mail utilizável devolve null.
-export function greetingNameFromEmail(email: string | null | undefined): string | null {
-    const localPart = (email ?? '').split('@')[0].trim()
-    if (localPart === '') {
-        return null
-    }
-    const greetingName = localPart.charAt(0).toUpperCase() + localPart.slice(1)
-    return greetingName
-}

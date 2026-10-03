@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { useDayStatus } from '@/contexts/DayStatusContext'
 import { useSelectedDate } from '@/contexts/SelectedDateContext'
+import { ProfileSection } from '@/features/account/ProfileSection'
 import { SignOutSection } from '@/features/account/SignOutSection'
 import { BodyWeightLog, SleepLog } from '@/features/bodyMetrics/BodyMetricLogs'
 import { UnlinkedExercisesPanel } from '@/features/exerciseCatalog/UnlinkedExercisesPanel'
@@ -89,6 +90,7 @@ function MenuHome({ onOpenTool }: { onOpenTool: (toolKey: MenuToolKey) => void }
             <div className="page-header">
                 <h2 className="page-title">Menu</h2>
             </div>
+            <ProfileSection />
             <section className="menu-section">
                 <div className="menu-section__header">
                     <h3 className="section-title">Registros do dia</h3>

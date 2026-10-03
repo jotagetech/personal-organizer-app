@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import {
     buildOnboardingItems,
-    greetingNameFromEmail,
     workoutWeekdaysFromPlan,
     type OnboardingChoice,
 } from '@/features/routine/onboardingItems'
@@ -99,17 +98,5 @@ describe('workoutWeekdaysFromPlan', () => {
 
     it('plano sem dias declarados usa segunda a sexta', () => {
         expect(workoutWeekdaysFromPlan(planWithWorkoutDays([undefined, []]))).toEqual(BUSINESS_DAYS)
-    })
-})
-
-describe('greetingNameFromEmail', () => {
-    it('usa a parte antes do @ com a primeira letra maiúscula', () => {
-        expect(greetingNameFromEmail('gustavo@exemplo.com')).toBe('Gustavo')
-    })
-
-    it('sem e-mail devolve null', () => {
-        expect(greetingNameFromEmail(undefined)).toBeNull()
-        expect(greetingNameFromEmail('')).toBeNull()
-        expect(greetingNameFromEmail('@exemplo.com')).toBeNull()
     })
 })

@@ -1,12 +1,11 @@
 import { Check, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { useAuth } from '@/contexts/AuthContext'
+import { useProfile } from '@/contexts/ProfileContext'
 import { createOnboardingRoutineItems, markRoutineOnboarded } from '@/features/routine/api'
 import {
     buildOnboardingItems,
     COMMON_ONBOARDING_PRESETS,
-    greetingNameFromEmail,
     LINKED_ONBOARDING_PRESETS,
     MAX_ONBOARDING_CHOICES,
     workoutWeekdaysFromPlan,
@@ -27,7 +26,7 @@ type RoutineOnboardingProps = {
 }
 
 export function RoutineOnboarding({ onFinished }: RoutineOnboardingProps) {
-    const { session } = useAuth()
+    const { displayName: greetingName } = useProfile()
     const [choices, setChoices] = useState<OnboardingChoice[]>([])
     const [customTitle, setCustomTitle] = useState('')
     const [workoutWeekdays, setWorkoutWeekdays] = useState<Weekday[]>(() => workoutWeekdaysFromPlan(null))
@@ -51,7 +50,6 @@ export function RoutineOnboarding({ onFinished }: RoutineOnboardingProps) {
         }
     }, [])
 
-    const greetingName = greetingNameFromEmail(session?.user.email)
     const isAtLimit = choices.length >= MAX_ONBOARDING_CHOICES
     const customChoices = choices.filter((choice) => choice.kind === 'custom')
 
